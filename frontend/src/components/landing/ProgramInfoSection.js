@@ -10,7 +10,7 @@ const ProgramInfoSection = () => {
         </svg>
       ),
       title: 'Finanțare nerambursabilă',
-      description: 'Până la 200.000 lei pentru demararea afacerii tale, fără obligația de a returna suma.'
+      description: 'Până la 250.000 lei pentru demararea afacerii tale, fără obligația de a returna suma.'
     },
     {
       icon: (

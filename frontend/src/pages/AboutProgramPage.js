@@ -16,7 +16,7 @@ const AboutProgramPage = () => {
           <div className="bg-white rounded-xl p-8 shadow-sm mb-8">
             <h2 className="text-2xl font-semibold text-gray-800 mb-4">Ce este Startup Nation 2025?</h2>
             <p className="text-gray-600 mb-4">
-              Startup Nation 2025 este un program de finanțare nerambursabilă destinat antreprenorilor care doresc să înceapă o afacere sau să-și dezvolte afacerea existentă. Programul oferă până la 200.000 lei finanțare nerambursabilă pentru a sprijini dezvoltarea ecosistemului antreprenorial din România.
+              Startup Nation 2025 este un program de finanțare nerambursabilă destinat antreprenorilor care doresc să înceapă o afacere sau să-și dezvolte afacerea existentă. Programul oferă până la 250.000 lei finanțare nerambursabilă pentru a sprijini dezvoltarea ecosistemului antreprenorial din România.
             </p>
             <p className="text-gray-600 mb-4">
               Lansat în 2025, această ediție a programului Startup Nation vine cu îmbunătățiri semnificative și un focus pe domenii inovative și cu potențial mare de creștere.
