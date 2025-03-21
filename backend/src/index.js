@@ -13,8 +13,6 @@ const fileUpload = require('express-fileupload');
 
 // Import middlewares
 const { errorHandler } = require('./middlewares/errorHandler');
-// Eliminate express-fileupload since we're using multer for document uploads
-// Update: Now using express-fileupload
 
 // Initialize Express app
 const app = express();
@@ -26,16 +24,21 @@ app.use(cors({
 }));
 app.use(helmet());
 app.use(morgan('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-// File upload middleware handled with express-fileupload for document.routes.js
-// și multer pentru admin.routes.js
+// Măresc limitele pentru bodyParser
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
+
+// Configurație modificată pentru express-fileupload cu limite mai mari
 app.use(fileUpload({
   useTempFiles: true,
   tempFileDir: '/tmp/',
   createParentPath: true,
-  limits: { fileSize: 100 * 1024 * 1024 } // 5MB max file size
+  limits: { 
+    fileSize: 1024 * 1024 * 1024, // 1GB limită maximă
+    abortOnLimit: false 
+  },
+  debug: true // Activez debug pentru a vedea mesaje în consolă
 }));
 
 // Static files
@@ -73,8 +76,8 @@ app.get('/health', (req, res) => {
 
 // Root route
 app.get('/', (req, res) => {
-  res.status(200).json({ 
-    message: 'Welcome to Startup Nation 2025 API',
+  res.status(200).json({
+     message: 'Welcome to Startup Nation 2025 API',
     version: '1.0.0',
     docs: '/api-docs'
   });
