@@ -28,16 +28,17 @@ exports.uploadDocument = async (req, res, next) => {
     const clientId = user.clientId || null;
 
     // Validate file type
-    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
-    if (!allowedMimeTypes.includes(file.mimetype)) {
+    // Optional approach - only block potentially harmful file types
+    const blockedMimeTypes = ['application/x-msdownload', 'application/x-msdos-program'];
+    if (blockedMimeTypes.includes(file.mimetype)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid file type. Allowed types: JPEG, PNG, JPG, PDF'
+        message: 'This file type is not allowed for security reasons'
       });
     }
 
     // Validate file size (5MB max)
-    const maxSize = 5 * 1024 * 1024;
+    const maxSize = 12 * 1024 * 1024;
     if (file.size > maxSize) {
       return res.status(400).json({
         success: false,
