@@ -99,7 +99,7 @@ const ClientDashboardPage = () => {
           // Determinăm pasul curent în funcție de progres
           let currentStepValue = 1;
           if (documents.id_cardUploaded) {
-            currentStepValue = 2;
+            currentStepValue = 1;
             if (documents.courseSelected) {
               currentStepValue = 3;
             }
@@ -247,26 +247,6 @@ const ClientDashboardPage = () => {
           
           // În ultimul rând, folosim date generate pentru a asigura funcționalitatea UI
           const generatedEvents = [
-            {
-              id: 1,
-              title: 'Introducere în antreprenoriat',
-              date: new Date(2025, 2, 25),
-              startTime: '10:00',
-              endTime: '13:00',
-              location: 'Online - Zoom',
-              availableSeats: 5,
-              status: 'available'
-            },
-            {
-              id: 2,
-              title: 'Marketing pentru startup-uri',
-              date: new Date(2025, 2, 28),
-              startTime: '14:00',
-              endTime: '17:00',
-              location: 'Online - Zoom',
-              availableSeats: 3,
-              status: 'available'
-            }
           ];
           setEvents(generatedEvents);
         }
@@ -459,9 +439,7 @@ const ClientDashboardPage = () => {
 
   // Progress steps
   const steps = user ? [
-    { id: 1, name: "Încărcare Buletin", icon: "document", completed: user.documents?.id_cardUploaded },
-    { id: 2, name: "Selectare Curs", icon: "calendar", completed: user.documents?.courseSelected },
-    { id: 3, name: "Descărcare App", icon: "check", completed: user.documents?.appDownloaded }
+    { id: 1, name: "Încărcare Buletin", icon: "document", completed: user.documents?.id_cardUploaded }
   ] : [];
 
   const handleLogout = async () => {
@@ -478,7 +456,6 @@ const ClientDashboardPage = () => {
     return (
       <>
         <ClientWelcomeCard user={user} />
-        <ClientEventCard event={events && events.length > 0 ? events[0] : null} />
         <ClientProgressSteps steps={steps} currentStep={currentStep} setCurrentStep={setCurrentStep} />
         <ClientStepContent step={currentStep} updateUserData={updateUserData} userDocuments={user?.documents} />
       </>
@@ -492,8 +469,6 @@ const ClientDashboardPage = () => {
       switch (activeTab) {
         case 'steps':
           return renderStepsContent();
-        case 'courses':
-          return <ClientCoursesContent events={events} />;
         case 'notifications':
           return <ClientNotifications notifications={user?.notifications || []} />;
         case 'profile':
@@ -509,7 +484,7 @@ const ClientDashboardPage = () => {
             {renderStepsContent()}
           </div>
           <div className="lg:col-span-1 space-y-8">
-            <ClientCoursesContent events={events} />
+            {/* <ClientCoursesContent events={events} /> */}
             <ClientNotifications notifications={user?.notifications || []} />
           </div>
         </div>
@@ -576,7 +551,8 @@ const ClientDashboardPage = () => {
               activeTab === 'steps' ? 'bg-gradient-to-r from-blue-700 to-purple-700 bg-clip-text text-transparent' : 'text-gray-500'
             }`}>Pași</span>
           </div>
-          <div 
+
+          {/* <div 
             className="flex flex-col items-center cursor-pointer"
             onClick={() => setActiveTab('courses')}
           >
@@ -588,7 +564,8 @@ const ClientDashboardPage = () => {
             <span className={`text-xs font-medium ${
               activeTab === 'courses' ? 'bg-gradient-to-r from-blue-700 to-purple-700 bg-clip-text text-transparent' : 'text-gray-500'
             }`}>Cursuri</span>
-          </div>
+          </div> */}
+
           <div 
             className="flex flex-col items-center cursor-pointer"
             onClick={() => setActiveTab('notifications')}
