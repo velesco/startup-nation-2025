@@ -44,40 +44,12 @@ const storage = multer.diskStorage({
 
 // File filter for documents
 const documentFilter = (req, file, cb) => {
-  const allowedTypes = [
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.ms-powerpoint',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    'image/jpeg',
-    'image/png',
-    'image/gif',
-    'text/plain'
-  ];
-  
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new ApiError(400, 'Tip de fișier neacceptat. Fișierele acceptate sunt: PDF, Word, Excel, PowerPoint, imagini și text.'));
-  }
+  cb(null, true);
 };
 
 // File filter for profile pictures
 const imageFilter = (req, file, cb) => {
-  const allowedTypes = [
-    'image/jpeg',
-    'image/png',
-    'image/gif'
-  ];
-  
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new ApiError(400, 'Tip de fișier neacceptat. Fișierele acceptate sunt: JPEG, PNG, GIF.'));
-  }
+  cb(null, true);
 };
 
 // Create multer instances
