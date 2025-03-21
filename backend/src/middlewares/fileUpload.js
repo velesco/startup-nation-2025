@@ -6,7 +6,7 @@ const { generateUniqueFilename, createDirectoryIfNotExists } = require('../utils
 
 // Get upload directory from environment variable or use default
 const uploadDir = process.env.UPLOAD_DIR || 'uploads';
-const maxFileSize = (process.env.MAX_FILE_SIZE || 10) * 1024 * 1024; // Default: 10MB
+// Am eliminat limitarea de dimensiune a fișierelor
 
 // Ensure upload directory exists
 try {
@@ -42,22 +42,20 @@ const storage = multer.diskStorage({
   }
 });
 
-// File filter for documents
+// File filter for documents - am eliminat verificările
 const documentFilter = (req, file, cb) => {
   cb(null, true);
 };
 
-// File filter for profile pictures
+// File filter for profile pictures - am eliminat verificările
 const imageFilter = (req, file, cb) => {
   cb(null, true);
 };
 
-// Create multer instances
+// Create multer instance fără limitări de dimensiune
 const upload = multer({
   storage,
-  limits: {
-    fileSize: maxFileSize
-  },
+  // Am eliminat limitarea fileSize
   fileFilter: (req, file, cb) => {
     if (file.fieldname === 'document') {
       documentFilter(req, file, cb);
@@ -69,12 +67,9 @@ const upload = multer({
   }
 });
 
-// Handle multer errors
+// Handle multer errors - simplificat pentru a elimina verificarea dimensiunii
 const handleMulterErrors = (err, req, res, next) => {
   if (err instanceof multer.MulterError) {
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      return next(new ApiError(400, `Fișierul este prea mare. Dimensiunea maximă este ${maxFileSize / (1024 * 1024)}MB.`));
-    }
     return next(new ApiError(400, err.message));
   }
   next(err);
