@@ -1,153 +1,174 @@
-const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { exec } = require('child_process');
 const util = require('util');
-
 const execPromise = util.promisify(exec);
+const logger = require('./logger');
 
-// Create backup directory if it doesn't exist
-const createBackupDirectory = () => {
-  const backupDir = path.join(__dirname, '../../backups');
-  if (!fs.existsSync(backupDir)) {
-    fs.mkdirSync(backupDir, { recursive: true });
-  }
-  return backupDir;
-};
+// Path for storing backups
+const backupDir = path.join(__dirname, '../../backups');
 
-// Generate backup filename with timestamp
-const getBackupFilename = () => {
-  const now = new Date();
-  const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
-  return `backup_${timestamp}.gz`;
-};
-
-// Run MongoDB backup using mongodump
+/**
+ * Run MongoDB database backup using mongodump
+ */
 const runDatabaseBackup = async () => {
   try {
-    const backupDir = createBackupDirectory();
-    const backupFilename = getBackupFilename();
+    // Create backup directory if it doesn't exist
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+
+    // Format date for filename
+    const date = new Date();
+    const formattedDate = date.toISOString().replace(/:/g, '-').replace(/\..+/, '');
+    const backupFilename = `backup_${formattedDate}.gz`;
     const backupPath = path.join(backupDir, backupFilename);
-    
-    // Get database connection string from environment variables
-    const dbUri = process.env.MONGODB_URI;
-    if (!dbUri) {
-      throw new Error('Database connection string is not defined');
-    }
-    
-    // Parse connection string to get credentials and database name
-    const dbUriRegex = /mongodb:\/\/(?:([^:]+):([^@]+)@)?([^:]+)(?::(\d+))?\/([^?]+)/;
-    const match = dbUri.match(dbUriRegex);
-    
-    if (!match) {
-      throw new Error('Invalid MongoDB connection string format');
-    }
-    
-    const [, username, password, host, port = '27017', dbName] = match;
-    
+
     // Build mongodump command
-    let command = `mongodump --host ${host} --port ${port} --db ${dbName} --archive=${backupPath} --gzip`;
-    
-    if (username && password) {
-      command += ` --username ${username} --password ${password} --authenticationDatabase admin`;
+    let command = `mongodump --uri="${process.env.MONGODB_URI}" --archive="${backupPath}" --gzip`;
+
+    // Add authentication if provided
+    if (process.env.MONGODB_USER && process.env.MONGODB_PASSWORD) {
+      command = `mongodump --uri="${process.env.MONGODB_URI}" --username="${process.env.MONGODB_USER}" --password="${process.env.MONGODB_PASSWORD}" --archive="${backupPath}" --gzip`;
     }
-    
-    // Execute mongodump command
+
+    // Execute mongodump
     const { stdout, stderr } = await execPromise(command);
     
     if (stderr && !stderr.includes('writing')) {
-      throw new Error(`mongodump error: ${stderr}`);
+      logger.warn(`Backup warning: ${stderr}`);
     }
-    
-    // Clean up old backups (keep last 7 days of hourly backups)
-    await cleanupOldBackups(backupDir);
+
+    logger.info(`Database backup created: ${backupFilename}`);
+
+    // Remove old backups based on retention policy
+    await cleanupOldBackups();
     
     return {
       success: true,
-      path: backupPath,
+      message: 'Backup completed successfully',
       filename: backupFilename,
-      timestamp: new Date(),
+      path: backupPath
     };
   } catch (error) {
-    console.error('Database backup error:', error);
-    throw error;
+    logger.error(`Backup error: ${error.message}`);
+    throw new Error(`Database backup failed: ${error.message}`);
   }
 };
 
-// Clean up old backups, keeping only the most recent ones
-const cleanupOldBackups = async (backupDir) => {
-  const files = fs.readdirSync(backupDir);
-  
-  // Sort files by creation time (oldest first)
-  const fileStats = files
-    .filter(file => file.startsWith('backup_') && file.endsWith('.gz'))
-    .map(file => ({
-      name: file,
-      path: path.join(backupDir, file),
-      ctime: fs.statSync(path.join(backupDir, file)).ctime,
-    }))
-    .sort((a, b) => a.ctime.getTime() - b.ctime.getTime());
-  
-  // Keep only last 168 backups (7 days of hourly backups)
-  const filesToDelete = fileStats.slice(0, Math.max(0, fileStats.length - 168));
-  
-  for (const file of filesToDelete) {
-    fs.unlinkSync(file.path);
-  }
-  
-  return filesToDelete.length;
-};
-
-// Restore database from backup file
-const restoreDatabase = async (backupFilePath) => {
+/**
+ * Clean up old backup files based on retention policy
+ */
+const cleanupOldBackups = async () => {
   try {
-    if (!fs.existsSync(backupFilePath)) {
-      throw new Error(`Backup file not found: ${backupFilePath}`);
+    const retentionDays = parseInt(process.env.BACKUP_RETENTION_DAYS) || 7;
+    
+    // List all files in the backup directory
+    const files = fs.readdirSync(backupDir);
+    
+    // Get current time
+    const now = new Date().getTime();
+    
+    // Calculate retention period in milliseconds
+    const retentionPeriod = retentionDays * 24 * 60 * 60 * 1000;
+    
+    // Filter and delete old backup files
+    for (const file of files) {
+      // Only process backup files
+      if (!file.startsWith('backup_')) continue;
+      
+      const filePath = path.join(backupDir, file);
+      const stats = fs.statSync(filePath);
+      
+      // Check if file is older than retention period
+      if (now - stats.mtime.getTime() > retentionPeriod) {
+        fs.unlinkSync(filePath);
+        logger.info(`Deleted old backup: ${file}`);
+      }
     }
     
-    // Get database connection string from environment variables
-    const dbUri = process.env.MONGODB_URI;
-    if (!dbUri) {
-      throw new Error('Database connection string is not defined');
+    logger.info('Backup cleanup completed');
+  } catch (error) {
+    logger.error(`Backup cleanup error: ${error.message}`);
+  }
+};
+
+/**
+ * Restore database from backup file
+ * @param {string} backupFile - Path to the backup file
+ */
+const restoreDatabase = async (backupFile) => {
+  try {
+    // Check if backup file exists
+    if (!fs.existsSync(backupFile)) {
+      throw new Error(`Backup file not found: ${backupFile}`);
     }
-    
-    // Parse connection string to get credentials and database name
-    const dbUriRegex = /mongodb:\/\/(?:([^:]+):([^@]+)@)?([^:]+)(?::(\d+))?\/([^?]+)/;
-    const match = dbUri.match(dbUriRegex);
-    
-    if (!match) {
-      throw new Error('Invalid MongoDB connection string format');
-    }
-    
-    const [, username, password, host, port = '27017', dbName] = match;
     
     // Build mongorestore command
-    let command = `mongorestore --host ${host} --port ${port} --db ${dbName} --archive=${backupFilePath} --gzip --drop`;
+    let command = `mongorestore --uri="${process.env.MONGODB_URI}" --archive="${backupFile}" --gzip`;
     
-    if (username && password) {
-      command += ` --username ${username} --password ${password} --authenticationDatabase admin`;
+    // Add authentication if provided
+    if (process.env.MONGODB_USER && process.env.MONGODB_PASSWORD) {
+      command = `mongorestore --uri="${process.env.MONGODB_URI}" --username="${process.env.MONGODB_USER}" --password="${process.env.MONGODB_PASSWORD}" --archive="${backupFile}" --gzip`;
     }
     
-    // Execute mongorestore command
+    // Execute mongorestore
     const { stdout, stderr } = await execPromise(command);
     
-    if (stderr && !stderr.includes('restoring')) {
-      throw new Error(`mongorestore error: ${stderr}`);
+    if (stderr && !stderr.includes('restoring') && !stderr.includes('done')) {
+      logger.warn(`Restore warning: ${stderr}`);
     }
+    
+    logger.info(`Database restore completed from: ${backupFile}`);
     
     return {
       success: true,
-      path: backupFilePath,
-      timestamp: new Date(),
+      message: 'Restore completed successfully',
+      file: backupFile
     };
   } catch (error) {
-    console.error('Database restore error:', error);
-    throw error;
+    logger.error(`Restore error: ${error.message}`);
+    throw new Error(`Database restore failed: ${error.message}`);
+  }
+};
+
+/**
+ * List available backup files
+ */
+const listBackups = () => {
+  try {
+    // Create backup directory if it doesn't exist
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+      return [];
+    }
+    
+    // List all files in the backup directory
+    const files = fs.readdirSync(backupDir)
+      .filter(file => file.startsWith('backup_'))
+      .map(file => {
+        const filePath = path.join(backupDir, file);
+        const stats = fs.statSync(filePath);
+        
+        return {
+          filename: file,
+          path: filePath,
+          size: stats.size,
+          created: stats.mtime
+        };
+      })
+      .sort((a, b) => b.created - a.created); // Sort by date desc
+    
+    return files;
+  } catch (error) {
+    logger.error(`List backups error: ${error.message}`);
+    throw new Error(`Failed to list backups: ${error.message}`);
   }
 };
 
 module.exports = {
   runDatabaseBackup,
+  cleanupOldBackups,
   restoreDatabase,
-  getBackupFilename,
-  createBackupDirectory,
+  listBackups
 };

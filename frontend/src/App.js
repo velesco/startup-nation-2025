@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
+import { ProtectedRoute, PublicRoute, RoleBasedRedirect } from './components/AuthMiddleware';
 
 // Pages
 import LandingPage from './pages/LandingPage';
@@ -25,39 +26,12 @@ import AdminGroupsPage from './pages/admin/AdminGroupsPage';
 import AdminClientsPage from './pages/admin/AdminClientsPage';
 import MaterialsLibraryPage from './pages/admin/MaterialsLibraryPage';
 
-// Protected Route Component
-const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-  const { isAuthenticated, loading, currentUser } = useAuth();
+// Componenta pentru redirecționare de la /clients/:id la /admin/clients/:id
+const ClientIdRedirect = () => {
+  const { id } = useParams();
+  const redirectPath = `/admin/clients/${id}`;
   
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-  
-  // Verifică dacă utilizatorul este autentificat
-  if (!isAuthenticated) {
-    return <Navigate to="/login" />;
-  }
-  
-  // Verifică rolul utilizatorului (dacă s-au specificat roluri permise)
-  if (allowedRoles.length > 0) {
-    const userRole = currentUser?.role;
-    if (!allowedRoles.includes(userRole)) {
-      // Redirecționare în funcție de rol
-      if (userRole === 'client' || userRole === 'user') {
-        return <Navigate to="/client/dashboard" />;
-      } else if (userRole === 'trainer') {
-        return <Navigate to="/trainer/dashboard" />;
-      } else {
-        return <Navigate to="/admin/dashboard" />;
-      }
-    }
-  }
-  
-  return children;
+  return <Navigate to={redirectPath} replace />;
 };
 
 // Componenta principala
@@ -76,9 +50,9 @@ function App() {
       <Routes>
         {/* Rute publice */}
         <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/set-password" element={<SetPasswordPage />} />
+        <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+        <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+        <Route path="/set-password" element={<PublicRoute><SetPasswordPage /></PublicRoute>} />
         <Route path="/despre-program" element={<AboutProgramPage />} />
         
         {/* Redirecționare după autentificare în funcție de rol */}
@@ -223,40 +197,5 @@ function App() {
     </Router>
   );
 }
-
-// Componenta pentru redirecționare de la /clients/:id la /admin/clients/:id
-const ClientIdRedirect = () => {
-  const { id } = useParams();
-  const redirectPath = `/admin/clients/${id}`;
-  
-  return <Navigate to={redirectPath} replace />;
-};
-
-// Componenta pentru redirecționare bazată pe rol
-const RoleBasedRedirect = () => {
-  const { currentUser, isAuthenticated, loading } = useAuth();
-  
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" />;
-  }
-  
-  // Redirecționare în funcție de rol
-  const userRole = currentUser?.role;
-  if (userRole === 'client' || userRole === 'user') {
-    return <Navigate to="/client/dashboard" />;
-  } else if (userRole === 'trainer') {
-    return <Navigate to="/trainer/dashboard" />;
-  } else {
-    return <Navigate to="/admin/dashboard" />;
-  }
-};
 
 export default App;

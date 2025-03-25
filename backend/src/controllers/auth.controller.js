@@ -3,8 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const logger = require('../utils/logger');
 const sendEmail = require('../utils/sendEmail');
-const fs = require('fs');
-const path = require('path');
+const logActivity = require('../utils/activityLogger');
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -34,7 +33,7 @@ exports.register = async (req, res, next) => {
     });
 
     // Log the new user registration in the activity log
-    logActivity('REGISTER', user, `New ${user.role} registration`);
+    await logActivity('REGISTER', user, `New ${user.role} registration`, req);
     
     // Set the lastLogin to now for all users since they will be auto-logged in
     user.lastLogin = Date.now();
@@ -113,7 +112,7 @@ exports.login = async (req, res, next) => {
     await user.save({ validateBeforeSave: false });
 
     // Log the successful login to the activity log
-    logActivity('LOGIN', user, `User logged in - Role: ${user.role}`);
+    await logActivity('LOGIN', user, `User logged in - Role: ${user.role}`, req);
 
     // Send response with token
     sendTokenResponse(user, 200, res);
@@ -126,9 +125,9 @@ exports.login = async (req, res, next) => {
 // @desc    Logout user / clear cookie
 // @route   GET /api/auth/logout
 // @access  Private
-exports.logout = (req, res) => {
+exports.logout = async (req, res) => {
   // Log the logout activity
-  logActivity('LOGOUT', req.user, 'User logged out');
+  await logActivity('LOGOUT', req.user, 'User logged out', req);
   
   res.status(200).json({
     success: true,
@@ -151,6 +150,8 @@ exports.getMe = async (req, res, next) => {
     next(error);
   }
 };
+
+
 
 // @desc    Update user details
 // @route   PUT /api/auth/update-details
@@ -209,64 +210,6 @@ exports.updatePassword = async (req, res, next) => {
   }
 };
 
-// @desc    Forgot password
-// @route   POST /api/auth/forgot-password
-// @access  Public
-exports.forgotPassword = async (req, res, next) => {
-  try {
-    const user = await User.findOne({ email: req.body.email });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'There is no user with that email'
-      });
-    }
-
-    // Get reset token
-    const resetToken = user.createPasswordResetToken();
-    await user.save({ validateBeforeSave: false });
-
-    // Create reset url
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
-
-    const message = `
-      Ați solicitat resetarea parolei. Vă rugăm să accesați următorul link pentru a vă seta o nouă parolă:
-      \n\n${resetUrl}\n\n
-      Acest link este valabil 10 minute. Dacă nu ați solicitat resetarea parolei, vă rugăm să ignorați acest email.
-    `;
-
-    try {
-      await sendEmail({
-        email: user.email,
-        subject: 'Resetare parolă Startup Nation 2025',
-        message
-      });
-
-      res.status(200).json({
-        success: true,
-        message: 'Email sent'
-      });
-    } catch (error) {
-      logger.error(`Error sending email: ${error.message}`);
-      
-      user.passwordResetToken = undefined;
-      user.passwordResetExpires = undefined;
-      await user.save({ validateBeforeSave: false });
-
-      return res.status(500).json({
-        success: false,
-        message: 'Email could not be sent'
-      });
-    }
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Reset password
-// @route   PUT /api/auth/reset-password/:resettoken
-// @access  Public
 // @desc    Update ID card information
 // @route   PUT /api/auth/update-id-card
 // @access  Private
@@ -301,7 +244,7 @@ exports.updateIdCard = async (req, res, next) => {
     );
 
     // Log the ID card upload in the activity log
-    logActivity('UPDATE_ID_CARD', user, `User updated ID card information`);
+    await logActivity('UPDATE_ID_CARD', user, `User updated ID card information`, req);
 
     res.status(200).json({
       success: true,
@@ -313,6 +256,67 @@ exports.updateIdCard = async (req, res, next) => {
   }
 };
 
+// @desc    Forgot password
+// @route   POST /api/auth/forgot-password
+// @access  Public
+exports.forgotPassword = async (req, res, next) => {
+  try {
+    const user = await User.findOne({ email: req.body.email });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'There is no user with that email'
+      });
+    }
+
+    // Get reset token
+    const resetToken = user.createPasswordResetToken();
+    await user.save({ validateBeforeSave: false });
+
+    // Create reset url
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+
+    const message = `
+      Ați solicitat resetarea parolei. Vă rugăm să accesați următorul link pentru a vă seta o nouă parolă:
+      \n\n${resetUrl}\n\n
+      Acest link este valabil 10 minute. Dacă nu ați solicitat resetarea parolei, vă rugăm să ignorați acest email.
+    `;
+
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: 'Resetare parolă Startup Nation 2025',
+        message
+      });
+
+      // Log the password reset request
+      await logActivity('FORGOT_PASSWORD', user, 'Password reset request', req);
+
+      res.status(200).json({
+        success: true,
+        message: 'Email sent'
+      });
+    } catch (error) {
+      logger.error(`Error sending email: ${error.message}`);
+      
+      user.passwordResetToken = undefined;
+      user.passwordResetExpires = undefined;
+      await user.save({ validateBeforeSave: false });
+
+      return res.status(500).json({
+        success: false,
+        message: 'Email could not be sent'
+      });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Reset password
+// @route   PUT /api/auth/reset-password/:resettoken
+// @access  Public
 exports.resetPassword = async (req, res, next) => {
   try {
     // Get hashed token
@@ -343,25 +347,6 @@ exports.resetPassword = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-};
-
-// Helper function to log activity to a file
-const logActivity = (action, user, details) => {
-  const logDir = path.join(__dirname, '../../logs');
-  
-  // Create logs directory if it doesn't exist
-  if (!fs.existsSync(logDir)) {
-    fs.mkdirSync(logDir, { recursive: true });
-  }
-  
-  const logFile = path.join(logDir, 'activity.log');
-  const timestamp = new Date().toISOString();
-  const userId = user?._id || user?.id || 'unknown';
-  const userEmail = user?.email || 'unknown';
-  
-  const logMessage = `[${timestamp}] ${action.toUpperCase()} - User: ${userId} (${userEmail}) - ${details || ''} \n`;
-  
-  fs.appendFileSync(logFile, logMessage, 'utf8');
 };
 
 // Helper function to send token response

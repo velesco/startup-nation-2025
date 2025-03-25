@@ -10,6 +10,7 @@ const path = require('path');
 const logger = require('./utils/logger');
 const connectDB = require('./config/database');
 const fileUpload = require('express-fileupload');
+const { authRateLimiter, apiRateLimiter } = require('./utils/security');
 
 // Import middlewares
 const { errorHandler } = require('./middlewares/errorHandler');
@@ -19,7 +20,12 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL,
+  origin: process.env.NODE_ENV === 'production' 
+    ? [process.env.FRONTEND_URL, process.env.SECONDARY_FRONTEND_URL].filter(Boolean) 
+    : '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
   optionsSuccessStatus: 200
 }));
 app.use(helmet());
@@ -29,16 +35,16 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
-// Configurație modificată pentru express-fileupload cu limite mai mari
+// Configurație pentru express-fileupload cu limite rezonabile
 app.use(fileUpload({
   useTempFiles: true,
   tempFileDir: '/tmp/',
   createParentPath: true,
   limits: { 
-    fileSize: 1024 * 1024 * 1024, // 1GB limită maximă
-    abortOnLimit: false 
+    fileSize: 50 * 1024 * 1024, // 50MB limită maximă
+    abortOnLimit: true 
   },
-  debug: true // Activez debug pentru a vedea mesaje în consolă
+  debug: process.env.NODE_ENV === 'development' // Debug doar în mod dezvoltare
 }));
 
 // Static files
@@ -46,7 +52,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Routes - uncomment these as you implement them
 const authRoutes = require('./routes/auth.routes');
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authRateLimiter, authRoutes);
 
 // Enable these routes as they are implemented
 const userRoutes = require('./routes/user.routes');
@@ -60,16 +66,16 @@ const activityRoutes = require('./routes/activity.routes');
 const logRoutes = require('./routes/log.routes');
 const contractRoutes = require('./routes/contract.routes');
 
-app.use('/api/users', userRoutes);
-app.use('/api/clients', clientRoutes);
-app.use('/api/groups', groupRoutes);
-app.use('/api/documents', documentRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/meetings', meetingRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/activities', activityRoutes);
-app.use('/api/logs', logRoutes);
-app.use('/api/contracts', contractRoutes);
+app.use('/api/users', apiRateLimiter, userRoutes);
+app.use('/api/clients', apiRateLimiter, clientRoutes);
+app.use('/api/groups', apiRateLimiter, groupRoutes);
+app.use('/api/documents', apiRateLimiter, documentRoutes);
+app.use('/api/admin', apiRateLimiter, adminRoutes);
+app.use('/api/meetings', apiRateLimiter, meetingRoutes);
+app.use('/api/notifications', apiRateLimiter, notificationRoutes);
+app.use('/api/activities', apiRateLimiter, activityRoutes);
+app.use('/api/logs', apiRateLimiter, logRoutes);
+app.use('/api/contracts', apiRateLimiter, contractRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

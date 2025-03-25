@@ -4,10 +4,7 @@ const logger = require('../utils/logger');
 const connectDB = async () => {
   try {
     const mongoURI = process.env.MONGODB_URI;
-    const options = {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    };
+    const options = {};
 
     // If credentials are provided in environment variables, use them
     if (process.env.MONGODB_USER && process.env.MONGODB_PASSWORD) {

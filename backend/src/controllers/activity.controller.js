@@ -1,90 +1,35 @@
 const Activity = require('../models/Activity');
 const logger = require('../utils/logger');
 
-// @desc    Get all activities
-// @route   GET /api/activities
-// @access  Private (Admin)
-exports.getActivities = async (req, res, next) => {
+// @desc    Log new activity
+// @route   POST /api/activities
+// @access  Private
+exports.logActivity = async (req, res, next) => {
   try {
-    // Prepare filter options
-    const filter = {};
+    const { action, details, metadata } = req.body;
     
-    // Filter by actor (user) if provided
-    if (req.query.actor) {
-      filter.actor = req.query.actor;
+    if (!action) {
+      return res.status(400).json({
+        success: false,
+        message: 'Action field is required'
+      });
     }
     
-    // Filter by type if provided
-    if (req.query.type) {
-      filter.type = req.query.type;
-    }
+    const activity = await Activity.create({
+      action,
+      user: req.user.id,
+      details: details || '',
+      ipAddress: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers?.['user-agent'],
+      metadata: metadata || {}
+    });
     
-    // Filter by visibility
-    if (req.user.role !== 'admin') {
-      filter.visibility = { $ne: 'Admin' };
-      
-      if (req.user.role !== 'partner') {
-        filter.visibility = 'Public';
-      }
-    }
-    
-    // Filter by related model type and ID if provided
-    if (req.query.modelType && req.query.modelId) {
-      filter['relatedTo.modelType'] = req.query.modelType;
-      filter['relatedTo.modelId'] = req.query.modelId;
-    } else if (req.query.modelType) {
-      filter['relatedTo.modelType'] = req.query.modelType;
-    }
-    
-    // Date range filter
-    if (req.query.startDate && req.query.endDate) {
-      filter.timestamp = {
-        $gte: new Date(req.query.startDate),
-        $lte: new Date(req.query.endDate)
-      };
-    } else if (req.query.startDate) {
-      filter.timestamp = { $gte: new Date(req.query.startDate) };
-    } else if (req.query.endDate) {
-      filter.timestamp = { $lte: new Date(req.query.endDate) };
-    }
-    
-    // Handle search query
-    if (req.query.search) {
-      const searchRegex = new RegExp(req.query.search, 'i');
-      filter.$or = [
-        { actorName: searchRegex },
-        { action: searchRegex },
-        { details: searchRegex },
-        { 'relatedTo.modelName': searchRegex }
-      ];
-    }
-
-    // Pagination
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 20;
-    const startIndex = (page - 1) * limit;
-    
-    // Execute query with pagination
-    const activities = await Activity.find(filter)
-      .populate('actor', 'name')
-      .skip(startIndex)
-      .limit(limit)
-      .sort({ timestamp: -1 });
-    
-    // Get total count for pagination
-    const total = await Activity.countDocuments(filter);
-    
-    res.status(200).json({
+    res.status(201).json({
       success: true,
-      count: activities.length,
-      pagination: {
-        total,
-        page,
-        pages: Math.ceil(total / limit)
-      },
-      data: activities
+      data: activity
     });
   } catch (error) {
+    logger.error(`Log activity error: ${error.message}`);
     next(error);
   }
 };
@@ -94,24 +39,13 @@ exports.getActivities = async (req, res, next) => {
 // @access  Private
 exports.getRecentActivities = async (req, res, next) => {
   try {
-    const limit = parseInt(req.query.limit, 10) || 10;
-    
-    // Prepare filter based on user role
-    const filter = {};
-    
-    if (req.user.role !== 'admin') {
-      filter.visibility = { $ne: 'Admin' };
-      
-      if (req.user.role !== 'partner') {
-        filter.visibility = 'Public';
-      }
-    }
+    const { limit = 10 } = req.query;
     
     // Get recent activities
-    const activities = await Activity.find(filter)
-      .populate('actor', 'name')
-      .sort({ timestamp: -1 })
-      .limit(limit);
+    const activities = await Activity.find()
+      .sort('-createdAt')
+      .limit(parseInt(limit, 10))
+      .populate('user', 'name email role');
     
     res.status(200).json({
       success: true,
@@ -119,158 +53,45 @@ exports.getRecentActivities = async (req, res, next) => {
       data: activities
     });
   } catch (error) {
+    logger.error(`Get recent activities error: ${error.message}`);
     next(error);
   }
 };
 
-// @desc    Get activities for a specific resource
+// @desc    Get activities related to a resource
 // @route   GET /api/activities/resource/:modelType/:modelId
 // @access  Private
 exports.getResourceActivities = async (req, res, next) => {
   try {
     const { modelType, modelId } = req.params;
+    const { limit = 20 } = req.query;
     
-    if (!modelType || !modelId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide model type and ID'
-      });
-    }
-    
-    // Prepare filter based on user role
+    // Build filter for resource-related activities
     const filter = {
-      'relatedTo.modelType': modelType,
-      'relatedTo.modelId': modelId
+      $or: [
+        { 'metadata.modelType': modelType, 'metadata.modelId': modelId },
+        { 'metadata.resourceType': modelType, 'metadata.resourceId': modelId }
+      ]
     };
-    
-    if (req.user.role !== 'admin') {
-      filter.visibility = { $ne: 'Admin' };
-      
-      if (req.user.role !== 'partner') {
-        filter.visibility = 'Public';
-      }
-    }
-    
-    // Pagination
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 10;
-    const startIndex = (page - 1) * limit;
     
     // Get activities
     const activities = await Activity.find(filter)
-      .populate('actor', 'name')
-      .skip(startIndex)
-      .limit(limit)
-      .sort({ timestamp: -1 });
-    
-    // Get total count for pagination
-    const total = await Activity.countDocuments(filter);
+      .sort('-createdAt')
+      .limit(parseInt(limit, 10))
+      .populate('user', 'name email role');
     
     res.status(200).json({
       success: true,
       count: activities.length,
-      pagination: {
-        total,
-        page,
-        pages: Math.ceil(total / limit)
-      },
       data: activities
     });
   } catch (error) {
+    logger.error(`Get resource activities error: ${error.message}`);
     next(error);
   }
 };
 
-// @desc    Log an activity
-// @route   POST /api/activities
-// @access  Private
-exports.logActivity = async (req, res, next) => {
-  try {
-    const { action, type, details, relatedTo, visibility } = req.body;
-    
-    if (!action || !type) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide action and type'
-      });
-    }
-    
-    // Create activity
-    const activity = await Activity.create({
-      actor: req.user.id,
-      actorName: req.user.name,
-      action,
-      type,
-      details,
-      relatedTo,
-      visibility: visibility || 'Public',
-      ipAddress: req.ip,
-      userAgent: req.get('user-agent')
-    });
-    
-    res.status(201).json({
-      success: true,
-      data: activity
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Get activity statistics
-// @route   GET /api/activities/stats
-// @access  Private (Admin)
-exports.getActivityStats = async (req, res, next) => {
-  try {
-    // Activities by type
-    const byType = await Activity.aggregate([
-      { $group: { _id: '$type', count: { $sum: 1 } } }
-    ]);
-    
-    // Activities by user (top 5)
-    const byUser = await Activity.aggregate([
-      { $group: { _id: '$actor', actorName: { $first: '$actorName' }, count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 5 }
-    ]);
-    
-    // Activities by day (last 7 days)
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
-    const byDay = await Activity.aggregate([
-      { $match: { timestamp: { $gte: sevenDaysAgo } } },
-      {
-        $group: {
-          _id: {
-            $dateToString: { format: '%Y-%m-%d', date: '$timestamp' }
-          },
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { _id: 1 } }
-    ]);
-    
-    res.status(200).json({
-      success: true,
-      data: {
-        byType: byType.reduce((acc, curr) => {
-          acc[curr._id] = curr.count;
-          return acc;
-        }, {}),
-        byUser,
-        byDay: byDay.map(item => ({
-          date: item._id,
-          count: item.count
-        }))
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Delete an activity
+// @desc    Delete activity
 // @route   DELETE /api/activities/:id
 // @access  Private (Admin)
 exports.deleteActivity = async (req, res, next) => {
@@ -284,13 +105,235 @@ exports.deleteActivity = async (req, res, next) => {
       });
     }
     
-    await activity.remove();
+    await activity.deleteOne();
     
     res.status(200).json({
       success: true,
       data: {}
     });
   } catch (error) {
+    logger.error(`Delete activity error: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc    Get all activities with pagination and filters
+// @route   GET /api/activities
+// @access  Private (Admin)
+exports.getActivities = async (req, res, next) => {
+  try {
+    const { 
+      page = 1, 
+      limit = 20, 
+      user, 
+      action, 
+      startDate, 
+      endDate,
+      sort = '-createdAt'
+    } = req.query;
+
+    // Build filter object
+    const filter = {};
+    
+    if (user) {
+      filter.user = user;
+    }
+    
+    if (action) {
+      filter.action = action;
+    }
+    
+    // Add date range if provided
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      
+      if (startDate) {
+        filter.createdAt.$gte = new Date(startDate);
+      }
+      
+      if (endDate) {
+        // Set end date to end of day
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        filter.createdAt.$lte = end;
+      }
+    }
+    
+    // Calculate pagination
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const skip = (pageNum - 1) * limitNum;
+    
+    // Execute query with pagination
+    const activities = await Activity.find(filter)
+      .sort(sort)
+      .skip(skip)
+      .limit(limitNum)
+      .populate('user', 'name email role');
+      
+    // Get total count
+    const total = await Activity.countDocuments(filter);
+    
+    res.status(200).json({
+      success: true,
+      count: activities.length,
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        pages: Math.ceil(total / limitNum)
+      },
+      data: activities
+    });
+  } catch (error) {
+    logger.error(`Get activities error: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc    Get activities for a specific user
+// @route   GET /api/activities/user/:userId
+// @access  Private (Admin or User for own activities)
+exports.getUserActivities = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const { page = 1, limit = 20, action } = req.query;
+    
+    // Check if user has permission to view these activities
+    if (req.user.role !== 'admin' && req.user.role !== 'super-admin' && req.user.id !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not authorized to view these activities'
+      });
+    }
+    
+    // Build filter
+    const filter = { user: userId };
+    
+    if (action) {
+      filter.action = action;
+    }
+    
+    // Calculate pagination
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const skip = (pageNum - 1) * limitNum;
+    
+    // Execute query
+    const activities = await Activity.find(filter)
+      .sort('-createdAt')
+      .skip(skip)
+      .limit(limitNum);
+      
+    // Get total count
+    const total = await Activity.countDocuments(filter);
+    
+    res.status(200).json({
+      success: true,
+      count: activities.length,
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        pages: Math.ceil(total / limitNum)
+      },
+      data: activities
+    });
+  } catch (error) {
+    logger.error(`Get user activities error: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc    Get activity statistics
+// @route   GET /api/activities/stats
+// @access  Private (Admin)
+exports.getActivityStats = async (req, res, next) => {
+  try {
+    // Get activity counts by type
+    const activityCountsByType = await Activity.aggregate([
+      { $group: { _id: '$action', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]);
+    
+    // Get activities by day (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const activitiesByDay = await Activity.aggregate([
+      { 
+        $match: { 
+          createdAt: { $gte: thirtyDaysAgo } 
+        } 
+      },
+      {
+        $group: {
+          _id: { 
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' },
+            day: { $dayOfMonth: '$createdAt' }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { 
+        $project: {
+          _id: 0,
+          date: {
+            $dateFromParts: {
+              year: '$_id.year',
+              month: '$_id.month',
+              day: '$_id.day'
+            }
+          },
+          count: 1
+        }
+      },
+      { $sort: { date: 1 } }
+    ]);
+    
+    // Get most active users
+    const mostActiveUsers = await Activity.aggregate([
+      { $group: { _id: '$user', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 },
+      {
+        $lookup: {
+          from: 'users',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'user'
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          userId: '$_id',
+          count: 1,
+          user: { $arrayElemAt: ['$user', 0] }
+        }
+      },
+      {
+        $project: {
+          userId: 1,
+          count: 1,
+          'user.name': 1,
+          'user.email': 1,
+          'user.role': 1
+        }
+      }
+    ]);
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        activityCountsByType,
+        activitiesByDay,
+        mostActiveUsers
+      }
+    });
+  } catch (error) {
+    logger.error(`Get activity stats error: ${error.message}`);
     next(error);
   }
 };

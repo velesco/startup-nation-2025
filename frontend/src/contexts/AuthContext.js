@@ -6,7 +6,7 @@ import jwt_decode from 'jwt-decode';
 const AuthContext = createContext();
 
 // API URL
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 // Context provider component
 export const AuthProvider = ({ children }) => {
@@ -25,7 +25,9 @@ export const AuthProvider = ({ children }) => {
           const originalRequest = error.config;
           
           // If error is 401 and we haven't already tried to refresh the token
-          if (error.response?.status === 401 && !originalRequest._retry) {
+          if (error.response?.status === 401 && 
+              !originalRequest._retry && 
+              error.response?.data?.message?.includes('expired')) {
             originalRequest._retry = true;
             
             try {
@@ -37,8 +39,15 @@ export const AuthProvider = ({ children }) => {
                 return Promise.reject(error);
               }
               
+              // Use a new axios instance to avoid interceptors loop
+              const axiosInstance = axios.create();
+              
               // Call refresh token API
-              const response = await axios.post(`${API_URL}/auth/refresh-token`, { refreshToken });
+              const response = await axiosInstance.post(`${API_URL}/auth/refresh-token`, { refreshToken });
+              
+              if (!response.data || !response.data.success) {
+                throw new Error('Token refresh failed');
+              }
               
               // Store new token
               const { token } = response.data;
@@ -52,6 +61,7 @@ export const AuthProvider = ({ children }) => {
               return axios(originalRequest);
             } catch (refreshError) {
               // Refresh token failed, force logout
+              console.error('Token refresh failed:', refreshError);
               logout();
               return Promise.reject(refreshError);
             }
@@ -84,6 +94,8 @@ export const AuthProvider = ({ children }) => {
         const decodedToken = jwt_decode(token);
         const currentTime = Date.now() / 1000;
         
+        let currentToken = token;
+        
         if (decodedToken.exp < currentTime) {
           // Token-ul a expirat, încercăm să folosim refresh token
           const refreshToken = localStorage.getItem('refreshToken');
@@ -99,12 +111,13 @@ export const AuthProvider = ({ children }) => {
             // Apelarea API pentru reînnoirea token-ului
             const response = await axios.post(`${API_URL}/auth/refresh-token`, { refreshToken });
             
-            // Salvarea noului token
-            const { token: newToken } = response.data;
-            localStorage.setItem('token', newToken);
+            if (!response.data || !response.data.success) {
+              throw new Error('Token refresh failed');
+            }
             
-            // Setarea header-ului de autorizare pentru toate cererile
-            axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+            // Salvarea noului token
+            currentToken = response.data.token;
+            localStorage.setItem('token', currentToken);
           } catch (refreshError) {
             // Eroare la reînnoirea token-ului, delogare
             console.error('Refresh token failed:', refreshError);
@@ -112,10 +125,10 @@ export const AuthProvider = ({ children }) => {
             setLoading(false);
             return;
           }
-        } else {
-          // Token-ul este valid, setăm header-ul de autorizare
-          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         }
+        
+        // Setarea header-ului de autorizare pentru toate cererile
+        axios.defaults.headers.common['Authorization'] = `Bearer ${currentToken}`;
         
         // Obținerea datelor utilizatorului curent
         try {

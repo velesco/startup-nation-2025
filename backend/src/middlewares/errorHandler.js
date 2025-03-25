@@ -26,15 +26,20 @@ exports.errorHandler = (err, req, res, next) => {
   // Log the error for debugging
   logger.error(`Error: ${err.stack}`);
 
+  // Log request details for better debugging
+  logger.error(`Request URL: ${req.originalUrl}`);
+  logger.error(`Request Method: ${req.method}`);
+  logger.error(`Request IP: ${req.ip}`);
+  
   // Mongoose bad ObjectId
   if (err.name === 'CastError') {
-    const message = 'Resource not found';
+    const message = `Resource not found with id of ${err.value}`;
     error = errorResponse(message, 404);
   }
 
   // Mongoose duplicate key
   if (err.code === 11000) {
-    const field = Object.keys(err.keyValue)[0];
+    const field = Object.keys(err.keyValue || {})[0] || 'field';
     const message = `Duplicate field value entered: ${field}. Please use another value.`;
     error = errorResponse(message, 400);
   }

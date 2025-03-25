@@ -16,7 +16,7 @@ const validationSchema = yup.object({
 });
 
 const LoginPage = () => {
-  const { login, error } = useAuth();
+  const { login, error, isAuthenticated, currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState(false);
@@ -25,6 +25,28 @@ const LoginPage = () => {
   // Obținem parametrul de rol din URL
   const queryParams = new URLSearchParams(location.search);
   const roleFromUrl = queryParams.get('role') || '';
+  const expired = queryParams.get('expired') === 'true';
+
+  // Verifică dacă utilizatorul este deja autentificat
+  useEffect(() => {
+    if (isAuthenticated && currentUser) {
+      // Redirecționare în funcție de rol
+      if (currentUser.role === 'client' || currentUser.role === 'user') {
+        navigate('/client/dashboard', { replace: true });
+      } else if (currentUser.role === 'trainer') {
+        navigate('/trainer/dashboard', { replace: true });
+      } else {
+        navigate('/admin/dashboard', { replace: true });
+      }
+    }
+  }, [isAuthenticated, currentUser, navigate]);
+
+  // Setează mesajul pentru sesiune expirată
+  useEffect(() => {
+    if (expired) {
+      setRedirectMessage('Sesiunea ta a expirat. Te rugăm să te autentifici din nou.');
+    }
+  }, [expired]);
 
   // Verifică dacă avem un email salvat din redirecționarea anterioară
   useEffect(() => {
@@ -52,8 +74,10 @@ const LoginPage = () => {
         // Redirecționare în funcție de rolul utilizatorului
         if (user.role === 'client' || user.role === 'user') {
           navigate('/client/dashboard', { replace: true });
+        } else if (user.role === 'trainer') {
+          navigate('/trainer/dashboard', { replace: true });
         } else {
-          navigate('/dashboard', { replace: true });
+          navigate('/admin/dashboard', { replace: true });
         }
       } catch (error) {
         // Error is handled by auth context

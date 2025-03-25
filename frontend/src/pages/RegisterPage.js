@@ -6,7 +6,7 @@ import { ChevronLeft, AlertCircle, CheckCircle, User, Building, Mail, Lock, Phon
 
 const RegisterPage = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated, login, currentUser } = useAuth();
   const location = useLocation();
   
   // Obținem parametrul de rol din URL
@@ -38,9 +38,17 @@ const RegisterPage = () => {
   // Verificăm dacă utilizatorul este deja autentificat
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/dashboard');
+      // Redirecționare în funcție de rol
+      const userRole = currentUser?.role;
+      if (userRole === 'client' || userRole === 'user') {
+        navigate('/client/dashboard', { replace: true });
+      } else if (userRole === 'trainer') {
+        navigate('/trainer/dashboard', { replace: true });
+      } else {
+        navigate('/admin/dashboard', { replace: true });
+      }
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, currentUser, navigate]);
   
   // Actualizăm state-ul formularului când se schimbă rolul în URL
   useEffect(() => {
@@ -88,7 +96,7 @@ const RegisterPage = () => {
       setLoading(true);
       setError(null);
       
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
       
       const response = await axios.post(`${API_URL}/auth/register`, {
         name: formData.name,
@@ -109,7 +117,14 @@ const RegisterPage = () => {
         setSuccess('Înregistrare realizată cu succes! Te vom redirecționa către dashboard...');
         
         setTimeout(() => {
-          navigate('/dashboard');
+          // Redirecționare în funcție de rolul utilizatorului înregistrat
+          if (user.role === 'client' || user.role === 'user') {
+            navigate('/client/dashboard', { replace: true });
+          } else if (user.role === 'trainer') {
+            navigate('/trainer/dashboard', { replace: true });
+          } else {
+            navigate('/admin/dashboard', { replace: true });
+          }
         }, 2000);
       } else {
         throw new Error(response.data?.message || 'Eroare la înregistrare');

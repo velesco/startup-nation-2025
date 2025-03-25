@@ -2,71 +2,48 @@ const mongoose = require('mongoose');
 
 const ActivitySchema = new mongoose.Schema(
   {
-    actor: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: [true, 'Activity must have an actor']
-    },
-    actorName: {
-      type: String
-    },
     action: {
       type: String,
-      required: [true, 'Activity must have an action description'],
-      trim: true
-    },
-    type: {
-      type: String,
+      required: true,
       enum: [
-        'meeting_create', 
-        'meeting_update', 
-        'meeting_delete', 
-        'participant_add', 
-        'participant_remove', 
-        'group_create', 
-        'group_update', 
-        'email_send', 
-        'document_upload', 
-        'comment_add',
-        'client_create',
-        'client_update',
-        'client_status',
-        'user_login',
-        'user_create',
-        'system_event'
-      ],
-      required: [true, 'Activity must have a type']
+        'LOGIN', 
+        'LOGOUT', 
+        'REGISTER', 
+        'UPDATE_PROFILE', 
+        'UPDATE_PASSWORD',
+        'UPDATE_ID_CARD',
+        'CLIENT_CREATED',
+        'CLIENT_UPDATED',
+        'CLIENT_DELETED',
+        'GROUP_CREATED',
+        'GROUP_UPDATED',
+        'GROUP_DELETED',
+        'DOCUMENT_UPLOADED',
+        'DOCUMENT_DELETED',
+        'MEETING_CREATED',
+        'MEETING_UPDATED',
+        'MEETING_DELETED',
+        'CONTRACT_GENERATED',
+        'CONTRACT_SIGNED',
+        'FORGOT_PASSWORD'
+      ]
+    },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
     },
     details: {
-      type: String,
-      trim: true
-    },
-    timestamp: {
-      type: Date,
-      default: Date.now
-    },
-    relatedTo: {
-      modelType: {
-        type: String,
-        enum: ['Meeting', 'Client', 'Group', 'Document', 'User']
-      },
-      modelId: {
-        type: mongoose.Schema.Types.ObjectId
-      },
-      modelName: {
-        type: String
-      }
-    },
-    visibility: {
-      type: String,
-      enum: ['Public', 'Private', 'Admin'],
-      default: 'Public'
+      type: String
     },
     ipAddress: {
       type: String
     },
     userAgent: {
       type: String
+    },
+    metadata: {
+      type: mongoose.Schema.Types.Mixed
     }
   },
   {
@@ -74,10 +51,8 @@ const ActivitySchema = new mongoose.Schema(
   }
 );
 
-// Index for faster querying
-ActivitySchema.index({ actor: 1 });
-ActivitySchema.index({ type: 1 });
-ActivitySchema.index({ timestamp: -1 });
-ActivitySchema.index({ 'relatedTo.modelType': 1, 'relatedTo.modelId': 1 });
+// Add index for faster querying
+ActivitySchema.index({ user: 1, createdAt: -1 });
+ActivitySchema.index({ action: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Activity', ActivitySchema);

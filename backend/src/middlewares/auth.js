@@ -24,8 +24,33 @@ exports.protect = async (req, res, next) => {
   }
 
   try {
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Verify token manually to provide better error messages
+    const decoded = jwt.decode(token);
+    
+    if (!decoded) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token format'
+      });
+    }
+    
+    // Check if token is expired
+    if (decoded.exp && Date.now() >= decoded.exp * 1000) {
+      return res.status(401).json({
+        success: false,
+        message: 'Token expired'
+      });
+    }
+    
+    // Verify the token signature
+    try {
+      jwt.verify(token, process.env.JWT_SECRET);
+    } catch (jwtError) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token signature'
+      });
+    }
 
     // Get user from id in token
     req.user = await User.findById(decoded.id);

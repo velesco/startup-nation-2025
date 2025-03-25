@@ -7,24 +7,28 @@ const {
   getResourceActivities,
   logActivity,
   getActivityStats,
-  deleteActivity
+  deleteActivity,
+  getUserActivities
 } = require('../controllers/activity.controller');
 
 // Routes
 router.route('/')
-  .get(protect, authorize('admin', 'partner'), getActivities)
+  .get(protect, authorize('admin', 'partner', 'super-admin'), getActivities)
   .post(protect, logActivity);
 
 router.route('/recent')
   .get(protect, getRecentActivities);
 
 router.route('/stats')
-  .get(protect, authorize('admin'), getActivityStats);
+  .get(protect, authorize('admin', 'super-admin'), getActivityStats);
 
 router.route('/resource/:modelType/:modelId')
   .get(protect, getResourceActivities);
 
+router.route('/user/:userId')
+  .get(protect, getUserActivities);
+
 router.route('/:id')
-  .delete(protect, authorize('admin'), deleteActivity);
+  .delete(protect, authorize('admin', 'super-admin'), deleteActivity);
 
 module.exports = router;
