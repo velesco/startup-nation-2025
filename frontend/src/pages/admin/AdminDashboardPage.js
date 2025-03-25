@@ -5,14 +5,10 @@ import {
   Users, 
   BarChart2, 
   Calendar, 
-  User, 
-  Bell, 
-  CheckCircle, 
   ArrowRight, 
   RefreshCw,
   Briefcase,
   PieChart,
-  TrendingUp
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import DashboardLayout from '../../components/layouts/DashboardLayout';

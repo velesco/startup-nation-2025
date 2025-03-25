@@ -140,15 +140,38 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
-  // Login function
-  const login = async (email, password) => {
+  // Login function - supports both credential login and token-based login
+  const login = async (emailOrToken, passwordOrRefreshToken, userData) => {
     try {
       setError(null);
       
-      console.log('Attemping login for email:', email);
+      // Case 1: We already have user data and tokens (e.g., after registration)
+      if (userData) {
+        const token = emailOrToken;
+        const refreshToken = passwordOrRefreshToken;
+        
+        // Save tokens to localStorage
+        localStorage.setItem('token', token);
+        localStorage.setItem('refreshToken', refreshToken);
+        
+        // Set auth header for all requests
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        
+        // Update state
+        setCurrentUser(userData);
+        setIsAuthenticated(true);
+        
+        return userData;
+      }
+      
+      // Case 2: Regular login with email and password
+      console.log('Attemping login for email:', emailOrToken);
       
       // Call login API
-      const response = await axios.post(`${API_URL}/auth/login`, { email, password });
+      const response = await axios.post(`${API_URL}/auth/login`, { 
+        email: emailOrToken, 
+        password: passwordOrRefreshToken 
+      });
       
       if (!response.data || !response.data.success) {
         throw new Error(response.data?.message || 'Autentificare eșuată');

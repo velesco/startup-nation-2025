@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 // Import Icons (using Material UI icons for now, can be replaced with custom SVG icons later)
@@ -14,9 +14,11 @@ import FileUploadIcon from '@mui/icons-material/FileUpload';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import PersonIcon from '@mui/icons-material/Person';
+import LogoutIcon from '@mui/icons-material/Logout';
 
 const DashboardPage = () => {
-  const { currentUser } = useAuth();
+  const navigate = useNavigate();
+  const { currentUser, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState(1);
   const [stats, setStats] = useState({
@@ -78,6 +80,15 @@ const DashboardPage = () => {
     { id: 3, name: "Creare Grupe", icon: <CalendarMonthIcon className="h-5 w-5" />, completed: user.clients.groupsCreated }
   ];
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
   useEffect(() => {
     // Simulate fetching data
     const timer = setTimeout(() => {
@@ -113,14 +124,23 @@ const DashboardPage = () => {
             </div>
             <h1 className="ml-2 font-semibold text-gray-800">Startup Nation 2025</h1>
           </div>
-          <div className="relative">
-            <button className="relative p-2 rounded-full text-gray-700 hover:bg-gray-100/50 transition">
-              <NotificationsIcon className="h-6 w-6" />
-              {user.notifications.filter(n => !n.read).length > 0 && (
-                <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
-                  {user.notifications.filter(n => !n.read).length}
-                </span>
-              )}
+          <div className="flex items-center">
+            <div className="relative mr-3">
+              <button className="relative p-2 rounded-full text-gray-700 hover:bg-gray-100/50 transition">
+                <NotificationsIcon className="h-6 w-6" />
+                {user.notifications.filter(n => !n.read).length > 0 && (
+                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
+                    {user.notifications.filter(n => !n.read).length}
+                  </span>
+                )}
+              </button>
+            </div>
+            <button 
+              onClick={handleLogout}
+              className="flex items-center rounded-lg px-3 py-1 text-gray-700 hover:bg-gray-100/50 transition"
+            >
+              <LogoutIcon className="h-5 w-5 mr-1" />
+              <span className="text-sm">Logout</span>
             </button>
           </div>
         </div>

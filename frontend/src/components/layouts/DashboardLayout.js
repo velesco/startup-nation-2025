@@ -55,20 +55,12 @@ const DashboardLayout = ({ children }) => {
               </div>
               <div>
                 <div className="text-lg font-bold text-gray-800">Startup Nation 2025</div>
-                <div className="text-xs text-gray-500">Portal Parteneri</div>
+                <div className="text-xs text-gray-500">Dashboard</div>
               </div>
             </div>
             
             {/* User Menu */}
             <div className="flex items-center space-x-4">
-              {/* Notification Bell */}
-              <div className="relative">
-                <button className="p-2 rounded-full bg-white/70 shadow-sm hover:bg-white/90 transition-colors">
-                  <Bell className="h-5 w-5 text-gray-600" />
-                  <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-gradient-to-r from-orange-500 to-pink-500"></span>
-                </button>
-              </div>
-              
               {/* User Profile Menu */}
               <div className="relative">
                 <button 
@@ -87,7 +79,7 @@ const DashboardLayout = ({ children }) => {
                     {getUserInitials()}
                   </div>
                   <ChevronDown className="h-4 w-4 text-gray-400" />
-                </button>
+                </button> 
                 
                 {/* Dropdown Menu */}
                 {showDropdown && (

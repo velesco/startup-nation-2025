@@ -12,6 +12,7 @@ import DashboardPage from './pages/DashboardPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ClientDashboardPage from './pages/client/ClientDashboardPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import TrainerDashboardPage from './pages/trainer/TrainerDashboardPage';
 
 // Admin Pages
 import AdminClientDetailPage from './pages/admin/AdminClientDetailPage';
@@ -48,6 +49,8 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
       // Redirecționare în funcție de rol
       if (userRole === 'client' || userRole === 'user') {
         return <Navigate to="/client/dashboard" />;
+      } else if (userRole === 'trainer') {
+        return <Navigate to="/trainer/dashboard" />;
       } else {
         return <Navigate to="/admin/dashboard" />;
       }
@@ -204,6 +207,16 @@ function App() {
           }
         />
         
+        {/* Rute protejate pentru traineri */}
+        <Route
+          path="/trainer/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['trainer']}>
+              <TrainerDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        
         {/* Rută implicită care redirecționează către pagina corespunzătoare rolului */}
         <Route path="*" element={<RoleBasedRedirect />} />
       </Routes>
@@ -239,6 +252,8 @@ const RoleBasedRedirect = () => {
   const userRole = currentUser?.role;
   if (userRole === 'client' || userRole === 'user') {
     return <Navigate to="/client/dashboard" />;
+  } else if (userRole === 'trainer') {
+    return <Navigate to="/trainer/dashboard" />;
   } else {
     return <Navigate to="/admin/dashboard" />;
   }
