@@ -6,6 +6,8 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
+backend/backups/
+backend/node_modules/
 
 # Node.js dependencies and build files
 node_modules/
