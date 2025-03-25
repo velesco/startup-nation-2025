@@ -26,6 +26,8 @@ build/
 .env.test.local
 .env.production.local
 
+frontend/.env.development
+
 # IDE and editor folders
 .idea/
 .vscode/
