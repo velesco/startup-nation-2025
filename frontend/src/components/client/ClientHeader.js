@@ -41,9 +41,6 @@ const ClientHeader = ({ user, onLogout, onRefresh }) => {
           <RefreshCw className={`h-5 w-5 ${isRefreshing ? 'text-gray-400 animate-spin' : 'text-gray-600'}`} />
         </div>
         <div className="relative">
-          <div className="h-10 w-10 rounded-full bg-white/80 backdrop-blur-sm shadow-md flex items-center justify-center">
-            <Bell className="h-5 w-5 text-gray-600" />
-          </div>
           {user?.notifications?.some(n => !n.read) && (
             <div className="absolute -top-1 -right-1 h-5 w-5 bg-gradient-to-r from-orange-400 to-pink-500 rounded-full flex items-center justify-center shadow-lg animate-pulse">
               <span className="text-white text-xs">{user.notifications.filter(n => !n.read).length}</span>

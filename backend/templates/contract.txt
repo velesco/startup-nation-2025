@@ -1,0 +1,17 @@
+Contract de participare la programul Startup Nation 2025
+
+Nume și prenume: {{nume_si_prenume}}
+
+Domiciliul: {{domiciliul_aplicantului}}
+
+Identificat cu CI: {{identificat_cu_ci}}
+
+Eliberat la data de: {{ci_eliberat_la_data_de}}
+
+Prin prezentul document, subsemnatul/subsemnata {{nume_si_prenume}}, domiciliat/ă în {{domiciliul_aplicantului}}, identificat/ă cu {{identificat_cu_ci}}, eliberat la data de {{ci_eliberat_la_data_de}}, confirm participarea în cadrul programului Startup Nation 2025.
+
+Mă angajez să respect termenii și condițiile programului și să furnizez toate informațiile necesare în mod corect și complet.
+
+Data: ______________
+
+Semnătura: ______________

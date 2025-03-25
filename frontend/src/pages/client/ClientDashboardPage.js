@@ -83,6 +83,8 @@ const ClientDashboardPage = () => {
           // Verificăm starea documentelor pentru a determina progresul
           const documents = userData.documents || {
             id_cardUploaded: false,
+            contractGenerated: false,
+            contractSigned: false,
             courseSelected: false,
             appDownloaded: false
           };
@@ -90,18 +92,25 @@ const ClientDashboardPage = () => {
           // Calculăm progresul utilizatorului în funcție de documentele încărcate
           const completedSteps = [
             documents.id_cardUploaded,
+            documents.contractSigned,
             documents.courseSelected,
             documents.appDownloaded
           ].filter(Boolean).length;
           
-          const progress = Math.round((completedSteps / 3) * 100);
+          const progress = Math.round((completedSteps / 4) * 100);
           
           // Determinăm pasul curent în funcție de progres
           let currentStepValue = 1;
+          
           if (documents.id_cardUploaded) {
-            currentStepValue = 1;
-            if (documents.courseSelected) {
-              currentStepValue = 3;
+            currentStepValue = 2; // Pas contract
+            
+            if (documents.contractSigned) {
+              currentStepValue = 3; // Pas selectare curs
+              
+              if (documents.courseSelected) {
+                currentStepValue = 4; // Pas instalare aplicație
+              }
             }
           }
           
@@ -439,7 +448,10 @@ const ClientDashboardPage = () => {
 
   // Progress steps
   const steps = user ? [
-    { id: 1, name: "Încărcare Buletin", icon: "document", completed: user.documents?.id_cardUploaded }
+    { id: 1, name: "Încărcare Buletin", icon: "document", completed: user.documents?.id_cardUploaded },
+    { id: 2, name: "Contract Participare", icon: "document", completed: user.documents?.contractSigned },
+    { id: 3, name: "Selectare Curs", icon: "calendar", completed: user.documents?.courseSelected },
+    { id: 4, name: "Instalare Aplicație", icon: "check", completed: user.documents?.appDownloaded }
   ] : [];
 
   const handleLogout = async () => {

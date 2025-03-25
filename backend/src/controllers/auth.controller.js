@@ -267,6 +267,52 @@ exports.forgotPassword = async (req, res, next) => {
 // @desc    Reset password
 // @route   PUT /api/auth/reset-password/:resettoken
 // @access  Public
+// @desc    Update ID card information
+// @route   PUT /api/auth/update-id-card
+// @access  Private
+exports.updateIdCard = async (req, res, next) => {
+  try {
+    const { 
+      CNP, 
+      fullName, 
+      address, 
+      series, 
+      number, 
+      issuedBy, 
+      birthDate, 
+      expiryDate 
+    } = req.body;
+
+    // Update user with ID card data
+    const user = await User.findByIdAndUpdate(
+      req.user.id, 
+      {
+        'idCard.CNP': CNP,
+        'idCard.fullName': fullName,
+        'idCard.address': address,
+        'idCard.series': series,
+        'idCard.number': number,
+        'idCard.issuedBy': issuedBy,
+        'idCard.birthDate': birthDate ? new Date(birthDate) : undefined,
+        'idCard.expiryDate': expiryDate ? new Date(expiryDate) : undefined,
+        'documents.id_cardUploaded': true
+      },
+      { new: true, runValidators: true }
+    );
+
+    // Log the ID card upload in the activity log
+    logActivity('UPDATE_ID_CARD', user, `User updated ID card information`);
+
+    res.status(200).json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    logger.error(`Update ID card error: ${error.message}`);
+    next(error);
+  }
+};
+
 exports.resetPassword = async (req, res, next) => {
   try {
     // Get hashed token

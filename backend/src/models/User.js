@@ -75,6 +75,53 @@ const UserSchema = new mongoose.Schema(
       appDownloaded: {
         type: Boolean,
         default: false
+      },
+      contractGenerated: {
+        type: Boolean,
+        default: false
+      }
+    },
+    contractSigned: {
+      type: Boolean,
+      default: false
+    },
+    contractSignedAt: {
+      type: Date
+    },
+    idCard: {
+      CNP: {
+        type: String,
+        trim: true
+      },
+      fullName: {
+        type: String,
+        trim: true
+      },
+      address: {
+        type: String,
+        trim: true
+      },
+      series: {
+        type: String,
+        trim: true
+      },
+      number: {
+        type: String,
+        trim: true
+      },
+      issuedBy: {
+        type: String,
+        trim: true
+      },
+      birthDate: {
+        type: Date
+      },
+      expiryDate: {
+        type: Date
+      },
+      verified: {
+        type: Boolean,
+        default: false
       }
     }
   },

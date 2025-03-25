@@ -58,6 +58,7 @@ const meetingRoutes = require('./routes/meeting.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const activityRoutes = require('./routes/activity.routes');
 const logRoutes = require('./routes/log.routes');
+const contractRoutes = require('./routes/contract.routes');
 
 app.use('/api/users', userRoutes);
 app.use('/api/clients', clientRoutes);
@@ -68,6 +69,7 @@ app.use('/api/meetings', meetingRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/logs', logRoutes);
+app.use('/api/contracts', contractRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

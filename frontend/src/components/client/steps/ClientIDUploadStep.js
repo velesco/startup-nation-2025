@@ -2,11 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Camera, ArrowRight, Upload, Check, XCircle, FileWarning, AlertCircle } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../../../contexts/AuthContext';
+import ClientIDCardDataForm from './ClientIDCardDataForm';
 
 const ClientIDUploadStep = ({ onStepComplete, userDocuments }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
-  const [uploadStatus, setUploadStatus] = useState('idle'); // idle, loading, success, error
+  const [uploadStatus, setUploadStatus] = useState('idle'); // idle, loading, success, success_with_form, error
+  const [showDataForm, setShowDataForm] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef(null);
@@ -15,9 +17,15 @@ const ClientIDUploadStep = ({ onStepComplete, userDocuments }) => {
   // Verificăm dacă buletinul a fost deja încărcat pentru a afișa starea corectă
   useEffect(() => {
     if (userDocuments && userDocuments.id_cardUploaded) {
-      setUploadStatus('success');
+      // Verificăm dacă utilizatorul are deja datele din buletin completate
+      if (currentUser?.idCard?.CNP && currentUser?.idCard?.fullName) {
+        setUploadStatus('success');
+      } else {
+        setUploadStatus('success_with_form');
+        setShowDataForm(true);
+      }
     }
-  }, [userDocuments]);
+  }, [userDocuments, currentUser]);
 
   // Gestionarea selecției fișierului
   const handleFileChange = (event) => {
@@ -133,15 +141,13 @@ const ClientIDUploadStep = ({ onStepComplete, userDocuments }) => {
       // Verificare răspuns - acceptăm și alte formate de răspuns
       if (response.data.success || response.status === 200) {
         console.log('Încărcare reușită!');
-        setUploadStatus('success');
         
-        // Notificăm componenta părinte că acest pas a fost completat
-        if (onStepComplete && typeof onStepComplete === 'function') {
-          console.log('Se apelează onStepComplete...');
-          setTimeout(() => {
-            onStepComplete('id_card');
-          }, 1000);
-        }
+        // Setăm starea pentru a afișa formularul de date
+        setUploadStatus('success_with_form'); 
+        setShowDataForm(true);
+        
+        // Notificăm componenta părinte doar după ce utilizatorul alege să continue
+        // NU mai apelăm automat onStepComplete
       } else {
         console.error('Răspunsul nu indică succes:', response.data);
         throw new Error(response.data.message || 'Eroare la încărcarea documentului');
@@ -173,11 +179,34 @@ const ClientIDUploadStep = ({ onStepComplete, userDocuments }) => {
     }
   };
 
+  // Handler pentru finalizarea completării formularului
+  const handleFormCompleted = () => {
+    setUploadStatus('success');
+    setShowDataForm(false);
+    
+    // Nu mai notificăm componenta părinte pentru a nu trece automat la următorul pas
+    // Utilizatorul va trebui să aleagă manual când dorește să continue
+  };
+
+  // Handler pentru a continua la următorul pas
+  const handleContinue = () => {
+    // Notificăm componenta părinte că acest pas a fost completat
+    if (onStepComplete && typeof onStepComplete === 'function') {
+      onStepComplete('id_card');
+    }
+  };
+
   return (
     <div className="bg-white/70 backdrop-blur-md rounded-3xl p-6 mb-8 shadow-lg border border-white/50">
       <h2 className="text-xl font-bold mb-6 bg-gradient-to-r from-gray-700 to-gray-900 bg-clip-text text-transparent">Încărcare Buletin</h2>
       
-      {uploadStatus === 'success' ? (
+      {showDataForm ? (
+        // Afișăm formularul de introducere date buletin
+        <ClientIDCardDataForm 
+          onCompleted={handleFormCompleted} 
+          onCancel={() => setShowDataForm(false)}
+        />
+      ) : uploadStatus === 'success' ? (
         <div className="border-2 border-green-200 rounded-2xl p-8 flex flex-col items-center justify-center bg-green-50/50">
           <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4 shadow-md">
             <Check className="h-8 w-8 text-green-500" />
@@ -186,11 +215,29 @@ const ClientIDUploadStep = ({ onStepComplete, userDocuments }) => {
           <p className="text-center text-gray-600 mb-6">
             Documentul tău a fost transmis și va fi verificat în cel mai scurt timp.
           </p>
-          <button 
-            onClick={handleCancel}
-            className="bg-white text-gray-700 border border-gray-300 px-6 py-2 rounded-full font-medium shadow-sm hover:bg-gray-50 transition-all duration-300"
+          
+          <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 mb-6">
+            <button 
+              onClick={() => setShowDataForm(true)}
+              className="bg-blue-600 text-white border border-blue-600 px-6 py-2 rounded-full font-medium shadow-sm hover:bg-blue-700 transition-all duration-300"
+            >
+              Editează datele din buletin
+            </button>
+            <button 
+              onClick={handleCancel}
+              className="bg-white text-gray-700 border border-gray-300 px-6 py-2 rounded-full font-medium shadow-sm hover:bg-gray-50 transition-all duration-300"
+            >
+              Încarcă alt document
+            </button>
+          </div>
+          
+          {/* Buton pentru a continua la următorul pas */}
+          <button
+            onClick={handleContinue}
+            className="bg-gradient-to-r from-green-500 to-green-600 text-white px-8 py-2 rounded-full font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center"
           >
-            Încarcă alt document
+            <span>Continuă la următorul pas</span>
+            <ArrowRight className="h-4 w-4 ml-2" />
           </button>
         </div>
       ) : (

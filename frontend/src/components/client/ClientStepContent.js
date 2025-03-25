@@ -3,6 +3,7 @@ import { Camera, Calendar, CheckCircle, Clock, ArrowRight, ChevronLeft, ChevronR
 import ClientIDUploadStep from './steps/ClientIDUploadStep';
 import ClientCourseSelectStep from './steps/ClientCourseSelectStep';
 import ClientAppDownloadStep from './steps/ClientAppDownloadStep';
+import ClientContractStep from './steps/ClientContractStep';
 
 const ClientStepContent = ({ step, updateUserData, userDocuments }) => {
   // Log pentru debugging
@@ -14,7 +15,7 @@ const ClientStepContent = ({ step, updateUserData, userDocuments }) => {
   }, [step, userDocuments, updateUserData]);
 
   // Funcție pentru gestionarea completării unui pas
-  const handleStepComplete = async (stepType) => {
+  const handleStepComplete = async (stepType, updatedDocs) => {
     console.log(`Pas completat: ${stepType}`);
     
     // Actualizare date utilizator în funcție de pasul completat
@@ -23,29 +24,37 @@ const ClientStepContent = ({ step, updateUserData, userDocuments }) => {
         console.log(`Se actualizează datele utilizatorului pentru pasul: ${stepType}`);
         console.log('Date utilizator înainte de actualizare:', userDocuments);
         
-        let updatedDocs = {};
+        let docsToUpdate = updatedDocs || {};
         
-        switch (stepType) {
-          case 'id_card':
-            updatedDocs = { ...userDocuments, id_cardUploaded: true };
-            console.log('Documente actualizate (ID Card):', updatedDocs);
-            await updateUserData({ documents: updatedDocs });
-            break;
-          case 'course_select':
-            updatedDocs = { ...userDocuments, courseSelected: true };
-            console.log('Documente actualizate (Curs):', updatedDocs);
-            await updateUserData({ documents: updatedDocs });
-            break;
-          case 'app_download':
-            updatedDocs = { ...userDocuments, appDownloaded: true };
-            console.log('Documente actualizate (App):', updatedDocs);
-            await updateUserData({ documents: updatedDocs });
-            break;
-          default:
-            console.warn(`Tip de pas necunoscut: ${stepType}`);
-            break;
+        if (!updatedDocs) {
+          // Dacă nu avem documente actualizate, construim în funcție de tipul pasului
+          switch (stepType) {
+            case 'id_card':
+              docsToUpdate = { ...userDocuments, id_cardUploaded: true };
+              break;
+            case 'course_select':
+              docsToUpdate = { ...userDocuments, courseSelected: true };
+              break;
+            case 'app_download':
+              docsToUpdate = { ...userDocuments, appDownloaded: true };
+              break;
+            case 'contract_generate':
+              docsToUpdate = { ...userDocuments, contractGenerated: true };
+              break;
+            case 'contract_sign':
+              docsToUpdate = { ...userDocuments, contractGenerated: true, contractSigned: true };
+              break;
+            case 'contract_complete':
+              docsToUpdate = { ...userDocuments, contractComplete: true };
+              break;
+            default:
+              console.warn(`Tip de pas necunoscut: ${stepType}`);
+              break;
+          }
         }
         
+        console.log('Documente actualizate:', docsToUpdate);
+        await updateUserData({ documents: docsToUpdate });
         console.log('Actualizare date utilizator reușită!');
       } catch (error) {
         console.error('Eroare la actualizarea datelor utilizatorului:', error);
@@ -59,8 +68,10 @@ const ClientStepContent = ({ step, updateUserData, userDocuments }) => {
     case 1:
       return <ClientIDUploadStep onStepComplete={handleStepComplete} userDocuments={userDocuments} />;
     case 2:
-      return <ClientCourseSelectStep onStepComplete={handleStepComplete} userDocuments={userDocuments} />;
+      return <ClientContractStep onStepComplete={handleStepComplete} userDocuments={userDocuments} />;
     case 3:
+      return <ClientCourseSelectStep onStepComplete={handleStepComplete} userDocuments={userDocuments} />;
+    case 4:
       return <ClientAppDownloadStep onStepComplete={handleStepComplete} userDocuments={userDocuments} />;
     default:
       return <ClientIDUploadStep onStepComplete={handleStepComplete} userDocuments={userDocuments} />;

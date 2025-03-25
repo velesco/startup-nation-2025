@@ -11,7 +11,8 @@ const {
   forgotPassword, 
   resetPassword,
   refreshToken,
-  checkEmail
+  checkEmail,
+  updateIdCard
 } = require('../controllers/auth.controller');
 
 // Public routes
@@ -27,5 +28,6 @@ router.get('/logout', protect, logout);
 router.get('/me', protect, getMe);
 router.put('/update-details', protect, updateDetails);
 router.put('/update-password', protect, updatePassword);
+router.put('/update-id-card', protect, updateIdCard);
 
 module.exports = router;
