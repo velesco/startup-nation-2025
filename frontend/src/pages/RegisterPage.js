@@ -100,10 +100,16 @@ const RegisterPage = () => {
       });
       
       if (response.data && response.data.success) {
-        setSuccess('Înregistrare realizată cu succes! Te vom redirecționa către pagina de login...');
+        // Get token and user data from response
+        const { token, refreshToken, user } = response.data;
+        
+        // Call login function from AuthContext to set user as authenticated
+        login(token, refreshToken, user);
+        
+        setSuccess('Înregistrare realizată cu succes! Te vom redirecționa către dashboard...');
         
         setTimeout(() => {
-          navigate(`/login?role=${formData.role}`);
+          navigate('/dashboard');
         }, 2000);
       } else {
         throw new Error(response.data?.message || 'Eroare la înregistrare');

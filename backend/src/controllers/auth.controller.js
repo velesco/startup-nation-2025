@@ -36,11 +36,9 @@ exports.register = async (req, res, next) => {
     // Log the new user registration in the activity log
     logActivity('REGISTER', user, `New ${user.role} registration`);
     
-    // If this is a client, set the lastLogin to now since they will be auto-logged in
-    if (user.role === 'client') {
-      user.lastLogin = Date.now();
-      await user.save({ validateBeforeSave: false });
-    }
+    // Set the lastLogin to now for all users since they will be auto-logged in
+    user.lastLogin = Date.now();
+    await user.save({ validateBeforeSave: false });
 
     // Send response with token
     sendTokenResponse(user, 201, res);
