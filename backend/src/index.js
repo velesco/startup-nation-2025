@@ -36,16 +36,26 @@ app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 // Configurație pentru express-fileupload cu limite rezonabile
-app.use(fileUpload({
-  useTempFiles: true,
-  tempFileDir: '/tmp/',
-  createParentPath: true,
-  limits: { 
-    fileSize: 50 * 1024 * 1024, // 50MB limită maximă
-    abortOnLimit: true 
-  },
-  debug: process.env.NODE_ENV === 'development' // Debug doar în mod dezvoltare
-}));
+app.use((req, res, next) => {
+  // Excludem rutele pentru contracte de la middleware-ul fileUpload
+  if (req.originalUrl.startsWith('/api/contracts/download') ||
+      req.originalUrl.startsWith('/api/contracts/generate') ||
+      req.originalUrl.startsWith('/api/contracts/template')) {
+    return next();
+  }
+  
+  // Aplicăm middleware-ul fileUpload pentru toate celelalte rute
+  fileUpload({
+    useTempFiles: true,
+    tempFileDir: '/tmp/',
+    createParentPath: true,
+    limits: { 
+      fileSize: 50 * 1024 * 1024, // 50MB limită maximă
+      abortOnLimit: true 
+    },
+    debug: process.env.NODE_ENV === 'development' // Debug doar în mod dezvoltare
+  })(req, res, next);
+});
 
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

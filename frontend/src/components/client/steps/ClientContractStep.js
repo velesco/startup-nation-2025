@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, Check, AlertCircle, FileCheck, Printer, Search, ArrowRight } from 'lucide-react';
+import { FileText, Download, Check, AlertCircle, FileCheck, Printer, Search, ArrowRight, UserRound, X } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -11,16 +11,228 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
   const [contractGenerated, setContractGenerated] = useState(false);
   const [viewingContract, setViewingContract] = useState(false);
   const [contractSigned, setContractSigned] = useState(false);
+  const [loadingDownload, setLoadingDownload] = useState(false);
+  const [loadingReset, setLoadingReset] = useState(false);
+  const [showDevInfo, setShowDevInfo] = useState(false);
+  const [showIdCardDialog, setShowIdCardDialog] = useState(false);
+  const [idCardFormData, setIdCardFormData] = useState({});
+  const [idCardFormLoading, setIdCardFormLoading] = useState(false);
+  const [idCardMissingFields, setIdCardMissingFields] = useState([]);
+  
+  // Dezactivez devInfo în producție
+  const isDev = process.env.NODE_ENV === 'development';
 
   // Verifică dacă contractul a fost generat/semnat anterior
   useEffect(() => {
-    if (userDocuments && userDocuments.contractGenerated) {
-      setContractGenerated(true);
-    }
-    if (userDocuments && userDocuments.contractSigned) {
-      setContractSigned(true);
+    if (userDocuments) {
+      if (userDocuments.contractGenerated) {
+        setContractGenerated(true);
+      }
+      if (userDocuments.contractSigned) {
+        setContractSigned(true);
+      }
+      // Dacă este semnat sau generat, încercăm să preîncărcăm URL-ul contractului
+      if ((userDocuments.contractGenerated || userDocuments.contractSigned) && !contractUrl) {
+        handleDownloadContract(true);
+      }
     }
   }, [userDocuments]);
+  
+  // Verificare date buletin înainte de generare contract
+  const checkIdCardData = async () => {
+    setError('');
+    
+    try {
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('Nu există token de autentificare. Te rugăm să te conectezi din nou.');
+      }
+      
+      const response = await axios.post(
+        `${API_URL}/contracts/validate-id-card`,
+        {},
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      if (response.data && response.data.success) {
+        // Toate datele sunt complete, putem genera contractul
+        handleGenerateContract();
+      } else {
+        // Avem câmpuri lipsă, trebuie să le completăm
+        setIdCardMissingFields(response.data?.missingFields || []);
+        setShowIdCardDialog(true);
+      }
+    } catch (error) {
+      console.error('Eroare la verificarea datelor din buletin:', error);
+      if (error.response?.data?.missingFields) {
+        // Avem câmpuri lipsă, deschidem formularul
+        setIdCardMissingFields(error.response.data.missingFields);
+        setShowIdCardDialog(true);
+      } else {
+        setError(error.response?.data?.message || error.message || 'A apărut o eroare la verificarea datelor din buletin.');
+      }
+    }
+  };
+  
+  // Funcție pentru trimiterea datelor din formularul de buletin
+  const submitIdCardForm = async (e) => {
+    e.preventDefault();
+    setIdCardFormLoading(true);
+    setError('');
+    
+    try {
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('Nu există token de autentificare. Te rugăm să te conectezi din nou.');
+      }
+      
+      const response = await axios.post(
+        `${API_URL}/contracts/validate-id-card`,
+        idCardFormData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      if (response.data && response.data.success) {
+        // Datele au fost salvate cu succes, închidem dialogul
+        setShowIdCardDialog(false);
+        // Generează contractul
+        handleGenerateContract();
+      } else {
+        // Mai sunt câmpuri lipsă
+        setIdCardMissingFields(response.data?.missingFields || []);
+        setError(response.data?.message || 'Unele câmpuri sunt încă incomplete.');
+      }
+    } catch (error) {
+      console.error('Eroare la salvarea datelor din buletin:', error);
+      setError(error.response?.data?.message || error.message || 'A apărut o eroare la salvarea datelor din buletin.');
+    } finally {
+      setIdCardFormLoading(false);
+    }
+  };
+  
+  // Actualizare câmp formular
+  const handleIdCardFormChange = (e) => {
+    const { name, value } = e.target;
+    setIdCardFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+  
+  // Funcție pentru resetarea contractului
+  const handleResetContract = async () => {
+    if (loadingReset) return;
+    
+    setLoadingReset(true);
+    setError('');
+    
+    try {
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('Nu există token de autentificare. Te rugăm să te conectezi din nou.');
+      }
+      
+      // Apelăm API-ul pentru a reseta statusul contractului
+      const response = await axios.post(
+        `${API_URL}/contracts/reset`,
+        {},
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      if (response.data && response.data.success) {
+        setContractGenerated(false);
+        setContractSigned(false);
+        setContractUrl('');
+        
+        // Notificăm componenta părinte că s-a resetat contractul
+        if (onStepComplete && typeof onStepComplete === 'function') {
+          // Actualizăm userDocuments pentru a marca contractul ca resetat
+          const updatedDocs = { 
+            ...userDocuments, 
+            contractGenerated: false,
+            contractSigned: false,
+            contractPath: null
+          };
+          onStepComplete('contract_reset', updatedDocs);
+        }
+      } else {
+        throw new Error(response.data?.message || 'Eroare la resetarea contractului.');
+      }
+    } catch (error) {
+      console.error('Eroare la resetarea contractului:', error);
+      setError(error.response?.data?.message || error.message || 'A apărut o eroare la resetarea contractului. Te rugăm să încerci din nou.');
+    } finally {
+      setLoadingReset(false);
+    }
+  };
+  
+  // Funcție pentru a descărca contractul existent
+  const handleDownloadContract = async (preloadOnly = false) => {
+    if (loadingDownload) return;
+    
+    setLoadingDownload(true);
+    setError('');
+    
+    try {
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('Nu există token de autentificare. Te rugăm să te conectezi din nou.');
+      }
+      
+      // Facem request pentru a descărca contractul salvat
+      const response = await axios.get(`${API_URL}/contracts/download`, {
+        responseType: 'blob',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      // Creăm un URL pentru blob-ul primit
+      const blob = new Blob([response.data], { 
+        type: response.headers['content-type'] || 'application/pdf' 
+      });
+      const url = URL.createObjectURL(blob);
+      
+      // Stocăm URL-ul contractului
+      setContractUrl(url);
+      
+      // Dacă nu este preload, deschidem contractul într-o fereastră nouă
+      if (!preloadOnly) {
+        window.open(url, '_blank');
+      }
+      
+    } catch (error) {
+      console.error('Eroare la descărcarea contractului:', error);
+      if (!preloadOnly) { // Afișăm eroarea doar dacă nu este preload
+        setError(error.response?.data?.message || error.message || 'A apărut o eroare la descărcarea contractului.');
+      }
+    } finally {
+      setLoadingDownload(false);
+    }
+  };
 
   // Generează contractul bazat pe datele din buletin
   const handleGenerateContract = async () => {
@@ -34,11 +246,6 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
       
       if (!token) {
         throw new Error('Nu există token de autentificare. Te rugăm să te conectezi din nou.');
-      }
-      
-      // Verificăm dacă datele din buletin sunt completate
-      if (!currentUser.idCard || !currentUser.idCard.CNP || !currentUser.idCard.fullName) {
-        throw new Error('Datele din buletin nu sunt complete. Te rugăm să completezi toate datele din buletin înainte de a genera contractul.');
       }
       
       // Nu putem folosi window.open direct pentru endpoint-uri care necesită autorizare
@@ -156,24 +363,31 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
           
           {contractUrl && (
             <div className="flex space-x-4 mb-6">
-              <a 
-                href={contractUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={() => handleDownloadContract()}
+                disabled={loadingDownload}
                 className="bg-blue-600 text-white px-4 py-2 rounded-full font-medium shadow-md hover:bg-blue-700 transition-all duration-300 flex items-center"
               >
-                <Download className="h-4 w-4 mr-2" />
-                <span>Descarcă contract</span>
-              </a>
-              <a 
-                href={contractUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+                {loadingDownload ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    <span>Se descarcă...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    <span>Descarcă contract</span>
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => contractUrl ? window.open(contractUrl, '_blank') : handleDownloadContract()}
+                disabled={loadingDownload && !contractUrl}
                 className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-full font-medium shadow-sm hover:bg-gray-50 transition-all duration-300 flex items-center"
               >
                 <Printer className="h-4 w-4 mr-2" />
                 <span>Printează</span>
-              </a>
+              </button>
             </div>
           )}
           
@@ -200,24 +414,40 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
           </p>
           
           <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 mb-6">
-            <a 
-              href={contractUrl || '#'}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => contractUrl ? window.open(contractUrl, '_blank') : handleDownloadContract()}
+              disabled={loadingDownload && !contractUrl}
               className="bg-blue-600 text-white px-4 py-2 rounded-full font-medium shadow-md hover:bg-blue-700 transition-all duration-300 flex items-center justify-center"
             >
-              <Search className="h-4 w-4 mr-2" />
-              <span>Vizualizează contract</span>
-            </a>
-            <a 
-              href={contractUrl || '#'}
-              target="_blank"
-              rel="noopener noreferrer"
+              {loadingDownload && !contractUrl ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  <span>Se încarcă...</span>
+                </>
+              ) : (
+                <>
+                  <Search className="h-4 w-4 mr-2" />
+                  <span>Vizualizează contract</span>
+                </>
+              )}
+            </button>
+            <button
+              onClick={() => handleDownloadContract()}
+              disabled={loadingDownload}
               className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-full font-medium shadow-sm hover:bg-gray-50 transition-all duration-300 flex items-center justify-center"
             >
-              <Download className="h-4 w-4 mr-2" />
-              <span>Descarcă contract</span>
-            </a>
+              {loadingDownload ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-700 mr-2"></div>
+                  <span>Se descarcă...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  <span>Descarcă contract</span>
+                </>
+              )}
+            </button>
           </div>
           
           <button
@@ -250,7 +480,7 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
           </p>
           
           <button 
-            onClick={handleGenerateContract}
+            onClick={checkIdCardData}
             disabled={loading}
             className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-full font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center"
           >
@@ -278,7 +508,229 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
           <li>Contractul este disponibil în format PDF pentru descărcare și printare.</li>
           <li>Contractul semnat electronic are aceeași valoare ca un contract semnat fizic.</li>
         </ul>
+        
+        {(contractGenerated || contractSigned) && (
+          <div className="mt-4 border-t border-gray-200 pt-4">
+            <p className="text-xs text-gray-500 mb-2">
+              {contractSigned 
+                ? 'Dacă ai probleme cu vizualizarea contractului semnat, poți reseta starea contractului pentru a-l regenera.' 
+                : 'Ai întâmpinat probleme cu generarea contractului? Poți încerca să resetezi contractul.'}
+            </p>
+            <button
+              onClick={handleResetContract}
+              disabled={loadingReset}
+              className="text-xs text-red-600 hover:text-red-800 font-medium flex items-center"
+            >
+              {loadingReset ? (
+                <>
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
+                  <span>Se procesează...</span>
+                </>
+              ) : (
+                <>
+                  <span>Resetează stare contract</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+        
+        {isDev && (
+          <div className="mt-4 border-t border-gray-300 pt-4">
+            <button 
+              onClick={() => setShowDevInfo(!showDevInfo)}
+              className="text-xs text-gray-600 hover:text-gray-800 flex items-center"
+            >
+              
+              <span>{showDevInfo ? 'Ascunde informații debug' : 'Arată informații debug'}</span>
+            </button>
+            
+            {showDevInfo && (
+              <div className="mt-2 p-2 bg-gray-100 rounded text-xs">
+                <h4 className="font-medium mb-1">Informații ID Card:</h4>
+                <pre className="whitespace-pre-wrap overflow-auto max-h-96 text-xs">
+                  {currentUser && currentUser.idCard ? JSON.stringify(currentUser.idCard, null, 2) : 'Nu există date ID Card'}
+                </pre>
+                
+                <h4 className="font-medium mt-3 mb-1">Informații Documents:</h4>
+                <pre className="whitespace-pre-wrap overflow-auto max-h-96 text-xs">
+                  {userDocuments ? JSON.stringify(userDocuments, null, 2) : 'Nu există documents'}
+                </pre>
+                
+                <div className="mt-3 flex space-x-2">
+                  <button
+                    onClick={() => alert(JSON.stringify(currentUser?.idCard || {}, null, 2))}
+                    className="bg-gray-200 hover:bg-gray-300 text-xs px-2 py-1 rounded"
+                  >
+                    Alert ID Card
+                  </button>
+                  <button
+                    onClick={() => window.localStorage.setItem('idCardDebug', JSON.stringify(currentUser?.idCard || {}))}
+                    className="bg-gray-200 hover:bg-gray-300 text-xs px-2 py-1 rounded"
+                  >
+                    Save to localStorage
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
+      
+      {/* Modal pentru completarea datelor din buletin lipsă */}
+      {showIdCardDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold flex items-center">
+                <UserRound className="h-5 w-5 mr-2 text-blue-500" />
+                <span>Completează datele din buletin</span>
+              </h3>
+              <button 
+                onClick={() => setShowIdCardDialog(false)} 
+                className="p-1 rounded-full hover:bg-gray-100"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            
+            {error && (
+              <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm flex items-start">
+                <AlertCircle className="h-4 w-4 mr-2 flex-shrink-0 mt-0.5" />
+                <p>{error}</p>
+              </div>
+            )}
+            
+            <p className="text-sm text-gray-600 mb-4">
+              Unele date din buletin lipsesc. Te rugăm să completezi următoarele câmpuri pentru a putea genera contractul.
+            </p>
+            
+            <form onSubmit={submitIdCardForm}>
+              <div className="space-y-4">
+                {idCardMissingFields.includes('CNP') && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">CNP</label>
+                    <input
+                      type="text"
+                      name="CNP"
+                      value={idCardFormData.CNP || ''}
+                      onChange={handleIdCardFormChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                      required
+                    />
+                  </div>
+                )}
+                
+                {idCardMissingFields.includes('nume și prenume') && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nume și prenume</label>
+                    <input
+                      type="text"
+                      name="fullName"
+                      value={idCardFormData.fullName || ''}
+                      onChange={handleIdCardFormChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                      required
+                    />
+                  </div>
+                )}
+                
+                {idCardMissingFields.includes('adresa') && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Adresa</label>
+                    <textarea
+                      name="address"
+                      value={idCardFormData.address || ''}
+                      onChange={handleIdCardFormChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                      rows="2"
+                      required
+                    ></textarea>
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-2 gap-4">
+                  {idCardMissingFields.includes('seria') && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Seria</label>
+                      <input
+                        type="text"
+                        name="series"
+                        value={idCardFormData.series || ''}
+                        onChange={handleIdCardFormChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                        required
+                      />
+                    </div>
+                  )}
+                  
+                  {idCardMissingFields.includes('numărul') && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Număr</label>
+                      <input
+                        type="text"
+                        name="number"
+                        value={idCardFormData.number || ''}
+                        onChange={handleIdCardFormChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                        required
+                      />
+                    </div>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Emis de</label>
+                    <input
+                      type="text"
+                      name="issuedBy"
+                      value={idCardFormData.issuedBy || ''}
+                      onChange={handleIdCardFormChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Data nașterii</label>
+                    <input
+                      type="date"
+                      name="birthDate"
+                      value={idCardFormData.birthDate || ''}
+                      onChange={handleIdCardFormChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowIdCardDialog(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Anulează
+                </button>
+                <button
+                  type="submit"
+                  disabled={idCardFormLoading}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md shadow-sm text-sm font-medium hover:bg-blue-700 flex items-center"
+                >
+                  {idCardFormLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      <span>Se salvează...</span>
+                    </>
+                  ) : (
+                    <span>Salvează și generează contract</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
