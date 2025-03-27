@@ -7,6 +7,9 @@ const {
   getClients,
   getGroups,
   getUsers,
+  getUserById,
+  updateUser,
+  addUser,
   addClient,
   addGroup,
   getClientById,
@@ -16,6 +19,8 @@ const {
   getClientStatistics,
   getClientDocuments,
   uploadClientDocument,
+  getUserDocuments,
+  uploadUserDocument,
   downloadDocument,
   deleteDocument
 } = require('../controllers/admin.controller');
@@ -54,6 +59,17 @@ router.route('/groups')
   .post(authorize('admin'), addGroup);
 
 // User routes - restricted to admin only
-router.get('/users', authorize('admin', 'super-admin'), getUsers);
+router.route('/users')
+  .get(authorize('admin', 'super-admin'), getUsers)
+  .post(authorize('admin', 'super-admin'), addUser);
+
+router.route('/users/:id')
+  .get(authorize('admin', 'super-admin'), getUserById)
+  .put(authorize('admin', 'super-admin'), updateUser);
+
+// User Document routes
+router.route('/users/:id/documents')
+  .get(authorize('admin', 'super-admin'), getUserDocuments)
+  .post(authorize('admin', 'super-admin'), uploadUserDocument);
 
 module.exports = router;

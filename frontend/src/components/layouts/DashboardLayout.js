@@ -6,7 +6,9 @@ import {
   BookOpen, 
   BarChart2, 
   LogOut,
-  ChevronDown
+  ChevronDown,
+  Shield,
+  UserCircle2
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -151,6 +153,21 @@ const DashboardLayout = ({ children }) => {
               <Users className="h-5 w-5 mr-2" />
               Clienți
             </Link>
+            
+            {/* Users link - visible only for admin users */}
+            {currentUser && currentUser.role === 'admin' && (
+              <Link
+                to="/admin/users"
+                className={`flex items-center px-2 py-4 ${
+                  isActive('/admin/users')
+                    ? 'text-blue-600 border-b-2 border-blue-600 font-medium'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Shield className="h-5 w-5 mr-2" />
+                Utilizatori
+              </Link>
+            )}
             
             <Link
               to="/admin/groups"

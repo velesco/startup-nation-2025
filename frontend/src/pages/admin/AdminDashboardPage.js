@@ -9,6 +9,8 @@ import {
   RefreshCw,
   Briefcase,
   PieChart,
+  UserPlus,
+  Shield
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import DashboardLayout from '../../components/layouts/DashboardLayout';
@@ -19,6 +21,7 @@ import ParticipationChart from '../../components/admin/dashboard/ParticipationCh
 import UpcomingMeetingsCalendar from '../../components/admin/dashboard/UpcomingMeetingsCalendar';
 import NotificationsPanel from '../../components/admin/dashboard/NotificationsPanel';
 import RecentActivitiesPanel from '../../components/admin/dashboard/RecentActivitiesPanel';
+import AllUsersPanel from '../../components/admin/dashboard/AllUsersPanel';
 
 const AdminDashboardPage = () => {
   const navigate = useNavigate();
@@ -322,6 +325,13 @@ const AdminDashboardPage = () => {
             <ParticipationChart data={dashboardData?.meetingParticipation || []} />
           </div>
         </div>
+
+        {/* Lista utilizatori - vizibilă doar pentru admini */}
+        {currentUser && currentUser.role === 'admin' && (
+          <div className="mb-6">
+            <AllUsersPanel />
+          </div>
+        )}
         
         {/* Calendar întâlniri și panouri informații */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

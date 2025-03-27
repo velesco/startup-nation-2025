@@ -4,6 +4,10 @@ const User = require('../models/User');
 const Document = require('../models/Document');
 const mongoose = require('mongoose');
 const logger = require('../utils/logger');
+const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const path = require('path');
+const { v4: uuidv4 } = require('uuid');
 
 // @desc    Get dashboard statistics
 // @route   GET /api/admin/dashboard
@@ -145,9 +149,6 @@ exports.uploadClientDocument = async (req, res, next) => {
       const uploadedFile = req.files.document;
       
       // Crearea directorului pentru client dacă nu există
-      const fs = require('fs');
-      const path = require('path');
-      const { v4: uuidv4 } = require('uuid');
       const uploadDir = path.join(__dirname, '../../uploads', clientId);
       
       if (!fs.existsSync(uploadDir)) {
@@ -215,7 +216,6 @@ exports.uploadClientDocument = async (req, res, next) => {
       logger.error(`Error creating document record: ${err.message}`);
       // Dacă apare o eroare la crearea documentului în baza de date, ștergem fișierul
       if (file && file.path) {
-        const fs = require('fs');
         if (fs.existsSync(file.path)) {
           fs.unlinkSync(file.path);
         }
@@ -253,7 +253,6 @@ exports.downloadDocument = async (req, res, next) => {
     }
     
     // Verificăm dacă fișierul există pe disc
-    const fs = require('fs');
     if (!fs.existsSync(document.path)) {
       return res.status(404).json({
         success: false,
@@ -293,7 +292,6 @@ exports.deleteDocument = async (req, res, next) => {
     }
     
     // Delete file from storage
-    const fs = require('fs');
     if (fs.existsSync(document.path)) {
       fs.unlinkSync(document.path);
     }
@@ -470,7 +468,7 @@ exports.getUsers = async (req, res, next) => {
   try {
     const { 
       page = 1, 
-      limit = 10, 
+      limit = 100, // Setting a higher default limit
       search = '', 
       role, 
       sortBy = 'createdAt', 
@@ -482,8 +480,8 @@ exports.getUsers = async (req, res, next) => {
     
     // Check user role for access restrictions
     if (req.user.role !== 'admin' && req.user.role !== 'super-admin') {
-      // Regular partners can only see clients
-      query.role = 'client';
+      // Regular partners can only see their own profile
+      query._id = req.user._id;
     } else if (role) {
       // Admins can filter by role
       query.role = role;
@@ -507,7 +505,7 @@ exports.getUsers = async (req, res, next) => {
     
     // Execute query with pagination
     const users = await User.find(query)
-      .select('name email role organization position lastLogin createdAt')
+      .select('name email role organization position lastLogin createdAt phone')
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
@@ -528,6 +526,237 @@ exports.getUsers = async (req, res, next) => {
     });
   } catch (error) {
     logger.error(`Error getting user list: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc    Get user by ID
+// @route   GET /api/admin/users/:id
+// @access  Private (Admin, Super Admin)
+exports.getUserById = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+    
+    // Find user
+    const user = await User.findById(userId).select('-password');
+    
+    // Check if user exists
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    // Return user details
+    res.status(200).json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    logger.error(`Error getting user details: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc    Update user
+// @route   PUT /api/admin/users/:id
+// @access  Private (Admin, Super Admin)
+exports.updateUser = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+    const updateData = req.body;
+    
+    // Don't allow role update to super-admin unless current user is super-admin
+    if (updateData.role === 'super-admin' && req.user.role !== 'super-admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not authorized to assign super-admin role'
+      });
+    }
+    
+    // Ensure email uniqueness when updating
+    if (updateData.email) {
+      const existingUser = await User.findOne({ 
+        email: updateData.email,
+        _id: { $ne: userId }
+      });
+      
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'Another user with this email already exists'
+        });
+      }
+    }
+    
+    // If password is included, hash it
+    if (updateData.password) {
+      const salt = await bcrypt.genSalt(10);
+      updateData.password = await bcrypt.hash(updateData.password, salt);
+    }
+    
+    // Find and update user
+    const user = await User.findByIdAndUpdate(
+      userId,
+      updateData,
+      { new: true, runValidators: true }
+    ).select('-password');
+    
+    // Check if user exists
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    // Return updated user
+    res.status(200).json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    logger.error(`Error updating user: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc    Get user documents
+// @route   GET /api/admin/users/:id/documents
+// @access  Private (Admin, Super Admin)
+exports.getUserDocuments = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+    
+    // Find user
+    const user = await User.findById(userId);
+    
+    // Check if user exists
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    // Find documents for this user
+    const documents = await Document.find({ uploadedBy: userId })
+      .sort({ createdAt: -1 });
+    
+    // Return documents
+    res.status(200).json({
+      success: true,
+      data: documents
+    });
+  } catch (error) {
+    logger.error(`Error getting user documents: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc    Upload user document
+// @route   POST /api/admin/users/:id/documents
+// @access  Private (Admin, Super Admin)
+exports.uploadUserDocument = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+    const { type, name } = req.body;
+    
+    // Check if user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    // Process uploaded file
+    let file;
+    
+    if (req.file) {
+      // Multer approach
+      file = req.file;
+      file.path = file.path.replace(/\\/g, '/'); // Normalize path for Windows
+    } else if (req.files && (req.files.document || req.files.documents)) {
+      // Express-fileupload approach
+      const uploadedFile = req.files.document || req.files.documents;
+      
+      // Handle both single file and array of files
+      const filesToProcess = Array.isArray(uploadedFile) ? uploadedFile : [uploadedFile];
+      const processedFiles = [];
+      
+      for (const currentFile of filesToProcess) {
+        // Create directory for user if it doesn't exist
+        const uploadDir = path.join(__dirname, '../../uploads/users', userId);
+        
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        
+        // Generate unique filename
+        const extension = path.extname(currentFile.name);
+        const filename = uuidv4() + extension;
+        const filePath = path.join(uploadDir, filename);
+        
+        // Save file
+        await currentFile.mv(filePath);
+        
+        // Create document record
+        const documentType = type || 'other';
+        const documentName = name || currentFile.name;
+        
+        const document = await Document.create({
+          uploadedBy: userId,
+          type: documentType,
+          name: documentName,
+          fileName: filename,
+          originalName: currentFile.name,
+          mimeType: currentFile.mimetype,
+          size: currentFile.size,
+          path: filePath.replace(/\\/g, '/'), // Normalize path for Windows
+          status: 'pending'
+        });
+        
+        processedFiles.push(document);
+      }
+      
+      // Return created documents
+      return res.status(201).json({
+        success: true,
+        data: processedFiles,
+        message: `${processedFiles.length} document(s) uploaded successfully`
+      });
+    }
+    
+    // Handle single file upload through Multer
+    if (file) {
+      const document = await Document.create({
+        uploadedBy: userId,
+        type: type || 'other',
+        name: name || file.originalname,
+        fileName: file.filename,
+        originalName: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+        path: file.path,
+        status: 'pending'
+      });
+      
+      return res.status(201).json({
+        success: true,
+        data: document
+      });
+    }
+    
+    // If no file was processed
+    return res.status(400).json({
+      success: false,
+      message: 'No file uploaded or file upload failed'
+    });
+  } catch (error) {
+    logger.error(`Error uploading user document: ${error.message}`);
     next(error);
   }
 };
@@ -618,6 +847,65 @@ exports.addGroup = async (req, res, next) => {
     });
   } catch (error) {
     logger.error(`Error adding group: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc    Add new user
+// @route   POST /api/admin/users
+// @access  Private (Admin)
+exports.addUser = async (req, res, next) => {
+  try {
+    const { name, email, password, role, organization, position, phone } = req.body;
+    
+    // Check if user with this email already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'Un utilizator cu acest email există deja'
+      });
+    }
+    
+    // Verificare rol valid
+    const allowedRoles = ['user', 'client', 'partner', 'admin'];
+    if (role && !allowedRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Rol invalid. Rolurile permise sunt: ' + allowedRoles.join(', ')
+      });
+    }
+    
+    // Restricție pentru crearea de utilizatori admin
+    if (role === 'admin' && req.user.role !== 'admin' && req.user.role !== 'super-admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Nu aveți permisiunea de a crea utilizatori administratori'
+      });
+    }
+    
+    // Create new user
+    const user = await User.create({
+      name,
+      email,
+      password,
+      role: role || 'user',
+      organization,
+      position,
+      phone,
+      isActive: true
+    });
+    
+    // Return new user without password
+    const userResponse = { ...user.toObject() };
+    delete userResponse.password;
+    
+    res.status(201).json({
+      success: true,
+      data: userResponse
+    });
+  } catch (error) {
+    logger.error(`Error adding user: ${error.message}`);
     next(error);
   }
 };

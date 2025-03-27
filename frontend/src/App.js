@@ -13,6 +13,8 @@ import DashboardPage from './pages/DashboardPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ClientDashboardPage from './pages/client/ClientDashboardPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
+import UserDetailPage from './pages/admin/UserDetailPage';
 import TrainerDashboardPage from './pages/trainer/TrainerDashboardPage';
 
 // Admin Pages
@@ -93,6 +95,25 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['admin', 'partner', 'super-admin']}>
               <AdminClientsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Pagina de users - doar pentru admin */}
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute allowedRoles={['admin', 'super-admin']}>
+              <AdminUsersPage />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/admin/users/:id"
+          element={
+            <ProtectedRoute allowedRoles={['admin', 'super-admin']}>
+              <UserDetailPage />
             </ProtectedRoute>
           }
         />

@@ -243,9 +243,6 @@ const AdminUsersPage = () => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Înregistrat
                   </th>
-                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acțiuni
-                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white/50">
@@ -307,11 +304,6 @@ const AdminUsersPage = () => {
                         <Calendar className="h-4 w-4 mr-1 text-gray-400" />
                         {formatDate(user.createdAt)}
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center" onClick={(e) => e.stopPropagation()}>
-                      <button className="text-gray-500 hover:text-gray-700">
-                        <MoreHorizontal className="h-5 w-5" />
-                      </button>
                     </td>
                   </tr>
                 ))}
