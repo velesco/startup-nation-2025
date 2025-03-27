@@ -18,6 +18,9 @@ const { errorHandler } = require('./middlewares/errorHandler');
 // Initialize Express app
 const app = express();
 
+// Setare 'trust proxy' pentru a rezolva problemele cu X-Forwarded-For
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 

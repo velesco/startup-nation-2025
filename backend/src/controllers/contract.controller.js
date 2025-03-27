@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const PizZip = require('pizzip');
 const Docxtemplater = require('docxtemplater');
-const { convertWordBufferToPdf } = require('../utils/pdfConverter');
+const { convertToPdf } = require('../utils/documentConverter');
 const User = require('../models/User');
 const logger = require('../utils/logger');
 const mkdirp = require('mkdirp');
@@ -154,7 +154,8 @@ exports.generateContract = async (req, res, next) => {
       
       // Convertește în PDF
       try {
-        const pdfBuffer = await convertWordBufferToPdf(wordBuffer);
+        // Folosim noul convertor pentru a genera PDF
+        const pdfBuffer = await convertToPdf(wordBuffer);
         
         // Salvează PDF-ul în directorul utilizatorului
         const uploadsDir = path.join(__dirname, '../../../uploads/contracts');
@@ -413,7 +414,7 @@ exports.downloadContract = async (req, res, next) => {
                 compression: 'DEFLATE'
               });
               
-              const pdfBuffer = await convertWordBufferToPdf(wordBuffer);
+              const pdfBuffer = await convertToPdf(wordBuffer);
               
               // Save file
               fs.writeFileSync(defaultPath, pdfBuffer);

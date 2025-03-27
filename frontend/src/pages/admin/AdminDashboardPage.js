@@ -9,8 +9,6 @@ import {
   RefreshCw,
   Briefcase,
   PieChart,
-  UserPlus,
-  Shield
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import DashboardLayout from '../../components/layouts/DashboardLayout';
