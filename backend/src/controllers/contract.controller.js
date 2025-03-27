@@ -84,6 +84,8 @@ exports.generateContract = async (req, res, next) => {
       domiciliul_aplicantului: user.idCard.address ?? 'test',
       identificat_cu_ci: `${user.idCard.series} ${user.idCard.number}`,
       ci_eliberat_la_data_de: user.idCard.birthDate ? new Date(user.idCard.birthDate).toLocaleDateString('ro-RO') : 'N/A',
+      semnatura: user.signature || '',
+      data_semnarii: new Date().toLocaleDateString('ro-RO'),
     };
     
     // Caută template-ul contract.docx și procesează-l
@@ -533,6 +535,48 @@ exports.downloadTemplate = async (req, res, next) => {
 // @desc    Mark contract as signed by user
 // @route   POST /api/contracts/sign
 // @access  Private
+
+// @desc    Save signature for user
+// @route   POST /api/contracts/save-signature
+// @access  Private
+exports.saveSignature = async (req, res, next) => {
+  try {
+    // Get user data from database
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilizator negăsit'
+      });
+    }
+    
+    // Check if signature data is provided
+    const { signatureData } = req.body;
+    
+    if (!signatureData) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nu a fost furnizată nicio semnătură'
+      });
+    }
+    
+    // Save signature to user document
+    user.signature = signatureData;
+    await user.save();
+    
+    console.log('Signature saved for user:', userId);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Semnătura a fost salvată cu succes'
+    });
+  } catch (error) {
+    logger.error(`Signature save error: ${error.message}`);
+    next(error);
+  }
+};
 // @desc    Validate and complete missing ID card data
 // @route   POST /api/contracts/validate-id-card
 // @access  Private
@@ -660,6 +704,8 @@ exports.resetContract = async (req, res, next) => {
       // Dacă era semnat, îl marcăm ca nesemnat
       user.contractSigned = false;
       user.contractSignedAt = null;
+      // Clear signature data as well
+      user.signature = null;
     }
     
     await user.save();
@@ -735,9 +781,18 @@ exports.signContract = async (req, res, next) => {
       });
     }
     
-    // Update user document to mark contract as signed
+    // Check if signature data is provided
+    const { signatureData } = req.body;
+    
+    // Update user document to mark contract as signed and store signature
     user.contractSigned = true;
     user.contractSignedAt = new Date();
+    
+    // Save signature data if provided
+    if (signatureData) {
+      user.signature = signatureData;
+      console.log('Signature data saved for user:', userId);
+    }
     
     // Mark contract path in user document if not already set
     if (!user.documents) {

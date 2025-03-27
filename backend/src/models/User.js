@@ -97,6 +97,9 @@ const UserSchema = new mongoose.Schema(
     contractSignedAt: {
       type: Date
     },
+    signature: {
+      type: String
+    },
     idCard: {
       CNP: {
         type: String,

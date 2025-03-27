@@ -8,7 +8,8 @@ const {
   signContract,
   downloadContract,
   resetContract,
-  validateIdCard
+  validateIdCard,
+  saveSignature
 } = require('../controllers/contract.controller');
 
 // Crează un rate limiter special pentru contracte - mai permisiv
@@ -23,6 +24,7 @@ router.get('/generate', protect, contractRateLimiter, generateContract);
 router.get('/template', protect, contractRateLimiter, downloadTemplate);
 router.get('/download', protect, contractRateLimiter, downloadContract);
 router.post('/sign', protect, contractRateLimiter, signContract);
+router.post('/save-signature', protect, contractRateLimiter, saveSignature);
 router.post('/reset', protect, contractRateLimiter, resetContract);
 router.post('/validate-id-card', protect, contractRateLimiter, validateIdCard);
 

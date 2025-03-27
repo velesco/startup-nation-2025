@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, Check, AlertCircle, FileCheck, Printer, Search, ArrowRight, UserRound, X } from 'lucide-react';
+import { FileText, Download, Check, AlertCircle, FileCheck, Printer, Search, ArrowRight, UserRound, X, PenTool } from 'lucide-react';
+import SignatureCapture from '../signature/SignatureCapture';
 import axios from 'axios';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -18,6 +19,9 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
   const [idCardFormData, setIdCardFormData] = useState({});
   const [idCardFormLoading, setIdCardFormLoading] = useState(false);
   const [idCardMissingFields, setIdCardMissingFields] = useState([]);
+  const [showSignatureDialog, setShowSignatureDialog] = useState(false);
+  const [signatureData, setSignatureData] = useState('');
+  const [signatureSaving, setSignatureSaving] = useState(false);
   
   // Vizualizare contract
   const handleViewContract = () => {
@@ -62,7 +66,7 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
     }
   }, [userDocuments]);
   
-  // Verificare date buletin înainte de generare contract
+  // Verificare date buletin înainte de a permite captura semnăturii
   const checkIdCardData = async () => {
     setError('');
     
@@ -86,8 +90,8 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
       );
       
       if (response.data && response.data.success) {
-        // Toate datele sunt complete, putem genera contractul
-        handleGenerateContract();
+        // Toate datele sunt complete, putem cere semnătura utilizatorului
+        setShowSignatureDialog(true);
       } else {
         // Avem câmpuri lipsă, trebuie să le completăm
         setIdCardMissingFields(response.data?.missingFields || []);
@@ -290,7 +294,7 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
   };
 
   // Generează contractul bazat pe datele din buletin
-  const handleGenerateContract = async () => {
+  const handleGenerateContract = async (signature = null) => {
     console.log('=== START Generare Contract ===');
     setLoading(true);
     setError('');
@@ -302,6 +306,10 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
       if (!token) {
         throw new Error('Nu există token de autentificare. Te rugăm să te conectezi din nou.');
       }
+      
+      // Dacă avem semnătura, o folosim pentru contract
+      const sig = signature || signatureData;
+      console.log('Generăm contract cu semnătură:', !!sig);
       
       // Nu putem folosi window.open direct pentru endpoint-uri care necesită autorizare
       // Vom face request-ul direct cu axios și vom crea un URL pentru blob
@@ -340,8 +348,48 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
     }
   };
 
+  // Salvează semnătura
+  const handleSaveSignature = async (signatureImageData) => {
+    setSignatureSaving(true);
+    setError('');
+    
+    try {
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('Nu există token de autentificare. Te rugăm să te conectezi din nou.');
+      }
+      
+      // Apelăm API-ul pentru a salva semnătura
+      const response = await axios.post(
+        `${API_URL}/contracts/save-signature`,
+        { signatureData: signatureImageData },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      if (response.data && response.data.success) {
+        console.log('Semnătura a fost salvată cu succes');
+        setSignatureData(signatureImageData);
+        setShowSignatureDialog(false);
+      } else {
+        throw new Error(response.data?.message || 'Eroare la salvarea semnăturii.');
+      }
+    } catch (error) {
+      console.error('Eroare la salvarea semnăturii:', error);
+      setError(error.message || 'A apărut o eroare la salvarea semnăturii. Te rugăm să încerci din nou.');
+    } finally {
+      setSignatureSaving(false);
+    }
+  };
+  
   // Marchează contractul ca semnat
-  const handleSignContract = async () => {
+  const handleSignContract = async (signature = null) => {
     console.log('=== START Semnare Contract ===');
     setLoading(true);
     setError('');
@@ -357,7 +405,7 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
       // Apelăm API-ul pentru a marca contractul ca semnat
       const response = await axios.post(
         `${API_URL}/contracts/sign`,
-        {},
+        { signatureData: signature || signatureData },
         {
           headers: {
             'Content-Type': 'application/json',
@@ -486,7 +534,7 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
           </div>
           
           <button
-            onClick={handleSignContract}
+            onClick={() => setShowSignatureDialog(true)}
             disabled={loading}
             className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-xl font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center"
           >
@@ -497,8 +545,8 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
               </>
             ) : (
               <>
-                <Check className="h-5 w-5 mr-2" />
-                <span>Confirm și semnez contractul</span>
+                <PenTool className="h-5 w-5 mr-2" />
+                <span>Semnează contractul</span>
               </>
             )}
           </button>
@@ -511,26 +559,46 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
           </div>
           <h3 className="text-lg font-semibold text-gray-800 mb-2">Contract de Participare</h3>
           <p className="text-center text-gray-600 mb-6">
-            Pentru a finaliza înscrierea în program, te rugăm să generezi și să semnezi contractul de participare.
+            Pentru a finaliza înscrierea în program, mai întâi adaugă semnătura, apoi generează contractul. Semnătura va fi inclusă în documentul final.
           </p>
           
-          <button 
-            onClick={checkIdCardData}
-            disabled={loading}
-            className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-full font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center"
-          >
-            {loading ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
-                <span>Se generează contractul...</span>
-              </>
-            ) : (
-              <>
-                <span>Generează contract</span>
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </>
-            )}
-          </button>
+          <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+            <button 
+              onClick={checkIdCardData}
+              disabled={loading}
+              className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-full font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center"
+            >
+              <PenTool className="h-4 w-4 mr-2" />
+              <span>Adaugă semnătura</span>
+            </button>
+            
+            <button 
+              onClick={() => handleGenerateContract(signatureData)}
+              disabled={loading || !signatureData}
+              className={`px-6 py-3 rounded-full font-medium shadow-md flex items-center justify-center ${signatureData ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                  <span>Se generează contractul...</span>
+                </>
+              ) : (
+                <>
+                  <ArrowRight className="h-4 w-4 mr-2" />
+                  <span>Generează contract</span>
+                </>
+              )}
+            </button>
+          </div>
+          
+          {signatureData && (
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-green-700 text-sm flex items-center">
+                <Check className="h-4 w-4 mr-2 text-green-500" />
+                Semnătura a fost adăugată cu succes. Acum poți genera contractul.
+              </p>
+            </div>
+          )}
         </div>
       )}
       
@@ -614,6 +682,7 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
       
       {/* Modal pentru completarea datelor din buletin lipsă */}
       {showIdCardDialog && (
+
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
@@ -763,6 +832,36 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      
+      {/* Modal pentru semnătură */}
+      {showSignatureDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold flex items-center">
+                <PenTool className="h-5 w-5 mr-2 text-blue-500" />
+                <span>Semnătură olografă</span>
+              </h3>
+              <button 
+                onClick={() => setShowSignatureDialog(false)} 
+                className="p-1 rounded-full hover:bg-gray-100"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-4">
+              Adaugă semnătura ta în spațiul de mai jos. Această semnătură va fi salvată și ulterior inclusă în contract atunci când îl vei genera.
+            </p>
+            
+            <SignatureCapture 
+              onSave={handleSaveSignature} 
+              onCancel={() => setShowSignatureDialog(false)}
+              required={true}
+            />
           </div>
         </div>
       )}
