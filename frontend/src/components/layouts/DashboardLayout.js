@@ -5,8 +5,6 @@ import {
   Users, 
   BookOpen, 
   BarChart2, 
-  Settings, 
-  Bell, 
   LogOut,
   ChevronDown
 } from 'lucide-react';

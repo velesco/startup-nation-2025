@@ -42,17 +42,24 @@ const validateIdCardData = (idCard) => {
 // @route   GET /api/contracts/generate
 // @access  Private
 exports.generateContract = async (req, res, next) => {
+  console.log(`Contract generation requested`);
   try {
     // Get user data from database
     const userId = req.user.id;
+    console.log(`Generating contract for user ID: ${userId}`);
     const user = await User.findById(userId);
     
     if (!user) {
+      console.error(`User not found: ${userId}`);
       return res.status(404).json({
         success: false,
         message: 'Utilizator negăsit'
       });
     }
+    
+    console.log(`User found. Name: ${user.name}, Email: ${user.email}`);
+    console.log(`ID Card data: ${JSON.stringify(user.idCard || {})}`);
+    console.log(`Documents state: ${JSON.stringify(user.documents || {})}`);
     
     // Check if user has ID card data
     const validationResult = validateIdCardData(user.idCard);
@@ -75,10 +82,9 @@ exports.generateContract = async (req, res, next) => {
     // Prepare data for contract template
     const contractData = {
       nume_si_prenume: user.idCard.fullName,
-      domiciliul_aplicantului: user.idCard.address,
+      domiciliul_aplicantului: user.idCard.address ?? 'test',
       identificat_cu_ci: `${user.idCard.series} ${user.idCard.number}`,
       ci_eliberat_la_data_de: user.idCard.birthDate ? new Date(user.idCard.birthDate).toLocaleDateString('ro-RO') : 'N/A',
-      // Add any additional fields as needed
     };
     
     // Caută template-ul contract.docx și procesează-l
@@ -152,32 +158,119 @@ exports.generateContract = async (req, res, next) => {
         
         // Salvează PDF-ul în directorul utilizatorului
         const uploadsDir = path.join(__dirname, '../../../uploads/contracts');
-        await mkdirp(uploadsDir); // Asigură-te că directorul există
+        console.log(`Creez directorul pentru contracte dacă nu există: ${uploadsDir}`);
+        
+        try {
+          // Asigură-te că directorul există
+          await mkdirp(uploadsDir);
+          
+          // Verificăm dacă directorul chiar există după creare
+          if (!fs.existsSync(uploadsDir)) {
+            throw new Error(`Directorul nu a putut fi creat la: ${uploadsDir}`);
+          }
+          
+          console.log(`Directorul pentru contracte este pregătit: ${uploadsDir}`);
+        } catch (dirError) {
+          logger.error(`Error creating contracts directory: ${dirError.message}`);
+          throw new Error(`Nu am putut crea directorul pentru contracte: ${dirError.message}`);
+        }
+        
+        console.log(`Salvez contractul în directorul: ${uploadsDir}`);
         
         const contractFilename = `contract_${userId}.pdf`;
         const contractPath = path.join(uploadsDir, contractFilename);
         
-        fs.writeFileSync(contractPath, pdfBuffer);
+        try {
+          fs.writeFileSync(contractPath, pdfBuffer);
+          console.log(`Contract salvat cu succes la: ${contractPath}`);
+          
+          // Verificăm dacă fișierul chiar există după scriere
+          if (!fs.existsSync(contractPath)) {
+            throw new Error(`Fișierul nu a fost creat la: ${contractPath}`);
+          }
+        } catch (writeError) {
+          logger.error(`Error writing contract file: ${writeError.message}`);
+          throw new Error(`Nu am putut salva contractul: ${writeError.message}`);
+        }
         
         // Actualizează calea în documentul utilizatorului
-        user.documents.contractPath = `/uploads/contracts/${contractFilename}`;
-        await user.save();
+        const contractRelativePath = `/uploads/contracts/${contractFilename}`;
+        user.documents.contractPath = contractRelativePath;
+        console.log(`Setting contract path to: ${contractRelativePath} for user: ${userId}`);
+        
+        // Verificăm dacă contractul există după ce a fost generat
+        const uploadedContractFullPath = path.join(__dirname, `../../../${contractRelativePath.substring(1)}`);
+        console.log(`Verifying contract exists at: ${uploadedContractFullPath}`);
+        
+        if (!fs.existsSync(uploadedContractFullPath)) {
+          console.error(`WARNING: Contract file not found after generation at: ${uploadedContractFullPath}`);
+        } else {
+          console.log(`Contract successfully verified at: ${uploadedContractFullPath}`);
+        }
+        
+        try {
+          await user.save();
+          console.log(`User ${userId} updated with contract path: ${user.documents.contractPath}`);
+        } catch (saveError) {
+          console.error(`Error saving user with contract path: ${saveError.message}`);
+          throw saveError;
+        }
         
         // Setează header-ele de răspuns
+        // Make sure we have a valid name for the contract file
+        let displayName = user.idCard.fullName;
+        if (!displayName || displayName === 'test') {
+          // Fallback to user name if idCard name is not available or is test
+          displayName = user.name || userId;
+        }
+        
+        console.log(`Using display name for contract: ${displayName}`);
+        
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=contract_${user.idCard.fullName.replace(/\s+/g, '_')}.pdf`);
+        res.setHeader('Content-Disposition', `attachment; filename=contract_${displayName.replace(/\s+/g, '_')}.pdf`);
         
         // Trimite PDF-ul
         return res.send(pdfBuffer);
       } catch (conversionError) {
         logger.error(`PDF conversion error: ${conversionError.message}`);
+        console.error(`Error converting to PDF: ${conversionError.message}`);
         
         // Trimitem un răspuns cu mai multe detalii, dar oferim și docx ca alternativă
         logger.info('Returning Word document as fallback');
         
+        // Salvam documentul Word ca fallback
+        const uploadsDir = path.join(__dirname, '../../../uploads/contracts');
+        await mkdirp(uploadsDir);
+        
+        // Generam si fisierul docx
+        const docxFilename = `contract_${userId}.docx`;
+        const docxPath = path.join(uploadsDir, docxFilename);
+        
+        try {
+          console.log(`Saving docx as fallback at: ${docxPath}`);
+          fs.writeFileSync(docxPath, wordBuffer);
+          
+          // Actualizăm calea în documentul utilizatorului să pointeze spre docx
+          user.documents.contractPath = `/uploads/contracts/${docxFilename}`;
+          user.documents.contractFormat = 'docx'; // Flag pentru format
+          await user.save();
+          console.log(`User updated with DOCX contract path: ${user.documents.contractPath}`);
+        } catch (docxError) {
+          console.error(`Failed to save docx fallback: ${docxError.message}`);
+        }
+        
         // Dacă conversia PDF eșuează, trimite documentul Word ca fallback
+        // Make sure we have a valid name for the contract file
+        let displayName = user.idCard.fullName;
+        if (!displayName || displayName === 'test') {
+          // Fallback to user name if idCard name is not available or is test
+          displayName = user.name || userId;
+        }
+        
+        console.log(`Using display name for docx fallback: ${displayName}`);
+        
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-        res.setHeader('Content-Disposition', `attachment; filename=contract_${user.idCard.fullName.replace(/\s+/g, '_')}.docx`);
+        res.setHeader('Content-Disposition', `attachment; filename=contract_${displayName.replace(/\s+/g, '_')}.docx`);
         
         return res.send(wordBuffer);
       }
@@ -197,142 +290,6 @@ exports.generateContract = async (req, res, next) => {
   }
 };
 
-// Funcție de utilitate pentru a genera un document PDF simplu cu text
-const generateSimpleContract = async (user) => {
-  try {
-    // Verificăm dacă avem libreofficer pentru conversie
-    const libre = require('libreoffice-convert');
-    const { promisify } = require('util');
-    const convertAsync = promisify(libre.convert);
-    
-    // Pregătim datele pentru template
-    const userName = user.idCard?.fullName || user.name || 'Utilizator';
-    const userAddress = user.idCard?.address || 'Adresă necunoscută';
-    const userId = user._id;
-    
-    // Creăm un text simplu pentru contract
-    const contractText = `
-CONTRACT DE PARTICIPARE
-Programul Startup Nation 2025
-
-Nume și prenume: ${userName}
-Domiciliul: ${userAddress}
-User ID: ${userId}
-
-Prin prezentul document, subsemnatul/subsemnata ${userName}, confirm participarea în cadrul programului Startup Nation 2025.
-
-Mă angajez să respect termenii și condițiile programului și să furnizez toate informațiile necesare în mod corect și complet.
-
-Data: ${new Date().toLocaleDateString('ro-RO')}
-
-Semnătura: ______________
-    `;
-    
-    // Creăm un document Word simplu
-    const PizZip = require('pizzip');
-    const Docxtemplater = require('docxtemplater');
-    const fs = require('fs');
-    const path = require('path');
-    
-    // Încercăm să folosim template-ul existent dacă există
-    const templatePath = path.join(__dirname, '../../templates/contract.docx');
-    let wordContent;
-    
-    if (fs.existsSync(templatePath)) {
-      // Folosim template-ul existent
-      const content = fs.readFileSync(templatePath, 'binary');
-      const zip = new PizZip(content);
-      
-      // Creăm o instanță de docxtemplater
-      const doc = new Docxtemplater(zip, {
-        paragraphLoop: true,
-        linebreaks: true,
-        delimiters: {
-          start: '{{',
-          end: '}}'
-        }
-      });
-      
-      // Setăm variabilele template-ului
-      doc.setData({
-        nume_si_prenume: userName,
-        domiciliul_aplicantului: userAddress,
-        identificat_cu_ci: user.idCard?.series && user.idCard?.number ? 
-          `${user.idCard.series} ${user.idCard.number}` : 'Nespecificat',
-        ci_eliberat_la_data_de: user.idCard?.birthDate ? 
-          new Date(user.idCard.birthDate).toLocaleDateString('ro-RO') : 'N/A'
-      });
-      
-      // Renderăm documentul
-      doc.render();
-      
-      // Obținem buffer-ul pentru Word
-      wordContent = doc.getZip().generate({
-        type: 'nodebuffer',
-        compression: 'DEFLATE'
-      });
-    } else {
-      // Nu avem template, creăm un document Word simplu
-      const tmpDir = path.join(__dirname, '../../../temp');
-      if (!fs.existsSync(tmpDir)) {
-        fs.mkdirSync(tmpDir, { recursive: true });
-      }
-      
-      const textFilePath = path.join(tmpDir, 'contract.txt');
-      fs.writeFileSync(textFilePath, contractText);
-      
-      // Returnează conținutul ca text, conversia va eșua
-      wordContent = Buffer.from(contractText, 'utf8');
-    }
-    
-    // Asigurăm că directorul pentru contract există
-    const contractsDir = path.join(__dirname, '../../../uploads/contracts');
-    if (!fs.existsSync(contractsDir)) {
-    try {
-        // Creăm directorul recursiv
-          fs.mkdirSync(contractsDir, { recursive: true, mode: 0o755 });
-          logger.info(`Created contracts directory: ${contractsDir}`);
-        } catch (mkdirError) {
-          logger.error(`Error creating contracts directory: ${mkdirError.message}`);
-        }
-      } else {
-        // Verificăm permisiunile și le setăm corect dacă este necesar
-        try {
-          fs.chmodSync(contractsDir, 0o755);
-        } catch (chmodError) {
-          logger.warn(`Could not set permissions on contracts directory: ${chmodError.message}`);
-        }
-      }
-    
-    // Salvăm fișierul Word temporar
-    const wordFilePath = path.join(contractsDir, `contract_${userId}.docx`);
-    fs.writeFileSync(wordFilePath, wordContent);
-    
-    // Încercăm conversia în PDF (dacă libreoffice este disponibil)
-    try {
-      const pdfBuffer = await convertAsync(wordContent, '.pdf', {});
-      
-      // Salvăm PDF-ul
-      const pdfFilePath = path.join(contractsDir, `contract_${userId}.pdf`);
-      fs.writeFileSync(pdfFilePath, pdfBuffer);
-      
-      // Actualizăm calea în documentul utilizatorului
-      user.documents.contractPath = `/uploads/contracts/contract_${userId}.pdf`;
-      await user.save();
-      
-      return pdfFilePath;
-    } catch (conversionError) {
-      // Dacă conversia eșuează, folosim fișierul Word
-      user.documents.contractPath = `/uploads/contracts/contract_${userId}.docx`;
-      await user.save();
-      
-      return wordFilePath;
-    }
-  } catch (error) {
-    logger.error(`Error generating simple contract: ${error.message}`);
-    throw error;
-  }
-};
 
 // @desc    Get the saved contract for current user
 // @route   GET /api/contracts/download
@@ -350,10 +307,13 @@ exports.downloadContract = async (req, res, next) => {
       });
     }
     
-    // Inițializăm documetele utilizatorului dacă nu există
+    // Inițializăm documentele utilizatorului dacă nu există
     if (!user.documents) {
       user.documents = {};
     }
+    
+    console.log(`Download contract requested for user: ${userId}`);
+    console.log(`User document state: ${JSON.stringify(user.documents)}`);
     
     let contractFullPath = null;
     
@@ -361,47 +321,164 @@ exports.downloadContract = async (req, res, next) => {
     if (user.documents.contractPath) {
       // Obținem calea completă din calea relativă
       const contractRelativePath = user.documents.contractPath;
+      console.log(`Contract relative path from user document: ${contractRelativePath}`);
+      
       contractFullPath = path.join(__dirname, `../../../${contractRelativePath.substring(1)}`);
+      console.log(`Constructed full path: ${contractFullPath}`);
       
       // Verificăm dacă fișierul există fizic
       if (!fs.existsSync(contractFullPath)) {
         logger.error(`Contract file not found at path: ${contractFullPath}`);
-        contractFullPath = null;
-      }
-    }
-    
-    // Dacă nu avem un contract valid, dar utilizatorul este marcat cu contract generat,
-    // generăm un contract simplu
-    if (!contractFullPath) {
-      if (user.documents.contractGenerated) {
-        logger.info(`Generating a replacement contract for user ${userId}`);
-        try {
-          // Generăm un contract simplu și primim calea către acesta
-          contractFullPath = await generateSimpleContract(user);
-          logger.info(`Generated replacement contract at: ${contractFullPath}`);
-        } catch (genError) {
-          logger.error(`Error generating replacement contract: ${genError.message}`);
+        console.error(`Contract file does not exist at path: ${contractFullPath}`);
+        
+        // Verificăm dacă există un alt contract pentru acest utilizator
+        const alternativeFilename = `contract_${userId}.pdf`;
+        const alternativePath = path.join(__dirname, `../../../uploads/contracts/${alternativeFilename}`);
+        console.log(`Checking alternative path: ${alternativePath}`);
+        
+        if (fs.existsSync(alternativePath)) {
+          console.log(`Found contract at alternative path: ${alternativePath}`);
+          contractFullPath = alternativePath;
           
-          return res.status(500).json({
-            success: false,
-            message: 'Eroare la generarea contractului de înlocuire. Te rugăm să generezi contractul din nou.'
-          });
+          // Actualizăm calea în baza de date pentru viitoare descărcări
+          user.documents.contractPath = `/uploads/contracts/${alternativeFilename}`;
+          await user.save();
+        } else {
+          console.error(`No contract file found for user at either path`);
+          contractFullPath = null;
         }
       } else {
-        return res.status(404).json({
-          success: false,
-          message: 'Contractul nu a fost generat încă. Te rugăm să generezi contractul mai întâi.'
-        });
+        console.log(`Contract file exists at path: ${contractFullPath}`);
       }
+    } else {
+      console.log(`No contract path set for user: ${userId}`);
+      
+      // Încercăm să găsim un contract existent
+      const defaultFilename = `contract_${userId}.pdf`;
+      const defaultPath = path.join(__dirname, `../../../uploads/contracts/${defaultFilename}`);
+      console.log(`Checking default path: ${defaultPath}`);
+      
+      if (fs.existsSync(defaultPath)) {
+        console.log(`Found contract at default path: ${defaultPath}`);
+        contractFullPath = defaultPath;
+        
+        // Actualizăm calea în baza de date pentru viitoare descărcări
+        user.documents.contractPath = `/uploads/contracts/${defaultFilename}`;
+        await user.save();
+      } else if (user.documents.contractGenerated) {
+        // Contract is marked as generated but file is missing - we should regenerate it
+        console.log(`Contract marked as generated but file is missing. Attempting to regenerate.`);
+        
+        try {
+          // Check if user has ID card data needed for generation
+          const validationResult = validateIdCardData(user.idCard);
+          if (validationResult.valid) {
+            console.log(`User has valid ID card data. Will regenerate contract.`);
+            
+            // Prepare directory
+            const uploadsDir = path.join(__dirname, '../../../uploads/contracts');
+            await mkdirp(uploadsDir);
+            
+            // Prepare data for contract template
+            const contractData = {
+              nume_si_prenume: user.idCard.fullName,
+              domiciliul_aplicantului: user.idCard.address ?? 'N/A',
+              identificat_cu_ci: `${user.idCard.series} ${user.idCard.number}`,
+              ci_eliberat_la_data_de: user.idCard.birthDate ? new Date(user.idCard.birthDate).toLocaleDateString('ro-RO') : 'N/A',
+            };
+            
+            // Get template
+            const templatePath = path.join(__dirname, '../../templates/contract.docx');
+            
+            if (fs.existsSync(templatePath)) {
+              // Process template
+              const content = fs.readFileSync(templatePath, 'binary');
+              const zip = new PizZip(content);
+              
+              const doc = new Docxtemplater(zip, {
+                paragraphLoop: true,
+                linebreaks: true,
+                delimiters: {
+                  start: '{{',
+                  end: '}}'
+                }
+              });
+              
+              doc.setData(contractData);
+              doc.render();
+              
+              // Generate PDF
+              const wordBuffer = doc.getZip().generate({
+                type: 'nodebuffer',
+                compression: 'DEFLATE'
+              });
+              
+              const pdfBuffer = await convertWordBufferToPdf(wordBuffer);
+              
+              // Save file
+              fs.writeFileSync(defaultPath, pdfBuffer);
+              console.log(`Regenerated contract successfully at: ${defaultPath}`);
+              
+              contractFullPath = defaultPath;
+              user.documents.contractPath = `/uploads/contracts/${defaultFilename}`;
+              await user.save();
+              
+              // We successfully regenerated the contract
+            } else {
+              console.error(`Cannot regenerate contract - template not found at: ${templatePath}`);
+            }
+          } else {
+            console.error(`Cannot regenerate contract - missing ID card data: ${validationResult.missingFields.join(', ')}`);
+          }
+        } catch (regenerateError) {
+          console.error(`Error regenerating contract: ${regenerateError.message}`);
+        }
+      }
+    }
+  
+    
+        // Verificăm dacă avem o cale validă înainte de a încerca să citim fișierul
+    if (!contractFullPath) {
+      // Show a more detailed error with information about the state
+      console.error(`Contract not found. User state: contractGenerated=${user.documents.contractGenerated}, contractPath=${user.documents.contractPath}`);
+      return res.status(404).json({
+        success: false,
+        message: 'Contractul nu a fost găsit. Te rugăm să generezi mai întâi contractul.',
+        error: 'contract_not_found',
+        shouldGenerate: true
+      });
     }
     
     try {
       // Citim fișierul în memorie pentru a evita problemele cu middleware-ul fileUpload
+      console.log(`Reading contract file from: ${contractFullPath}`);
       const fileBuffer = fs.readFileSync(contractFullPath);
+      console.log(`Successfully read contract file, size: ${fileBuffer.length} bytes`);
       
-      // Set headers for PDF and send file
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename=contract_${user.idCard?.fullName?.replace(/\s+/g, '_') || userId}.pdf`);
+      // Determinam tipul de fisier dupa extensie sau flag-ul contractFormat
+      const isDocx = user.documents.contractFormat === 'docx' || contractFullPath.toLowerCase().endsWith('.docx');
+      
+      // Set headers for correct file type and send file
+      // Make sure we have a valid name for the contract file
+      let displayName = user.idCard?.fullName;
+      if (!displayName || displayName === 'test') {
+        // Fallback to user name if idCard name is not available or is test
+        displayName = user.name || userId;
+      }
+      const fileName = `contract_${displayName.replace(/\s+/g, '_')}${isDocx ? '.docx' : '.pdf'}`;
+      
+      console.log(`Using display name for contract: ${displayName}`);
+      
+      if (isDocx) {
+        console.log(`Sending a DOCX file: ${fileName}`);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      } else {
+        console.log(`Sending a PDF file: ${fileName}`);
+        res.setHeader('Content-Type', 'application/pdf');
+      }
+      
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`);
+      console.log(`Set headers for download, filename: ${fileName}`);
       
       // Important: Marchez acest request ca fiind o descărcare statică, nu un upload de fișier
       if (req.files) {
@@ -409,12 +486,15 @@ exports.downloadContract = async (req, res, next) => {
       }
       
       // Trimitem buffer-ul direct
+      console.log(`Sending file to client...`);
       return res.send(fileBuffer);
     } catch (readError) {
       logger.error(`Error reading contract file: ${readError.message}`);
+      console.error(`Failed to read contract file: ${readError.message}`);
       return res.status(500).json({
         success: false,
-        message: 'Eroare la citirea fișierului contract. Te rugăm să încerci din nou.'
+        message: 'Eroare la citirea fișierului contract. Te rugăm să încerci din nou.',
+        error: readError.message
       });
     }
   } catch (error) {
@@ -586,19 +666,48 @@ exports.resetContract = async (req, res, next) => {
     
     // Verificăm dacă există fișiere de contract pentru acest utilizator și le ștergem
     const contractsDir = path.join(__dirname, '../../../uploads/contracts');
+    console.log(`Verificare fișiere contract pentru ștergere din: ${contractsDir}`);
+    
+    // Verificăm dacă directorul există
+    if (!fs.existsSync(contractsDir)) {
+      console.log(`Directorul pentru contracte nu există, se creează: ${contractsDir}`);
+      await mkdirp(contractsDir);
+    }
+    
     const contractFilename = `contract_${userId}.pdf`;
     const contractPath = path.join(contractsDir, contractFilename);
+    console.log(`Caut fișierul contract PDF: ${contractPath}`);
     
     // Ștergem fișierul PDF dacă există
-    if (fs.existsSync(contractPath)) {
-      fs.unlinkSync(contractPath);
+    try {
+      if (fs.existsSync(contractPath)) {
+        console.log(`Șterg fișierul contract PDF: ${contractPath}`);
+        fs.unlinkSync(contractPath);
+        console.log(`Fișierul PDF a fost șters`);
+      } else {
+        console.log(`Nu s-a găsit fișierul PDF pentru ștergere`);
+      }
+    } catch (deleteError) {
+      console.error(`Eroare la ștergerea contractului PDF: ${deleteError.message}`);
     }
     
     // Verificăm și fișierul docx
     const docxPath = path.join(contractsDir, `contract_${userId}.docx`);
-    if (fs.existsSync(docxPath)) {
-      fs.unlinkSync(docxPath);
+    console.log(`Caut fișierul contract DOCX: ${docxPath}`);
+    
+    try {
+      if (fs.existsSync(docxPath)) {
+        console.log(`Șterg fișierul contract DOCX: ${docxPath}`);
+        fs.unlinkSync(docxPath);
+        console.log(`Fișierul DOCX a fost șters`);
+      } else {
+        console.log(`Nu s-a găsit fișierul DOCX pentru ștergere`);
+      }
+    } catch (deleteError) {
+      console.error(`Eroare la ștergerea contractului DOCX: ${deleteError.message}`);
     }
+    
+    console.log(`Resetarea contractului și a fișierelor asociate a fost finalizată.`);
     
     return res.status(200).json({
       success: true,
@@ -636,12 +745,37 @@ exports.signContract = async (req, res, next) => {
     }
     
     // If no contract path is set but contract file exists for this user, update the path
+    // Verificăm dacă avem un path valid pentru contract sau dacă putem recrea unul
     if (!user.documents.contractPath) {
       const contractFilename = `contract_${userId}.pdf`;
       const contractPath = path.join(__dirname, `../../../uploads/contracts/${contractFilename}`);
       
       if (fs.existsSync(contractPath)) {
         user.documents.contractPath = `/uploads/contracts/${contractFilename}`;
+        console.log(`Am găsit și am setat calea contractului la: ${user.documents.contractPath}`);
+      } else {
+        // Nu am găsit un contract existent
+        logger.warn(`Nu am găsit un contract existent pentru utilizatorul ${userId} la semnare`);
+        
+        // Dacă nu găsim contractul, dar utilizatorul încearcă să-l semneze, putem genera unul nou automat
+        // sau putem returna o eroare indicând că trebuie generat mai întâi
+        return res.status(400).json({
+          success: false,
+          message: 'Contractul nu a fost găsit. Te rugăm să generezi mai întâi contractul.',
+          error: 'contract_not_found'
+        });
+      }
+    } else {
+      // Verificăm dacă contractul referit de path există în realitate
+      const contractFullPath = path.join(__dirname, `../../../${user.documents.contractPath.substring(1)}`);
+      
+      if (!fs.existsSync(contractFullPath)) {
+        logger.error(`Contract file not found at path when signing: ${contractFullPath}`);
+        return res.status(400).json({
+          success: false,
+          message: 'Contractul nu a fost găsit la adresa indicată. Te rugăm să regenerezi contractul.',
+          error: 'contract_path_invalid'
+        });
       }
     }
     

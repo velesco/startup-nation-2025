@@ -19,14 +19,38 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
   const [idCardFormLoading, setIdCardFormLoading] = useState(false);
   const [idCardMissingFields, setIdCardMissingFields] = useState([]);
   
+  // Vizualizare contract
+  const handleViewContract = () => {
+    console.log('Opening contract for viewing');
+    if (contractUrl) {
+      // Deschide contractul într-o fereastră nouă - încercăm să păstrăm extensia potrivită
+      console.log('Using existing contract URL for viewing');
+      window.open(contractUrl, '_blank');
+    } else {
+      console.log('No contract URL available, downloading first');
+      handleDownloadContract(true);
+      // Apăsăm un buton artificial pentru a deschide contractul în fereastă nouă
+      setTimeout(() => {
+        if (contractUrl) {
+          window.open(contractUrl, '_blank');
+        }
+      }, 1000);
+    }
+  };
+  
   // Dezactivez devInfo în producție
   const isDev = process.env.NODE_ENV === 'development';
 
-  // Verifică dacă contractul a fost generat/semnat anterior
+  // Verificare date contract din userDocuments
   useEffect(() => {
     if (userDocuments) {
       if (userDocuments.contractGenerated) {
         setContractGenerated(true);
+        
+        // Afișăm un mesaj special dacă contractul este în format docx
+        if (userDocuments.contractFormat === 'docx') {
+          console.log('Contract is in DOCX format');
+        }
       }
       if (userDocuments.contractSigned) {
         setContractSigned(true);
@@ -195,6 +219,7 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
     setError('');
     
     try {
+      console.log('=== START Download Contract ===');
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
       const token = localStorage.getItem('token');
       
@@ -203,6 +228,7 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
       }
       
       // Facem request pentru a descărca contractul salvat
+      console.log(`Requesting contract download from: ${API_URL}/contracts/download`);
       const response = await axios.get(`${API_URL}/contracts/download`, {
         responseType: 'blob',
         headers: {
@@ -210,24 +236,53 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
         }
       });
       
+      console.log(`Received response with content type: ${response.headers['content-type']}`);
+      
       // Creăm un URL pentru blob-ul primit
       const blob = new Blob([response.data], { 
         type: response.headers['content-type'] || 'application/pdf' 
       });
       const url = URL.createObjectURL(blob);
+      console.log(`Created blob URL: ${url}`);
       
       // Stocăm URL-ul contractului
       setContractUrl(url);
       
       // Dacă nu este preload, deschidem contractul într-o fereastră nouă
       if (!preloadOnly) {
-        window.open(url, '_blank');
+        console.log('Opening contract in new window');
+        // Creăm un link temporar pentru descărcare
+        const downloadLink = document.createElement('a');
+        downloadLink.href = url;
+        
+        // Determinăm numele fișierului bazat pe format
+        const isDocx = userDocuments?.contractFormat === 'docx';
+        const fileName = `contract_${currentUser?.name || 'utilizator'}.${isDocx ? 'docx' : 'pdf'}`;
+        downloadLink.setAttribute('download', fileName);
+        
+        // Declanșăm click pentru descărcare
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+        
+        console.log(`Downloaded contract with filename: ${fileName}`);
       }
       
     } catch (error) {
       console.error('Eroare la descărcarea contractului:', error);
       if (!preloadOnly) { // Afișăm eroarea doar dacă nu este preload
-        setError(error.response?.data?.message || error.message || 'A apărut o eroare la descărcarea contractului.');
+        // Verificăm dacă contractul trebuie regenerat
+        if (error.response?.data?.shouldGenerate) {
+          console.log('Contractul lipsește dar e marcat ca generat. Încercăm să îl regenerăm.');
+          setError('Contractul nu a fost găsit. Încercăm să îl regenerăm automat...');
+          
+          // Așteptăm puțin și apoi încercam să generăm un contract nou
+          setTimeout(() => {
+            handleGenerateContract();
+          }, 2000);
+        } else {
+          setError(error.response?.data?.message || error.message || 'A apărut o eroare la descărcarea contractului.');
+        }
       }
     } finally {
       setLoadingDownload(false);
@@ -359,6 +414,11 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
           <h3 className="text-lg font-semibold text-green-700 mb-2">Contract semnat cu succes!</h3>
           <p className="text-center text-gray-600 mb-6">
             Contractul tău a fost semnat și înregistrat. Poți descărca o copie a contractului oricând.
+            {userDocuments.contractFormat === 'docx' && (
+              <span className="block mt-2 text-amber-600 text-sm">
+                Contractul este în format Microsoft Word (DOCX) și poate fi deschis cu orice program care suportă acest format.
+              </span>
+            )}
           </p>
           
           {contractUrl && (
@@ -376,17 +436,9 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
                 ) : (
                   <>
                     <Download className="h-4 w-4 mr-2" />
-                    <span>Descarcă contract</span>
+                    <span>Descarcă contract {userDocuments.contractFormat === 'docx' ? '(DOCX)' : ''}</span>
                   </>
                 )}
-              </button>
-              <button
-                onClick={() => contractUrl ? window.open(contractUrl, '_blank') : handleDownloadContract()}
-                disabled={loadingDownload && !contractUrl}
-                className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-full font-medium shadow-sm hover:bg-gray-50 transition-all duration-300 flex items-center"
-              >
-                <Printer className="h-4 w-4 mr-2" />
-                <span>Printează</span>
               </button>
             </div>
           )}
@@ -415,23 +467,6 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
           
           <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 mb-6">
             <button
-              onClick={() => contractUrl ? window.open(contractUrl, '_blank') : handleDownloadContract()}
-              disabled={loadingDownload && !contractUrl}
-              className="bg-blue-600 text-white px-4 py-2 rounded-full font-medium shadow-md hover:bg-blue-700 transition-all duration-300 flex items-center justify-center"
-            >
-              {loadingDownload && !contractUrl ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  <span>Se încarcă...</span>
-                </>
-              ) : (
-                <>
-                  <Search className="h-4 w-4 mr-2" />
-                  <span>Vizualizează contract</span>
-                </>
-              )}
-            </button>
-            <button
               onClick={() => handleDownloadContract()}
               disabled={loadingDownload}
               className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-full font-medium shadow-sm hover:bg-gray-50 transition-all duration-300 flex items-center justify-center"
@@ -443,8 +478,8 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
                 </>
               ) : (
                 <>
-                  <Download className="h-4 w-4 mr-2" />
-                  <span>Descarcă contract</span>
+                <Download className="h-4 w-4 mr-2" />
+                <span>Descarcă contract {userDocuments.contractFormat === 'docx' ? '(DOCX)' : ''}</span>
                 </>
               )}
             </button>

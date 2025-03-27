@@ -79,6 +79,15 @@ const UserSchema = new mongoose.Schema(
       contractGenerated: {
         type: Boolean,
         default: false
+      },
+      contractPath: {
+        type: String,
+        default: null
+      },
+      contractFormat: {
+        type: String,
+        enum: ['pdf', 'docx'],
+        default: 'pdf'
       }
     },
     contractSigned: {

@@ -12,6 +12,7 @@ const convertAsync = promisify(libre.convert);
  */
 const convertWordBufferToPdf = async (wordBuffer) => {
   try {
+    logger.info(`Starting Word to PDF conversion, buffer size: ${wordBuffer.length} bytes`);
     // Set conversion options (optional)
     const options = {
       // You can specify output format and other options here
@@ -20,11 +21,19 @@ const convertWordBufferToPdf = async (wordBuffer) => {
     };
     
     // Convert the document
+    logger.info(`Converting document with libreoffice-convert...`);
     const pdfBuffer = await convertAsync(wordBuffer, '.pdf', options);
+    logger.info(`PDF conversion successful, result size: ${pdfBuffer.length} bytes`);
     
     return pdfBuffer;
   } catch (error) {
     logger.error(`Word to PDF conversion error: ${error.message}`);
+    logger.error(`Error stack: ${error.stack}`);
+    
+    if (error.code) {
+      logger.error(`Error code: ${error.code}`);
+    }
+    
     throw new Error(`Failed to convert Word document to PDF: ${error.message}`);
   }
 };
