@@ -5,7 +5,6 @@ const Docxtemplater = require('docxtemplater');
 const { convertToPdf } = require('../utils/documentConverter');
 const User = require('../models/User');
 const logger = require('../utils/logger');
-const mkdirp = require('mkdirp');
 
 // Funcție ajutătoare pentru verificarea datelor din buletin
 const validateIdCardData = (idCard) => {
@@ -163,7 +162,7 @@ exports.generateContract = async (req, res, next) => {
         
         try {
           // Asigură-te că directorul există
-          await mkdirp(uploadsDir);
+          await fs.promises.mkdir(uploadsDir, { recursive: true });
           
           // Verificăm dacă directorul chiar există după creare
           if (!fs.existsSync(uploadsDir)) {

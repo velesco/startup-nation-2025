@@ -1,0 +1,188 @@
+    // Verificăm din nou validitatea
+    const revalidationResult = validateIdCardData(user.idCard);
+    
+    if (revalidationResult.valid) {
+      return res.status(200).json({
+        success: true,
+        message: 'Datele din buletin au fost actualizate cu succes',
+        idCard: user.idCard
+      });
+    } else {
+      // Datele încă sunt incomplete
+      const missingFieldsText = revalidationResult.missingFields.join(', ');
+      return res.status(400).json({
+        success: false,
+        message: `Datele din buletin sunt încă incomplete. Lipsesc: ${missingFieldsText}.`,
+        missingFields: revalidationResult.missingFields,
+        idCard: user.idCard
+      });
+    }
+  } catch (error) {
+    logger.error(`ID card validation error: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc    Reset contract status and allow regeneration
+// @route   POST /api/contracts/reset
+// @access  Private
+exports.resetContract = async (req, res, next) => {
+  try {
+    // Get user data from database
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilizator negăsit'
+      });
+    }
+    
+    // Reset contract state
+    if (!user.documents) {
+      user.documents = {};
+    }
+    
+    // Reset flaguri contract
+    user.documents.contractGenerated = false;
+    user.documents.contractPath = null;
+    
+    if (user.contractSigned) {
+      // Dacă era semnat, îl marcăm ca nesemnat
+      user.contractSigned = false;
+      user.contractSignedAt = null;
+    }
+    
+    await user.save();
+    
+    // Verificăm dacă există fișiere de contract pentru acest utilizator și le ștergem
+    const contractsDir = path.join(__dirname, '../../../uploads/contracts');
+    console.log(`Verificare fișiere contract pentru ștergere din: ${contractsDir}`);
+    
+    // Verificăm dacă directorul există
+    if (!fs.existsSync(contractsDir)) {
+      console.log(`Directorul pentru contracte nu există, se creează: ${contractsDir}`);
+      await fs.promises.mkdir(contractsDir, { recursive: true });
+    }
+    
+    const contractFilename = `contract_${userId}.pdf`;
+    const contractPath = path.join(contractsDir, contractFilename);
+    console.log(`Caut fișierul contract PDF: ${contractPath}`);
+    
+    // Ștergem fișierul PDF dacă există
+    try {
+      if (fs.existsSync(contractPath)) {
+        console.log(`Șterg fișierul contract PDF: ${contractPath}`);
+        fs.unlinkSync(contractPath);
+        console.log(`Fișierul PDF a fost șters`);
+      } else {
+        console.log(`Nu s-a găsit fișierul PDF pentru ștergere`);
+      }
+    } catch (deleteError) {
+      console.error(`Eroare la ștergerea contractului PDF: ${deleteError.message}`);
+    }
+    
+    // Verificăm și fișierul docx
+    const docxPath = path.join(contractsDir, `contract_${userId}.docx`);
+    console.log(`Caut fișierul contract DOCX: ${docxPath}`);
+    
+    try {
+      if (fs.existsSync(docxPath)) {
+        console.log(`Șterg fișierul contract DOCX: ${docxPath}`);
+        fs.unlinkSync(docxPath);
+        console.log(`Fișierul DOCX a fost șters`);
+      } else {
+        console.log(`Nu s-a găsit fișierul DOCX pentru ștergere`);
+      }
+    } catch (deleteError) {
+      console.error(`Eroare la ștergerea contractului DOCX: ${deleteError.message}`);
+    }
+    
+    console.log(`Resetarea contractului și a fișierelor asociate a fost finalizată.`);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Status contract resetat cu succes. Poți genera acum un nou contract.'
+    });
+  } catch (error) {
+    logger.error(`Contract reset error: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc    Mark contract as signed by user
+// @route   POST /api/contracts/sign
+// @access  Private
+exports.signContract = async (req, res, next) => {
+  try {
+    // Get user data from database
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilizator negăsit'
+      });
+    }
+    
+    // Update user document to mark contract as signed
+    user.contractSigned = true;
+    user.contractSignedAt = new Date();
+    
+    // Mark contract path in user document if not already set
+    if (!user.documents) {
+      user.documents = {};
+    }
+    
+    // If no contract path is set but contract file exists for this user, update the path
+    // Verificăm dacă avem un path valid pentru contract sau dacă putem recrea unul
+    if (!user.documents.contractPath) {
+      const contractFilename = `contract_${userId}.pdf`;
+      const contractPath = path.join(__dirname, `../../../uploads/contracts/${contractFilename}`);
+      
+      if (fs.existsSync(contractPath)) {
+        user.documents.contractPath = `/uploads/contracts/${contractFilename}`;
+        console.log(`Am găsit și am setat calea contractului la: ${user.documents.contractPath}`);
+      } else {
+        // Nu am găsit un contract existent
+        logger.warn(`Nu am găsit un contract existent pentru utilizatorul ${userId} la semnare`);
+        
+        // Dacă nu găsim contractul, dar utilizatorul încearcă să-l semneze, putem genera unul nou automat
+        // sau putem returna o eroare indicând că trebuie generat mai întâi
+        return res.status(400).json({
+          success: false,
+          message: 'Contractul nu a fost găsit. Te rugăm să generezi mai întâi contractul.',
+          error: 'contract_not_found'
+        });
+      }
+    } else {
+      // Verificăm dacă contractul referit de path există în realitate
+      const contractFullPath = path.join(__dirname, `../../../${user.documents.contractPath.substring(1)}`);
+      
+      if (!fs.existsSync(contractFullPath)) {
+        logger.error(`Contract file not found at path when signing: ${contractFullPath}`);
+        return res.status(400).json({
+          success: false,
+          message: 'Contractul nu a fost găsit la adresa indicată. Te rugăm să regenerezi contractul.',
+          error: 'contract_path_invalid'
+        });
+      }
+    }
+    
+    await user.save();
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Contractul a fost semnat cu succes',
+      data: {
+        contractSigned: user.contractSigned,
+        contractSignedAt: user.contractSignedAt
+      }
+    });
+  } catch (error) {
+    logger.error(`Contract signing error: ${error.message}`);
+    next(error);
+  }
+};
