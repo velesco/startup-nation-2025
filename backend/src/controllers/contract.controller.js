@@ -84,7 +84,7 @@ exports.generateContract = async (req, res, next) => {
     console.log('Trimitem datele la API extern...');
     
     // Apelăm API-ul extern pentru a genera documentul DOCX
-    const apiResponse = await axios.post('https://aipro.ro/api/startup/documente', formData, {
+    const apiResponse = await axios.post('https://pnrr.digitalizarefirme.com/api/startup/documente', formData, {
       headers: {
         ...formData.getHeaders(),
         'Accept': 'application/json'
