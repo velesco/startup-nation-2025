@@ -101,7 +101,10 @@ exports.generateContract = async (req, res, next) => {
 
     // Configurarea opțiunilor pentru modulul de imagini
     const imageOpts = {
+      centered: false,
+      fileType: 'docx',
       getImage: function (tagValue) {
+        console.log("getImage called with:", tagValue);
         // Dacă tagValue reprezintă o cale de fișier validă, returnează conținutul fișierului
         if (fs.existsSync(tagValue)) {
           return fs.readFileSync(tagValue);
@@ -116,7 +119,11 @@ exports.generateContract = async (req, res, next) => {
         const maxWidth = 150;
         const ratio = maxWidth / dimensions.width;
         return [maxWidth, dimensions.height * ratio];
-      }
+      },
+      // IMPORTANT: Configurare pentru tag-urile de forma {%image semnatura%}
+      tagName: 'image',
+      delimiterStart: '{%',
+      delimiterEnd: '%}'
     };
 
     const imageModule = new ImageModule(imageOpts);
@@ -124,45 +131,25 @@ exports.generateContract = async (req, res, next) => {
       modules: [imageModule],
       paragraphLoop: true,
       linebreaks: true,
-      // Definim delimiters pentru text normal
-      delimiters: { start: '{{', end: '}}' },
-      // Definim custom delimiters pentru imagini
-      parser: (tag) => {
-        // Detectăm tag-urile de imagine cu formatul {%image nume_tag%}
-        const imageMatch = tag.match(/{%image\s+([^%]+)%}/);
-        if (imageMatch) {
-          return {
-            get: (scope) => {
-              // Returnăm valoarea din scope folosind cheia "image nume_tag"
-              return scope[`image ${imageMatch[1]}`];
-            }
-          };
-        }
-        
-        // Pentru tag-urile normale, folosim parser-ul standard
-        return {
-          get: (scope) => {
-            const parts = tag.split('.');
-            let result = scope;
-            for (let i = 0; i < parts.length; i++) {
-              result = result[parts[i]];
-            }
-            return result;
-          }
-        };
-      }
+      delimiters: { start: '{{', end: '}}' }
     });
-    
-    // Setăm datele pentru template, asigurând-ne că pentru semnătură folosim cheia "image semnatura"
+
+    // Setăm datele pentru template
+    // IMPORTANT: Pentru tag-ul {%image semnatura%}, cheia trebuie să fie doar 'semnatura'
     doc.setData({
       ...contractData,
-      "image semnatura": contractData.semnatura // Aceasta va fi accesibilă prin {%image semnatura%}
+      // ImageModule va face automat maparea între 'semnatura' și {%image semnatura%}
+      "semnatura": contractData.semnatura
     });
     console.log("Semnătură trimisă:", contractData.semnatura);
 
     try {
       doc.render();
     } catch (err) {
+      console.error("Eroare la renderizare:", err);
+      if (err.properties && err.properties.errors) {
+        console.error("Detalii erori:", JSON.stringify(err.properties.errors));
+      }
       logger.error(`Eroare la renderizarea contractului: ${err.message}`);
       return res.status(500).json({ success: false, message: 'Eroare la procesarea template-ului', details: err });
     }
