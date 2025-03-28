@@ -1,5 +1,3 @@
-// Contract controller complet, cu inserarea semnăturii ca imagine în DOCX la {{image semnatura}}
-
 const fs = require('fs');
 const path = require('path');
 const PizZip = require('pizzip');
@@ -32,7 +30,8 @@ exports.saveSignature = async (req, res, next) => {
     const { signatureData } = req.body;
     if (!signatureData) return res.status(400).json({ success: false, message: 'Nu a fost furnizată nicio semnătură' });
 
-    user.signature = signatureData;
+    // Curățăm semnătura de eventuale newline-uri și spații suplimentare
+    user.signature = signatureData.replace(/\s+/g, '');
     await user.save();
     return res.status(200).json({ success: true, message: 'Semnătura a fost salvată cu succes' });
   } catch (error) {
@@ -60,13 +59,33 @@ exports.generateContract = async (req, res, next) => {
     user.documents.contractGenerated = true;
     await user.save();
 
+    // Procesăm semnătura: convertim dataURL-ul într-un fișier PNG
+    let signatureImagePath = null;
+    if (user.signature) {
+      // Eliminăm orice whitespace (newline-uri/spații) din string
+      const cleanSignature = user.signature.replace(/\s+/g, '');
+      // Verificăm dacă are prefixul corect
+      if (!cleanSignature.startsWith('data:image/png;base64,')) {
+        throw new Error('Semnătura nu este în formatul așteptat.');
+      }
+      // Obținem doar datele base64 (fără prefix)
+      const base64Data = cleanSignature.replace(/^data:image\/png;base64,/, '');
+      const imageBuffer = Buffer.from(base64Data, 'base64');
+
+      // Salvăm imaginea într-un director temporar
+      const tempDir = path.join(__dirname, '../../../uploads/temp');
+      await fs.promises.mkdir(tempDir, { recursive: true });
+      signatureImagePath = path.join(tempDir, `signature_${userId}.png`);
+      await fs.promises.writeFile(signatureImagePath, imageBuffer);
+    }
+
     const contractData = {
       nume_si_prenume: user.idCard.fullName,
       domiciliul_aplicantului: user.idCard.address ?? 'test',
       identificat_cu_ci: `${user.idCard.series} ${user.idCard.number}`,
       ci_eliberat_la_data_de: user.idCard.birthDate ? new Date(user.idCard.birthDate).toLocaleDateString('ro-RO') : 'N/A',
       data_semnarii: new Date().toLocaleDateString('ro-RO'),
-      semnatura: user.signature?.startsWith('data:image/') ? user.signature : null
+      semnatura: signatureImagePath // folosim calea fișierului PNG generat
     };
 
     const templatePath = path.join(__dirname, '../../templates/contract.docx');
@@ -80,8 +99,14 @@ exports.generateContract = async (req, res, next) => {
     const content = fs.readFileSync(templatePath, 'binary');
     const zip = new PizZip(content);
 
+    // Configurarea opțiunilor pentru modulul de imagini
     const imageOpts = {
       getImage: function (tagValue) {
+        // Dacă tagValue reprezintă o cale de fișier validă, returnează conținutul fișierului
+        if (fs.existsSync(tagValue)) {
+          return fs.readFileSync(tagValue);
+        }
+        // Fallback: dacă tagValue e un string base64 valid, procesează-l
         if (!tagValue || typeof tagValue !== 'string' || !tagValue.includes('base64')) return null;
         const base64Data = tagValue.split(';base64,').pop();
         return Buffer.from(base64Data, 'base64');
@@ -101,12 +126,13 @@ exports.generateContract = async (req, res, next) => {
       linebreaks: true,
       delimiters: { start: '{{', end: '}}' }
     });
-    
 
-    doc.setData({ ...contractData, "image:semnatura": contractData.semnatura });
-    console.log("Semnătură trimisă:", contractData.semnatura?.substring(0, 30)); // vezi dacă e base64
-
-
+    // Setăm datele pentru template, asigurându-ne că placeholder-ul este exact {{image:semnatura}}
+    doc.setData({
+      ...contractData,
+      "image:semnatura": contractData.semnatura
+    });
+    console.log("Semnătură trimisă:", contractData.semnatura);
 
     try {
       doc.render();
@@ -150,12 +176,8 @@ exports.generateContract = async (req, res, next) => {
   }
 };
 
-// @desc    Get the saved contract for current user
-// @route   GET /api/contracts/download
-// @access  Private
 exports.downloadContract = async (req, res, next) => {
   try {
-    // Get user data from database
     const userId = req.user.id;
     const user = await User.findById(userId);
     
@@ -166,7 +188,6 @@ exports.downloadContract = async (req, res, next) => {
       });
     }
     
-    // Inițializăm documentele utilizatorului dacă nu există
     if (!user.documents) {
       user.documents = {};
     }
@@ -176,21 +197,17 @@ exports.downloadContract = async (req, res, next) => {
     
     let contractFullPath = null;
     
-    // Verificăm dacă utilizatorul are o cale validată spre contract
     if (user.documents.contractPath) {
-      // Obținem calea completă din calea relativă
       const contractRelativePath = user.documents.contractPath;
       console.log(`Contract relative path from user document: ${contractRelativePath}`);
       
       contractFullPath = path.join(__dirname, `../../../${contractRelativePath.substring(1)}`);
       console.log(`Constructed full path: ${contractFullPath}`);
       
-      // Verificăm dacă fișierul există fizic
       if (!fs.existsSync(contractFullPath)) {
         logger.error(`Contract file not found at path: ${contractFullPath}`);
         console.error(`Contract file does not exist at path: ${contractFullPath}`);
         
-        // Verificăm dacă există un alt contract pentru acest utilizator
         const alternativeFilename = `contract_${userId}.pdf`;
         const alternativePath = path.join(__dirname, `../../../uploads/contracts/${alternativeFilename}`);
         console.log(`Checking alternative path: ${alternativePath}`);
@@ -199,7 +216,6 @@ exports.downloadContract = async (req, res, next) => {
           console.log(`Found contract at alternative path: ${alternativePath}`);
           contractFullPath = alternativePath;
           
-          // Actualizăm calea în baza de date pentru viitoare descărcări
           user.documents.contractPath = `/uploads/contracts/${alternativeFilename}`;
           await user.save();
         } else {
@@ -212,7 +228,6 @@ exports.downloadContract = async (req, res, next) => {
     } else {
       console.log(`No contract path set for user: ${userId}`);
       
-      // Încercăm să găsim un contract existent
       const defaultFilename = `contract_${userId}.pdf`;
       const defaultPath = path.join(__dirname, `../../../uploads/contracts/${defaultFilename}`);
       console.log(`Checking default path: ${defaultPath}`);
@@ -221,15 +236,12 @@ exports.downloadContract = async (req, res, next) => {
         console.log(`Found contract at default path: ${defaultPath}`);
         contractFullPath = defaultPath;
         
-        // Actualizăm calea în baza de date pentru viitoare descărcări
         user.documents.contractPath = `/uploads/contracts/${defaultFilename}`;
         await user.save();
       }
     }
     
-    // Verificăm dacă avem o cale validă înainte de a încerca să citim fișierul
     if (!contractFullPath) {
-      // Show a more detailed error with information about the state
       console.error(`Contract not found. User state: contractGenerated=${user.documents.contractGenerated}, contractPath=${user.documents.contractPath}`);
       return res.status(404).json({
         success: false,
@@ -240,19 +252,14 @@ exports.downloadContract = async (req, res, next) => {
     }
     
     try {
-      // Citim fișierul în memorie pentru a evita problemele cu middleware-ul fileUpload
       console.log(`Reading contract file from: ${contractFullPath}`);
       const fileBuffer = fs.readFileSync(contractFullPath);
       console.log(`Successfully read contract file, size: ${fileBuffer.length} bytes`);
       
-      // Determinam tipul de fisier dupa extensie sau flag-ul contractFormat
       const isDocx = user.documents.contractFormat === 'docx' || contractFullPath.toLowerCase().endsWith('.docx');
       
-      // Set headers for correct file type and send file
-      // Make sure we have a valid name for the contract file
       let displayName = user.idCard?.fullName;
       if (!displayName || displayName === 'test') {
-        // Fallback to user name if idCard name is not available or is test
         displayName = user.name || userId;
       }
       const fileName = `contract_${displayName.replace(/\s+/g, '_')}${isDocx ? '.docx' : '.pdf'}`;
@@ -270,12 +277,10 @@ exports.downloadContract = async (req, res, next) => {
       res.setHeader('Content-Disposition', `attachment; filename="${fileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`);
       console.log(`Set headers for download, filename: ${fileName}`);
       
-      // Important: Marchez acest request ca fiind o descărcare statică, nu un upload de fișier
       if (req.files) {
         delete req.files;
       }
       
-      // Trimitem buffer-ul direct
       console.log(`Sending file to client...`);
       return res.send(fileBuffer);
     } catch (readError) {
@@ -293,12 +298,8 @@ exports.downloadContract = async (req, res, next) => {
   }
 };
 
-// @desc    Validate and complete missing ID card data
-// @route   POST /api/contracts/validate-id-card
-// @access  Private
 exports.validateIdCard = async (req, res, next) => {
   try {
-    // Get user data from database
     const userId = req.user.id;
     const user = await User.findById(userId);
     
@@ -309,10 +310,8 @@ exports.validateIdCard = async (req, res, next) => {
       });
     }
     
-    // Verificăm datele din buletin și determinăm ce câmpuri lipsesc
     const validationResult = validateIdCardData(user.idCard);
     
-    // Dacă toate datele sunt complete, returnez succes
     if (validationResult.valid) {
       return res.status(200).json({
         success: true,
@@ -321,10 +320,8 @@ exports.validateIdCard = async (req, res, next) => {
       });
     }
     
-    // Actualizăm datele lipsă cu cele furnizate în request
     const { CNP, fullName, address, series, number, issuedBy, birthDate, expiryDate } = req.body;
     
-    // Creăm un obiect cu câmpurile noi sau cele existente
     const updatedIdCard = {
       CNP: CNP || user.idCard?.CNP,
       fullName: fullName || user.idCard?.fullName,
@@ -336,28 +333,23 @@ exports.validateIdCard = async (req, res, next) => {
       expiryDate: expiryDate ? new Date(expiryDate) : user.idCard?.expiryDate
     };
     
-    // Actualizăm utilizatorul cu noile date
     if (!user.idCard) {
       user.idCard = {};
     }
     
-    // Actualizăm fiecare câmp individual
     Object.keys(updatedIdCard).forEach(key => {
       if (updatedIdCard[key]) {
         user.idCard[key] = updatedIdCard[key];
       }
     });
     
-    // Marcăm buletinul ca încărcat
     if (!user.documents) {
       user.documents = {};
     }
     user.documents.id_cardUploaded = true;
     
-    // Salvăm utilizatorul
     await user.save();
     
-    // Verificăm din nou validitatea
     const revalidationResult = validateIdCardData(user.idCard);
     
     if (revalidationResult.valid) {
@@ -367,7 +359,6 @@ exports.validateIdCard = async (req, res, next) => {
         idCard: user.idCard
       });
     } else {
-      // Datele încă sunt incomplete
       const missingFieldsText = revalidationResult.missingFields.join(', ');
       return res.status(400).json({
         success: false,
@@ -382,12 +373,8 @@ exports.validateIdCard = async (req, res, next) => {
   }
 };
 
-// @desc    Reset contract status and allow regeneration
-// @route   POST /api/contracts/reset
-// @access  Private
 exports.resetContract = async (req, res, next) => {
   try {
-    // Get user data from database
     const userId = req.user.id;
     const user = await User.findById(userId);
     
@@ -398,30 +385,24 @@ exports.resetContract = async (req, res, next) => {
       });
     }
     
-    // Reset contract state
     if (!user.documents) {
       user.documents = {};
     }
     
-    // Reset flaguri contract
     user.documents.contractGenerated = false;
     user.documents.contractPath = null;
     
     if (user.contractSigned) {
-      // Dacă era semnat, îl marcăm ca nesemnat
       user.contractSigned = false;
       user.contractSignedAt = null;
-      // Clear signature data as well
       user.signature = null;
     }
     
     await user.save();
     
-    // Verificăm dacă există fișiere de contract pentru acest utilizator și le ștergem
     const contractsDir = path.join(__dirname, '../../../uploads/contracts');
     console.log(`Verificare fișiere contract pentru ștergere din: ${contractsDir}`);
     
-    // Verificăm dacă directorul există
     if (!fs.existsSync(contractsDir)) {
       console.log(`Directorul pentru contracte nu există, se creează: ${contractsDir}`);
       await fs.promises.mkdir(contractsDir, { recursive: true });
@@ -431,7 +412,6 @@ exports.resetContract = async (req, res, next) => {
     const contractPath = path.join(contractsDir, contractFilename);
     console.log(`Caut fișierul contract PDF: ${contractPath}`);
     
-    // Ștergem fișierul PDF dacă există
     try {
       if (fs.existsSync(contractPath)) {
         console.log(`Șterg fișierul contract PDF: ${contractPath}`);
@@ -444,7 +424,6 @@ exports.resetContract = async (req, res, next) => {
       console.error(`Eroare la ștergerea contractului PDF: ${deleteError.message}`);
     }
     
-    // Verificăm și fișierul docx
     const docxPath = path.join(contractsDir, `contract_${userId}.docx`);
     console.log(`Caut fișierul contract DOCX: ${docxPath}`);
     
@@ -471,12 +450,9 @@ exports.resetContract = async (req, res, next) => {
     next(error);
   }
 };
-// @desc    Mark contract as signed by user
-// @route   POST /api/contracts/sign
-// @access  Private
+
 exports.signContract = async (req, res, next) => {
   try {
-    // Get user data from database
     const userId = req.user.id;
     const user = await User.findById(userId);
     
@@ -487,26 +463,20 @@ exports.signContract = async (req, res, next) => {
       });
     }
     
-    // Check if signature data is provided
     const { signatureData } = req.body;
     
-    // Update user document to mark contract as signed and store signature
     user.contractSigned = true;
     user.contractSignedAt = new Date();
     
-    // Save signature data if provided
     if (signatureData) {
-      user.signature = signatureData;
+      user.signature = signatureData.replace(/\s+/g, '');
       console.log('Signature data saved for user:', userId);
     }
     
-    // Mark contract path in user document if not already set
     if (!user.documents) {
       user.documents = {};
     }
     
-    // If no contract path is set but contract file exists for this user, update the path
-    // Verificăm dacă avem un path valid pentru contract sau dacă putem recrea unul
     if (!user.documents.contractPath) {
       const contractFilename = `contract_${userId}.pdf`;
       const contractPath = path.join(__dirname, `../../../uploads/contracts/${contractFilename}`);
@@ -515,10 +485,7 @@ exports.signContract = async (req, res, next) => {
         user.documents.contractPath = `/uploads/contracts/${contractFilename}`;
         console.log(`Am găsit și am setat calea contractului la: ${user.documents.contractPath}`);
       } else {
-        // Nu am găsit un contract existent
         logger.warn(`Nu am găsit un contract existent pentru utilizatorul ${userId} la semnare`);
-        
-        // Dacă nu găsim contractul, dar utilizatorul încearcă să-l semneze, putem returna o eroare indicând că trebuie generat mai întâi
         return res.status(400).json({
           success: false,
           message: 'Contractul nu a fost găsit. Te rugăm să generezi mai întâi contractul.',
@@ -526,7 +493,6 @@ exports.signContract = async (req, res, next) => {
         });
       }
     } else {
-      // Verificăm dacă contractul referit de path există în realitate
       const contractFullPath = path.join(__dirname, `../../../${user.documents.contractPath.substring(1)}`);
       
       if (!fs.existsSync(contractFullPath)) {
@@ -555,14 +521,10 @@ exports.signContract = async (req, res, next) => {
   }
 };
 
-// @desc    Download contract template
-// @route   GET /api/contracts/template
-// @access  Private
 exports.downloadTemplate = async (req, res, next) => {
   try {
     const templatePath = path.join(__dirname, '../../templates/contract_template.docx');
     
-    // Check if template exists
     if (!fs.existsSync(templatePath)) {
       return res.status(404).json({
         success: false,
@@ -570,7 +532,6 @@ exports.downloadTemplate = async (req, res, next) => {
       });
     }
     
-    // Set headers and send file
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', 'attachment; filename=contract_template.docx');
     
