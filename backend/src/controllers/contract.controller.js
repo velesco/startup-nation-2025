@@ -95,14 +95,13 @@ exports.generateContract = async (req, res, next) => {
     };
 
     const imageModule = new ImageModule(imageOpts);
-    const doc = new Docxtemplater();
-    doc.attachModule(imageModule);
-    doc.loadZip(zip);
-    doc.setOptions({
+    const doc = new Docxtemplater(zip, {
+      modules: [imageModule],
       paragraphLoop: true,
       linebreaks: true,
       delimiters: { start: '{{', end: '}}' }
     });
+    
 
     doc.setData(contractData);
 
