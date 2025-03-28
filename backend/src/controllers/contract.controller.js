@@ -82,24 +82,26 @@ exports.generateContract = async (req, res, next) => {
 
     const imageOpts = {
       centered: false,
-      getImage: (tagValue) => {
+      getImage: function (tagValue) {
         const base64Data = tagValue.split(';base64,').pop();
         return Buffer.from(base64Data, 'base64');
       },
-      getSize: (img) => {
+      getSize: function (img) {
         const dimensions = sizeOf(img);
         const maxWidth = 150;
         const ratio = maxWidth / dimensions.width;
         return [maxWidth, dimensions.height * ratio];
       }
     };
+    
 
     const doc = new Docxtemplater(zip, {
       paragraphLoop: true,
       linebreaks: true,
       delimiters: { start: '{{', end: '}}' },
-      modules: [new ImageModule(imageOpts)]
+      modules: [new ImageModule(imageOpts)],
     });
+    console.log("Semnătura:", contractData.semnatura?.substring(0, 100));
 
     doc.setData(contractData);
 
