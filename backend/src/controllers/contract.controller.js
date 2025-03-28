@@ -103,7 +103,9 @@ exports.generateContract = async (req, res, next) => {
     });
     
 
-    doc.setData(contractData);
+    doc.setData({ ...contractData, "image:semnatura": contractData.semnatura });
+    console.log("Semnătură trimisă:", contractData.semnatura?.substring(0, 30)); // vezi dacă e base64
+
 
 
     try {
