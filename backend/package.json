@@ -20,6 +20,7 @@
     "express-rate-limit": "^6.7.0",
     "express-validator": "^7.2.1",
     "helmet": "^6.1.5",
+    "image-size": "^2.0.1",
     "joi": "^17.9.2",
     "jsonwebtoken": "^9.0.0",
     "libreoffice-convert": "^1.6.1",

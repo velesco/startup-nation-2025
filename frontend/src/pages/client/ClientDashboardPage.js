@@ -31,7 +31,6 @@ const ClientDashboardPage = () => {
     
     const steps = [
       documents.id_cardUploaded || false,
-      documents.courseSelected || false,
       documents.appDownloaded || false
     ];
     
@@ -85,7 +84,6 @@ const ClientDashboardPage = () => {
             id_cardUploaded: false,
             contractGenerated: false,
             contractSigned: false,
-            courseSelected: false,
             appDownloaded: false
           };
           
@@ -93,7 +91,6 @@ const ClientDashboardPage = () => {
           const completedSteps = [
             documents.id_cardUploaded,
             documents.contractSigned,
-            documents.courseSelected,
             documents.appDownloaded
           ].filter(Boolean).length;
           
@@ -107,10 +104,6 @@ const ClientDashboardPage = () => {
             
             if (documents.contractSigned) {
               currentStepValue = 3; // Pas selectare curs
-              
-              if (documents.courseSelected) {
-                currentStepValue = 4; // Pas instalare aplicație
-              }
             }
           }
           
@@ -327,7 +320,6 @@ const ClientDashboardPage = () => {
             console.log('Documente noi:', newData.documents);
             const completedSteps = [
               newData.documents.id_cardUploaded,
-              newData.documents.courseSelected,
               newData.documents.appDownloaded
             ].filter(Boolean).length;
             
@@ -338,9 +330,6 @@ const ClientDashboardPage = () => {
             let nextStep = 1;
             if (newData.documents.id_cardUploaded) {
               nextStep = 2;
-              if (newData.documents.courseSelected) {
-                nextStep = 3;
-              }
             }
             
             console.log('Pas nou calculat:', nextStep);
@@ -450,8 +439,7 @@ const ClientDashboardPage = () => {
   const steps = user ? [
     { id: 1, name: "Încărcare Buletin", icon: "document", completed: user.documents?.id_cardUploaded },
     { id: 2, name: "Contract Participare", icon: "document", completed: user.documents?.contractSigned },
-    { id: 3, name: "Selectare Curs", icon: "calendar", completed: user.documents?.courseSelected },
-    { id: 4, name: "Instalare Aplicație", icon: "check", completed: user.documents?.appDownloaded }
+    { id: 3, name: "Instalare Aplicație", icon: "check", completed: user.documents?.appDownloaded }
   ] : [];
 
   const handleLogout = async () => {
