@@ -104,7 +104,8 @@ exports.generateContract = async (req, res, next) => {
       delimiters: { start: '{{', end: '}}' }
     });
 
-    doc.setData({ "image semnatura": contractData.semnatura, ...contractData });
+    doc.setData(contractData);
+
 
     try {
       doc.render();
