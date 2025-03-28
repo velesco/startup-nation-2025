@@ -108,7 +108,16 @@ exports.generateContract = async (req, res, next) => {
       contractData['image semnatura'] = null;
     }
 
-    doc.setData(contractData);
+    try {
+      const rendered = doc.render(contractData); // <- aici treci contractData direct
+    } catch (err) {
+      logger.error(`Eroare la renderizarea contractului: ${err.message}`);
+      return res.status(500).json({
+        success: false,
+        message: 'Eroare la procesarea template-ului',
+        details: err
+      });
+    }
 
     try {
       doc.render();
