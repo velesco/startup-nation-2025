@@ -1,4 +1,4 @@
-// Contract controller complet, cu inserarea semnăturii ca imagine în DOCX la {%image semnatura}
+// Contract controller complet, cu inserarea semnăturii ca imagine în DOCX la {{image semnatura}}
 
 const fs = require('fs');
 const path = require('path');
@@ -66,7 +66,7 @@ exports.generateContract = async (req, res, next) => {
       identificat_cu_ci: `${user.idCard.series} ${user.idCard.number}`,
       ci_eliberat_la_data_de: user.idCard.birthDate ? new Date(user.idCard.birthDate).toLocaleDateString('ro-RO') : 'N/A',
       data_semnarii: new Date().toLocaleDateString('ro-RO'),
-      "image semnatura": user.signature?.startsWith('data:image/') ? user.signature : null
+      semnatura: user.signature?.startsWith('data:image/') ? user.signature : null
     };
 
     const templatePath = path.join(__dirname, '../../templates/contract.docx');
@@ -81,7 +81,6 @@ exports.generateContract = async (req, res, next) => {
     const zip = new PizZip(content);
 
     const imageOpts = {
-      centered: false,
       getImage: function (tagValue) {
         if (!tagValue || typeof tagValue !== 'string' || !tagValue.includes('base64')) return null;
         const base64Data = tagValue.split(';base64,').pop();
@@ -95,15 +94,20 @@ exports.generateContract = async (req, res, next) => {
       }
     };
 
-    const doc = new Docxtemplater(zip, {
+    const imageModule = new ImageModule(imageOpts);
+    const doc = new Docxtemplater();
+    doc.attachModule(imageModule);
+    doc.loadZip(zip);
+    doc.setOptions({
       paragraphLoop: true,
       linebreaks: true,
-      delimiters: { start: '{{', end: '}}' },
-      modules: [new ImageModule(imageOpts)]
+      delimiters: { start: '{{', end: '}}' }
     });
 
+    doc.setData({ "image semnatura": contractData.semnatura, ...contractData });
+
     try {
-      doc.render(contractData);
+      doc.render();
     } catch (err) {
       logger.error(`Eroare la renderizarea contractului: ${err.message}`);
       return res.status(500).json({ success: false, message: 'Eroare la procesarea template-ului', details: err });
@@ -143,6 +147,7 @@ exports.generateContract = async (req, res, next) => {
     next(error);
   }
 };
+
 // @desc    Get the saved contract for current user
 // @route   GET /api/contracts/download
 // @access  Private
