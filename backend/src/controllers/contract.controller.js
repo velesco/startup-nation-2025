@@ -112,14 +112,10 @@ exports.generateContract = async (req, res, next) => {
       domiciliul_aplicantului: user.idCard.address ?? 'test',
       identificat_cu_ci: `${user.idCard.series} ${user.idCard.number}`,
       ci_eliberat_la_data_de: user.idCard.birthDate ? new Date(user.idCard.birthDate).toLocaleDateString('ro-RO') : 'N/A',
-      // Pentru semnatură, vom folosi o abordare diferită - vezi mai jos comentariile
-      // În loc să includem direct semnătura ca string, vom folosi o soluție mai robustă pentru imagini
-      semnatura: '',  // Vom procesa semnătura special, nu ca text direct
+      // Pentru semnătură, vom folosi o abordare alternativă
+      semnatura: '', // Placeholder gol pentru semnătură, o vom procesa special
       data_semnarii: new Date().toLocaleDateString('ro-RO'),
     };
-    
-    // Pentru o soluție completă, ar trebui instalat pachetul docxtemplater-image-module-free
-    // și folosit pentru a insera imagini în documente
     
     // Caută template-ul contract.docx și procesează-l
     try {
@@ -142,24 +138,7 @@ exports.generateContract = async (req, res, next) => {
       const content = fs.readFileSync(templatePath, 'binary');
       const zip = new PizZip(content);
       
-      // Verificăm dacă utilizatorul are semnătură și o procesăm ca imagine
-      if (user.signature && user.signature.startsWith('data:image/')) {
-        console.log('Procesez semnătura ca imagine pentru contract');
-        const signatureBuffer = processSignatureImage(user.signature);
-        
-        if (signatureBuffer) {
-          // Utilizăm o abordare alternativă pentru a include semnătura în document
-          // Înlocuim direct string-ul placeholder cu date URI pentru imagine
-          // Această soluție este temporară până la instalarea modulului docxtemplater-image-module-free
-          
-          // Notă: În documentul Word, {{semnatura}} trebuie să fie înlocuit cu o reprezentare text
-          // Pentru o soluție completă, trebuie instalat modulul docxtemplater-image-module-free și utilizat așa:
-          // const ImageModule = require('docxtemplater-image-module-free');
-          // și apoi adăugat în opțiunile docxtemplater ca modules: [imageModule]
-        }
-      }
-      
-      // Creează instanța de docxtemplater
+      // Creează instanța de docxtemplater - corecție: nu folosim modulul de imagini încă
       const doc = new Docxtemplater(zip, {
         paragraphLoop: true,
         linebreaks: true,
@@ -303,7 +282,7 @@ exports.generateContract = async (req, res, next) => {
         
         // Salvam documentul Word ca fallback
         const uploadsDir = path.join(__dirname, '../../../uploads/contracts');
-        await mkdirp(uploadsDir);
+        await fs.promises.mkdir(uploadsDir, { recursive: true }); // utilizează fs.promises.mkdir în loc de mkdirp
         
         // Generam si fisierul docx
         const docxFilename = `contract_${userId}.docx`;
@@ -440,7 +419,7 @@ exports.downloadContract = async (req, res, next) => {
             
             // Prepare directory
             const uploadsDir = path.join(__dirname, '../../../uploads/contracts');
-            await mkdirp(uploadsDir);
+            await fs.promises.mkdir(uploadsDir, { recursive: true });
             
             // Prepare data for contract template
             const contractData = {
@@ -473,10 +452,21 @@ exports.downloadContract = async (req, res, next) => {
               doc.render();
               
               // Generate PDF
-              const wordBuffer = doc.getZip().generate({
+              let wordBuffer = doc.getZip().generate({
                 type: 'nodebuffer',
                 compression: 'DEFLATE'
               });
+              
+              // Procesare avansată pentru semnătură - adăugat la regenerare
+              if (user.signature && user.signature.startsWith('data:image/')) {
+                try {
+                  console.log('Inserez semnătura ca imagine în documentul regenerat');
+                  wordBuffer = insertSignatureImage(wordBuffer, user.signature);
+                } catch (signatureError) {
+                  logger.error(`Eroare la inserarea semnăturii în document regenerat: ${signatureError.message}`);
+                  // Continuăm cu buffer-ul original în caz de eroare
+                }
+              }
               
               const pdfBuffer = await convertToPdf(wordBuffer);
               
@@ -502,7 +492,7 @@ exports.downloadContract = async (req, res, next) => {
     }
   
     
-        // Verificăm dacă avem o cale validă înainte de a încerca să citim fișierul
+    // Verificăm dacă avem o cale validă înainte de a încerca să citim fișierul
     if (!contractFullPath) {
       // Show a more detailed error with information about the state
       console.error(`Contract not found. User state: contractGenerated=${user.documents.contractGenerated}, contractPath=${user.documents.contractPath}`);
@@ -780,7 +770,7 @@ exports.resetContract = async (req, res, next) => {
     // Verificăm dacă directorul există
     if (!fs.existsSync(contractsDir)) {
       console.log(`Directorul pentru contracte nu există, se creează: ${contractsDir}`);
-      await mkdirp(contractsDir);
+      await fs.promises.mkdir(contractsDir, { recursive: true });
     }
     
     const contractFilename = `contract_${userId}.pdf`;
