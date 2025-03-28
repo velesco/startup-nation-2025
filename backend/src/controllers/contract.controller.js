@@ -59,8 +59,8 @@ exports.generateContract = async (req, res, next) => {
     user.documents.contractGenerated = true;
     await user.save();
 
-    // Procesăm semnătura: convertim dataURL-ul într-un fișier PNG
-    let signatureImagePath = null;
+    // Procesăm semnătura
+    let signatureBase64 = null;
     if (user.signature) {
       // Eliminăm orice whitespace (newline-uri/spații) din string
       const cleanSignature = user.signature.replace(/\s+/g, '');
@@ -68,16 +68,16 @@ exports.generateContract = async (req, res, next) => {
       if (!cleanSignature.startsWith('data:image/png;base64,')) {
         throw new Error('Semnătura nu este în formatul așteptat.');
       }
-      // Obținem doar datele base64 (fără prefix)
-      const base64Data = cleanSignature.replace(/^data:image\/png;base64,/, '');
-      const imageBuffer = Buffer.from(base64Data, 'base64');
-
-      // Salvăm imaginea într-un director temporar
-      const tempDir = path.join(__dirname, '../../../uploads/temp');
-      await fs.promises.mkdir(tempDir, { recursive: true });
-      signatureImagePath = path.join(tempDir, `signature_${userId}.png`);
-      await fs.promises.writeFile(signatureImagePath, imageBuffer);
+      
+      // Folosim direct string-ul base64 complet pentru semnătură
+      signatureBase64 = cleanSignature;
+      
+      console.log("Semnătură base64 pregătită pentru template");
     }
+
+    // Obținem IP-ul utilizatorului pentru a-l include în document
+    const userIp = req.ip || req.connection.remoteAddress || "IP necunoscut";
+    console.log("IP-ul utilizatorului:", userIp);
 
     const contractData = {
       nume_si_prenume: user.idCard.fullName,
@@ -85,7 +85,8 @@ exports.generateContract = async (req, res, next) => {
       identificat_cu_ci: `${user.idCard.series} ${user.idCard.number}`,
       ci_eliberat_la_data_de: user.idCard.birthDate ? new Date(user.idCard.birthDate).toLocaleDateString('ro-RO') : 'N/A',
       data_semnarii: new Date().toLocaleDateString('ro-RO'),
-      semnatura: signatureImagePath // folosim calea fișierului PNG generat
+      ip_aplicant: userIp,
+      semnatura: signatureBase64 // folosim direct semnătura base64
     };
 
     const templatePath = path.join(__dirname, '../../templates/contract.docx');
@@ -96,84 +97,181 @@ exports.generateContract = async (req, res, next) => {
       });
     }
 
+    console.log(`Template path: ${templatePath}`);
+    console.log("Verificăm existența template-ului:", fs.existsSync(templatePath));
+
     const content = fs.readFileSync(templatePath, 'binary');
     const zip = new PizZip(content);
 
-    // Configurarea opțiunilor pentru modulul de imagini
+    // Încercăm să inspectăm tag-urile din template pentru debugging
+    try {
+      const textContent = zip.file("word/document.xml").asText();
+      console.log("Căutăm tag-ul de semnătură în template:");
+      
+      // Verificăm dacă există tag-ul pentru semnătură
+      const signatureTagPattern = /\{%image\s+semnatura%\}|\{image:\s*semnatura\}|\{\s*%\s*image\s+semnatura\s*%\s*\}/i;
+      const hasSignatureTag = signatureTagPattern.test(textContent);
+      console.log("Tag semnătură găsit în template:", hasSignatureTag);
+      
+      // Încercăm să găsim formatul exact
+      const match = textContent.match(/\{[^}]*semnatura[^}]*\}/i);
+      if (match) {
+        console.log("Format exact al tag-ului de semnătură:", match[0]);
+      }
+    } catch (err) {
+      console.error("Eroare la inspectarea template-ului:", err);
+    }
+
+    // Configurarea moduleului de imagini cu suport pentru multiple formate posibile de tag
     const imageOpts = {
       centered: false,
       fileType: 'docx',
       getImage: function (tagValue) {
-        console.log("getImage called with:", tagValue);
-        // Dacă tagValue reprezintă o cale de fișier validă, returnează conținutul fișierului
-        if (fs.existsSync(tagValue)) {
-          return fs.readFileSync(tagValue);
+        console.log("getImage apelat cu:", tagValue);
+        
+        // Verificăm dacă tagValue este un string base64
+        if (tagValue && typeof tagValue === 'string' && tagValue.includes('base64')) {
+          console.log("Procesare imagine base64");
+          const base64Data = tagValue.split(';base64,').pop();
+          return Buffer.from(base64Data, 'base64');
         }
-        // Fallback: dacă tagValue e un string base64 valid, procesează-l
-        if (!tagValue || typeof tagValue !== 'string' || !tagValue.includes('base64')) return null;
-        const base64Data = tagValue.split(';base64,').pop();
-        return Buffer.from(base64Data, 'base64');
+        
+        console.log("Nu am putut procesa tag-ul de imagine:", tagValue);
+        return null;
       },
       getSize: function (img) {
-        const dimensions = sizeOf(img);
-        const maxWidth = 150;
-        const ratio = maxWidth / dimensions.width;
-        return [maxWidth, dimensions.height * ratio];
+        try {
+          const dimensions = sizeOf(img);
+          console.log("Dimensiunile imaginii:", dimensions);
+          const maxWidth = 150;
+          const ratio = maxWidth / dimensions.width;
+          return [maxWidth, dimensions.height * ratio];
+        } catch (err) {
+          console.error("Eroare la obținerea dimensiunilor imaginii:", err);
+          return [150, 50]; // dimensiuni default
+        }
       },
-      // IMPORTANT: Configurare pentru tag-urile de forma {%image semnatura%}
+      // Suportăm mai multe formate posibile de tag-uri
       tagName: 'image',
       delimiterStart: '{%',
       delimiterEnd: '%}'
     };
 
     const imageModule = new ImageModule(imageOpts);
+
+    // Configurăm Docxtemplater cu opțiuni pentru ambele tipuri de tag-uri
     const doc = new Docxtemplater(zip, {
       modules: [imageModule],
       paragraphLoop: true,
       linebreaks: true,
-      delimiters: { start: '{{', end: '}}' }
+      delimiters: { start: '{{', end: '}}' },
+      // Parser personalizat pentru a gestiona formate variate de tag-uri
+      parser: function (tag) {
+        // Tag-uri standard
+        if (tag.startsWith('{{') && tag.endsWith('}}')) {
+          const key = tag.substring(2, tag.length - 2).trim();
+          return {
+            get: function (scope) {
+              return scope[key];
+            }
+          };
+        }
+        
+        // Tag-uri pentru imagini
+        const imgMatch = tag.match(/\{%\s*image\s+(\w+)\s*%\}/i);
+        if (imgMatch) {
+          const key = imgMatch[1].trim();
+          return {
+            get: function (scope) {
+              return scope[key];
+            }
+          };
+        }
+        
+        return {
+          get: function (scope) {
+            console.log("Tag necunoscut:", tag);
+            return '';
+          }
+        };
+      }
     });
 
     // Setăm datele pentru template
-    // IMPORTANT: Pentru tag-ul {%image semnatura%}, cheia trebuie să fie doar 'semnatura'
-    doc.setData({
+    console.log("Setăm datele pentru template:");
+    console.log(JSON.stringify({
       ...contractData,
-      // ImageModule va face automat maparea între 'semnatura' și {%image semnatura%}
-      "semnatura": contractData.semnatura
-    });
-    console.log("Semnătură trimisă:", contractData.semnatura);
+      semnatura: signatureBase64 ? "Semnătură base64 prezentă" : "Lipsă"
+    }));
+
+    doc.setData(contractData);
 
     try {
       doc.render();
+      console.log("Renderizarea a reușit!");
     } catch (err) {
       console.error("Eroare la renderizare:", err);
       if (err.properties && err.properties.errors) {
         console.error("Detalii erori:", JSON.stringify(err.properties.errors));
       }
+      
+      // Verificăm tag-urile care au cauzat probleme
+      if (err.properties && err.properties.errors) {
+        Object.keys(err.properties.errors).forEach(key => {
+          console.error(`Eroare pentru tag-ul '${key}':`, err.properties.errors[key]);
+        });
+      }
+      
       logger.error(`Eroare la renderizarea contractului: ${err.message}`);
-      return res.status(500).json({ success: false, message: 'Eroare la procesarea template-ului', details: err });
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Eroare la procesarea template-ului', 
+        details: err 
+      });
     }
 
+    // Generăm documentul
     const wordBuffer = doc.getZip().generate({ type: 'nodebuffer', compression: 'DEFLATE' });
+    console.log("Document DOCX generat, dimensiune:", wordBuffer.length, "bytes");
+
+    // Salvăm și versiunea docx pentru debugging
+    const docxDir = path.join(__dirname, '../../../uploads/contracts');
+    await fs.promises.mkdir(docxDir, { recursive: true });
+    const docxFilename = `contract_${userId}.docx`;
+    const docxPath = path.join(docxDir, docxFilename);
+    fs.writeFileSync(docxPath, wordBuffer);
+    console.log(`Document DOCX salvat la: ${docxPath}`);
+    
+    // Actualizăm și formatul în baza de date pentru a putea descărca varianta DOCX dacă este nevoie
+    user.documents.contractFormat = 'docx';
+    user.documents.contractPath = `/uploads/contracts/${docxFilename}`;
+    await user.save();
 
     let pdfBuffer;
     try {
       pdfBuffer = await convertToPdf(wordBuffer);
+      console.log("Conversie la PDF reușită, dimensiune:", pdfBuffer.length, "bytes");
     } catch (conversionError) {
       logger.error(`PDF conversion error: ${conversionError.message}`);
-      return res.status(500).json({
-        success: false,
-        message: 'Eroare la conversia în PDF. Încearcă să descarci fișierul .docx în schimb.'
-      });
+      console.error("Eroare la conversia în PDF:", conversionError);
+      
+      // Dacă conversia eșuează, trimitem documentul DOCX
+      let displayName = user.idCard.fullName || user.name || userId;
+      displayName = displayName.replace(/\s+/g, '_');
+      
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.setHeader('Content-Disposition', `attachment; filename=contract_${displayName}.docx`);
+      return res.send(wordBuffer);
     }
 
-    const uploadsDir = path.join(__dirname, '../../../uploads/contracts');
-    await fs.promises.mkdir(uploadsDir, { recursive: true });
-
+    // Salvăm PDF-ul
     const contractFilename = `contract_${userId}.pdf`;
-    const contractPath = path.join(uploadsDir, contractFilename);
+    const contractPath = path.join(docxDir, contractFilename);
     fs.writeFileSync(contractPath, pdfBuffer);
+    console.log(`Document PDF salvat la: ${contractPath}`);
 
+    // Actualizăm calea în baza de date
+    user.documents.contractFormat = 'pdf';
     user.documents.contractPath = `/uploads/contracts/${contractFilename}`;
     await user.save();
 
