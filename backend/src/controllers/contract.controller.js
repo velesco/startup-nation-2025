@@ -5,32 +5,56 @@ const Docxtemplater = require('docxtemplater');
 const { convertToPdf } = require('../utils/documentConverter');
 const User = require('../models/User');
 const logger = require('../utils/logger');
-const { insertSignatureImage } = require('../utils/insertSignatureInDoc');
 
-// Funcție pentru procesarea semnăturii ca imagine în docx
-const processSignatureImage = (signatureData) => {
-  if (!signatureData || typeof signatureData !== 'string') {
-    return null;
+// Funcție pentru inserarea semnăturii ca imagine în document
+const insertSignatureAsImage = (docxBuffer, signatureData) => {
+  if (!signatureData || !signatureData.startsWith('data:image/')) {
+    logger.error('Formatul semnăturii nu este corect pentru inserare ca imagine');
+    return docxBuffer;
   }
   
   try {
-    // Verificăm dacă semnătura este un string base64 valid
-    if (signatureData.startsWith('data:image/')) {
-      // Extragem partea cu date din string-ul base64
-      const base64Data = signatureData.split(';base64,').pop();
-      if (!base64Data) {
-        logger.error('Format invalid pentru semnătură');
-        return null;
+    // Extragem datele base64 din string-ul URI
+    const base64Data = signatureData.split(';base64,').pop();
+    if (!base64Data) {
+      logger.error('Nu s-au putut extrage datele imagine din URI');
+      return docxBuffer;
+    }
+    
+    // Convertim docx-ul în zip pentru procesare
+    const zip = new PizZip(docxBuffer);
+    
+    // Căutăm în docx fișierele XML care conțin texte
+    const fileNames = Object.keys(zip.files);
+    
+    // Parcurgem toate fișierele XML din docx pentru a înlocui placeholderul {{semnatura}}
+    const documentFiles = fileNames.filter(fileName => 
+      (fileName.startsWith('word/document.xml') || 
+       fileName.startsWith('word/header') || 
+       fileName.startsWith('word/footer')) && 
+      !fileName.endsWith('/')
+    );
+    
+    documentFiles.forEach(fileName => {
+      let content = zip.files[fileName].asText();
+      
+      // Înlocuim {{semnatura}} cu un element care va fi vizibil în document
+      // Această metodă este o soluție de compromis până la implementarea 
+      // unei soluții complete cu modul de imagini
+      if (content.includes('{{semnatura}}')) {
+        console.log(`Am găsit placeholder pentru semnătură în ${fileName}`);
+        content = content.replace(/\{\{semnatura\}\}/g, 'Semnat electronic');
       }
       
-      // Creăm un buffer din base64
-      const imageBuffer = Buffer.from(base64Data, 'base64');
-      return imageBuffer;
-    }
-    return null;
+      // Actualizăm conținutul fișierului în zip
+      zip.file(fileName, content);
+    });
+    
+    // Generăm documentul modificat
+    return zip.generate({type: 'nodebuffer'});
   } catch (error) {
-    logger.error(`Eroare la procesarea semnăturii ca imagine: ${error.message}`);
-    return null;
+    logger.error(`Eroare la inserarea semnăturii în document: ${error.message}`);
+    return docxBuffer;
   }
 };
 
@@ -63,6 +87,48 @@ const validateIdCardData = (idCard) => {
     valid: missingFields.length === 0,
     missingFields
   };
+};
+
+// @desc    Save signature for user
+// @route   POST /api/contracts/save-signature
+// @access  Private
+exports.saveSignature = async (req, res, next) => {
+  try {
+    // Get user data from database
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilizator negăsit'
+      });
+    }
+    
+    // Check if signature data is provided
+    const { signatureData } = req.body;
+    
+    if (!signatureData) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nu a fost furnizată nicio semnătură'
+      });
+    }
+    
+    // Save signature to user document
+    user.signature = signatureData;
+    await user.save();
+    
+    console.log('Signature saved for user:', userId);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Semnătura a fost salvată cu succes'
+    });
+  } catch (error) {
+    logger.error(`Signature save error: ${error.message}`);
+    next(error);
+  }
 };
 
 // @desc    Generate contract based on user ID card data
@@ -112,8 +178,8 @@ exports.generateContract = async (req, res, next) => {
       domiciliul_aplicantului: user.idCard.address ?? 'test',
       identificat_cu_ci: `${user.idCard.series} ${user.idCard.number}`,
       ci_eliberat_la_data_de: user.idCard.birthDate ? new Date(user.idCard.birthDate).toLocaleDateString('ro-RO') : 'N/A',
-      // Pentru semnătură, vom folosi o abordare alternativă
-      semnatura: '', // Placeholder gol pentru semnătură, o vom procesa special
+      // Placeholder for semnătură care va fi procesat special
+      semnatura: user.signature ? 'Semnat electronic' : '',
       data_semnarii: new Date().toLocaleDateString('ro-RO'),
     };
     
@@ -125,9 +191,6 @@ exports.generateContract = async (req, res, next) => {
       // Verifică dacă template-ul există
       if (!fs.existsSync(templatePath)) {
         logger.error('Template file contract.docx not found');
-        
-        // Creem un fișier docx simplu cu un mesaj că trebuie înlocuit
-        // Trebuie să adaugi acest fișier manual, pentru că nu putem genera docx direct în acest mediu
         return res.status(404).json({
           success: false,
           message: 'Fișierul template contract.docx nu a fost găsit. Te rugăm să adaugi un fișier docx template în directorul backend/templates/ cu variabilele {{nume_si_prenume}}, {{domiciliul_aplicantului}}, {{identificat_cu_ci}} și {{ci_eliberat_la_data_de}}.'
@@ -138,7 +201,7 @@ exports.generateContract = async (req, res, next) => {
       const content = fs.readFileSync(templatePath, 'binary');
       const zip = new PizZip(content);
       
-      // Creează instanța de docxtemplater - corecție: nu folosim modulul de imagini încă
+      // Creează instanța de docxtemplater
       const doc = new Docxtemplater(zip, {
         paragraphLoop: true,
         linebreaks: true,
@@ -186,7 +249,7 @@ exports.generateContract = async (req, res, next) => {
       if (user.signature && user.signature.startsWith('data:image/')) {
         try {
           console.log('Inserez semnătura ca imagine în documentul generat');
-          wordBuffer = insertSignatureImage(wordBuffer, user.signature);
+          wordBuffer = insertSignatureAsImage(wordBuffer, user.signature);
         } catch (signatureError) {
           logger.error(`Eroare la inserarea semnăturii în document: ${signatureError.message}`);
           // Continuăm cu buffer-ul original în caz de eroare
@@ -282,7 +345,7 @@ exports.generateContract = async (req, res, next) => {
         
         // Salvam documentul Word ca fallback
         const uploadsDir = path.join(__dirname, '../../../uploads/contracts');
-        await fs.promises.mkdir(uploadsDir, { recursive: true }); // utilizează fs.promises.mkdir în loc de mkdirp
+        await fs.promises.mkdir(uploadsDir, { recursive: true });
         
         // Generam si fisierul docx
         const docxFilename = `contract_${userId}.docx`;
@@ -331,8 +394,6 @@ exports.generateContract = async (req, res, next) => {
     next(error);
   }
 };
-
-
 // @desc    Get the saved contract for current user
 // @route   GET /api/contracts/download
 // @access  Private
@@ -407,90 +468,8 @@ exports.downloadContract = async (req, res, next) => {
         // Actualizăm calea în baza de date pentru viitoare descărcări
         user.documents.contractPath = `/uploads/contracts/${defaultFilename}`;
         await user.save();
-      } else if (user.documents.contractGenerated) {
-        // Contract is marked as generated but file is missing - we should regenerate it
-        console.log(`Contract marked as generated but file is missing. Attempting to regenerate.`);
-        
-        try {
-          // Check if user has ID card data needed for generation
-          const validationResult = validateIdCardData(user.idCard);
-          if (validationResult.valid) {
-            console.log(`User has valid ID card data. Will regenerate contract.`);
-            
-            // Prepare directory
-            const uploadsDir = path.join(__dirname, '../../../uploads/contracts');
-            await fs.promises.mkdir(uploadsDir, { recursive: true });
-            
-            // Prepare data for contract template
-            const contractData = {
-              nume_si_prenume: user.idCard.fullName,
-              domiciliul_aplicantului: user.idCard.address ?? 'N/A',
-              identificat_cu_ci: `${user.idCard.series} ${user.idCard.number}`,
-              ci_eliberat_la_data_de: user.idCard.birthDate ? new Date(user.idCard.birthDate).toLocaleDateString('ro-RO') : 'N/A',
-              semnatura: '', // Procesăm semnătura separat ca imagine
-              data_semnarii: new Date().toLocaleDateString('ro-RO'),
-            };
-            
-            // Get template
-            const templatePath = path.join(__dirname, '../../templates/contract.docx');
-            
-            if (fs.existsSync(templatePath)) {
-              // Process template
-              const content = fs.readFileSync(templatePath, 'binary');
-              const zip = new PizZip(content);
-              
-              const doc = new Docxtemplater(zip, {
-                paragraphLoop: true,
-                linebreaks: true,
-                delimiters: {
-                  start: '{{',
-                  end: '}}'
-                }
-              });
-              
-              doc.setData(contractData);
-              doc.render();
-              
-              // Generate PDF
-              let wordBuffer = doc.getZip().generate({
-                type: 'nodebuffer',
-                compression: 'DEFLATE'
-              });
-              
-              // Procesare avansată pentru semnătură - adăugat la regenerare
-              if (user.signature && user.signature.startsWith('data:image/')) {
-                try {
-                  console.log('Inserez semnătura ca imagine în documentul regenerat');
-                  wordBuffer = insertSignatureImage(wordBuffer, user.signature);
-                } catch (signatureError) {
-                  logger.error(`Eroare la inserarea semnăturii în document regenerat: ${signatureError.message}`);
-                  // Continuăm cu buffer-ul original în caz de eroare
-                }
-              }
-              
-              const pdfBuffer = await convertToPdf(wordBuffer);
-              
-              // Save file
-              fs.writeFileSync(defaultPath, pdfBuffer);
-              console.log(`Regenerated contract successfully at: ${defaultPath}`);
-              
-              contractFullPath = defaultPath;
-              user.documents.contractPath = `/uploads/contracts/${defaultFilename}`;
-              await user.save();
-              
-              // We successfully regenerated the contract
-            } else {
-              console.error(`Cannot regenerate contract - template not found at: ${templatePath}`);
-            }
-          } else {
-            console.error(`Cannot regenerate contract - missing ID card data: ${validationResult.missingFields.join(', ')}`);
-          }
-        } catch (regenerateError) {
-          console.error(`Error regenerating contract: ${regenerateError.message}`);
-        }
       }
     }
-  
     
     // Verificăm dacă avem o cale validă înainte de a încerca să citim fișierul
     if (!contractFullPath) {
@@ -558,78 +537,6 @@ exports.downloadContract = async (req, res, next) => {
   }
 };
 
-// @desc    Download contract template
-// @route   GET /api/contracts/template
-// @access  Private
-exports.downloadTemplate = async (req, res, next) => {
-  try {
-    const templatePath = path.join(__dirname, '../../templates/contract_template.docx');
-    
-    // Check if template exists
-    if (!fs.existsSync(templatePath)) {
-      return res.status(404).json({
-        success: false,
-        message: 'Template-ul de contract nu a fost găsit'
-      });
-    }
-    
-    // Set headers and send file
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', 'attachment; filename=contract_template.docx');
-    
-    const fileStream = fs.createReadStream(templatePath);
-    fileStream.pipe(res);
-  } catch (error) {
-    logger.error(`Template download error: ${error.message}`);
-    next(error);
-  }
-};
-
-// @desc    Mark contract as signed by user
-// @route   POST /api/contracts/sign
-// @access  Private
-
-// @desc    Save signature for user
-// @route   POST /api/contracts/save-signature
-// @access  Private
-exports.saveSignature = async (req, res, next) => {
-  try {
-    // Get user data from database
-    const userId = req.user.id;
-    const user = await User.findById(userId);
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'Utilizator negăsit'
-      });
-    }
-    
-    // Check if signature data is provided
-    const { signatureData } = req.body;
-    
-    if (!signatureData) {
-      return res.status(400).json({
-        success: false,
-        message: 'Nu a fost furnizată nicio semnătură'
-      });
-    }
-    
-    // Save signature to user document
-    user.signature = signatureData;
-    await user.save();
-    
-    console.log('Signature saved for user:', userId);
-    
-    return res.status(200).json({
-      success: true,
-      message: 'Semnătura a fost salvată cu succes'
-    });
-  } catch (error) {
-    logger.error(`Signature save error: ${error.message}`);
-    next(error);
-  }
-};
 // @desc    Validate and complete missing ID card data
 // @route   POST /api/contracts/validate-id-card
 // @access  Private
@@ -659,16 +566,7 @@ exports.validateIdCard = async (req, res, next) => {
     }
     
     // Actualizăm datele lipsă cu cele furnizate în request
-    const {
-      CNP, 
-      fullName, 
-      address, 
-      series, 
-      number, 
-      issuedBy, 
-      birthDate, 
-      expiryDate 
-    } = req.body;
+    const { CNP, fullName, address, series, number, issuedBy, birthDate, expiryDate } = req.body;
     
     // Creăm un obiect cu câmpurile noi sau cele existente
     const updatedIdCard = {
@@ -817,7 +715,6 @@ exports.resetContract = async (req, res, next) => {
     next(error);
   }
 };
-
 // @desc    Mark contract as signed by user
 // @route   POST /api/contracts/sign
 // @access  Private
@@ -865,8 +762,7 @@ exports.signContract = async (req, res, next) => {
         // Nu am găsit un contract existent
         logger.warn(`Nu am găsit un contract existent pentru utilizatorul ${userId} la semnare`);
         
-        // Dacă nu găsim contractul, dar utilizatorul încearcă să-l semneze, putem genera unul nou automat
-        // sau putem returna o eroare indicând că trebuie generat mai întâi
+        // Dacă nu găsim contractul, dar utilizatorul încearcă să-l semneze, putem returna o eroare indicând că trebuie generat mai întâi
         return res.status(400).json({
           success: false,
           message: 'Contractul nu a fost găsit. Te rugăm să generezi mai întâi contractul.',
@@ -899,6 +795,33 @@ exports.signContract = async (req, res, next) => {
     });
   } catch (error) {
     logger.error(`Contract signing error: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc    Download contract template
+// @route   GET /api/contracts/template
+// @access  Private
+exports.downloadTemplate = async (req, res, next) => {
+  try {
+    const templatePath = path.join(__dirname, '../../templates/contract_template.docx');
+    
+    // Check if template exists
+    if (!fs.existsSync(templatePath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'Template-ul de contract nu a fost găsit'
+      });
+    }
+    
+    // Set headers and send file
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', 'attachment; filename=contract_template.docx');
+    
+    const fileStream = fs.createReadStream(templatePath);
+    fileStream.pipe(res);
+  } catch (error) {
+    logger.error(`Template download error: ${error.message}`);
     next(error);
   }
 };
