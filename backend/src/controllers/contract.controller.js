@@ -123,27 +123,39 @@ exports.generateContract = async (req, res, next) => {
     }
 
     // Configurarea moduleului de imagini cu suport pentru multiple formate posibile de tag
-
     const imageOpts = {
       centered: false,
+      fileType: 'docx',
       getImage: function (tagValue) {
-        if (typeof tagValue === 'string' && tagValue.includes('base64')) {
+        console.log("getImage apelat cu:", tagValue);
+        
+        // Verificăm dacă tagValue este un string base64
+        if (tagValue && typeof tagValue === 'string' && tagValue.includes('base64')) {
+          console.log("Procesare imagine base64");
           const base64Data = tagValue.split(';base64,').pop();
           return Buffer.from(base64Data, 'base64');
         }
-        throw new Error('Semnătura nu este în formatul base64.');
+        
+        console.log("Nu am putut procesa tag-ul de imagine:", tagValue);
+        return null;
       },
       getSize: function (img) {
-        const dimensions = sizeOf(img);
-        const maxWidth = 150;
-        const ratio = maxWidth / dimensions.width;
-        return [maxWidth, dimensions.height * ratio];
+        try {
+          const dimensions = sizeOf(img);
+          console.log("Dimensiunile imaginii:", dimensions);
+          const maxWidth = 150;
+          const ratio = maxWidth / dimensions.width;
+          return [maxWidth, dimensions.height * ratio];
+        } catch (err) {
+          console.error("Eroare la obținerea dimensiunilor imaginii:", err);
+          return [150, 50]; // dimensiuni default
+        }
       },
+      // Suportăm mai multe formate posibile de tag-uri
       tagName: 'image',
       delimiterStart: '{%',
       delimiterEnd: '%}'
     };
-    
 
     const imageModule = new ImageModule(imageOpts);
 
@@ -151,9 +163,39 @@ exports.generateContract = async (req, res, next) => {
     const doc = new Docxtemplater(zip, {
       modules: [imageModule],
       paragraphLoop: true,
-      linebreaks: true
+      linebreaks: true,
+      delimiters: { start: '{{', end: '}}' },
+      // Parser personalizat pentru a gestiona formate variate de tag-uri
+      parser: function (tag) {
+        // Tag-uri standard
+        if (tag.startsWith('{{') && tag.endsWith('}}')) {
+          const key = tag.substring(2, tag.length - 2).trim();
+          return {
+            get: function (scope) {
+              return scope[key];
+            }
+          };
+        }
+        
+        // Tag-uri pentru imagini
+        const imgMatch = tag.match(/\{%\s*image\s+(\w+)\s*%\}/i);
+        if (imgMatch) {
+          const key = imgMatch[1].trim();
+          return {
+            get: function (scope) {
+              return scope[key];
+            }
+          };
+        }
+        
+        return {
+          get: function (scope) {
+            console.log("Tag necunoscut:", tag);
+            return '';
+          }
+        };
+      }
     });
-    
 
     // Setăm datele pentru template
     console.log("Setăm datele pentru template:");
