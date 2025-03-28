@@ -86,7 +86,7 @@ exports.generateContract = async (req, res, next) => {
     // Apelăm API-ul extern pentru a genera documentul DOCX
     const apiResponse = await axios.post('https://pnrr.digitalizarefirme.com/api/startup/documente', formData, {
       headers: {
-        ...formData.getHeaders(),
+        ...formData.getHeaders(), 
         'Accept': 'application/json'
       },
       responseType: 'arraybuffer'  // Important pentru a primi fișierul binar
