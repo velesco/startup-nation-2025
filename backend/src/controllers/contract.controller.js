@@ -65,7 +65,8 @@ exports.generateContract = async (req, res, next) => {
       domiciliul_aplicantului: user.idCard.address ?? 'test',
       identificat_cu_ci: `${user.idCard.series} ${user.idCard.number}`,
       ci_eliberat_la_data_de: user.idCard.birthDate ? new Date(user.idCard.birthDate).toLocaleDateString('ro-RO') : 'N/A',
-      data_semnarii: new Date().toLocaleDateString('ro-RO')
+      data_semnarii: new Date().toLocaleDateString('ro-RO'),
+      "image semnatura": user.signature?.startsWith('data:image/') ? user.signature : null
     };
 
     const templatePath = path.join(__dirname, '../../templates/contract.docx');
@@ -101,26 +102,8 @@ exports.generateContract = async (req, res, next) => {
       modules: [new ImageModule(imageOpts)]
     });
 
-    // Inject image semnătură doar dacă este validă
-    if (user.signature?.startsWith('data:image/')) {
-      contractData['image semnatura'] = user.signature;
-    } else {
-      contractData['image semnatura'] = null;
-    }
-
     try {
-      const rendered = doc.render(contractData); // <- aici treci contractData direct
-    } catch (err) {
-      logger.error(`Eroare la renderizarea contractului: ${err.message}`);
-      return res.status(500).json({
-        success: false,
-        message: 'Eroare la procesarea template-ului',
-        details: err
-      });
-    }
-
-    try {
-      doc.render();
+      doc.render(contractData);
     } catch (err) {
       logger.error(`Eroare la renderizarea contractului: ${err.message}`);
       return res.status(500).json({ success: false, message: 'Eroare la procesarea template-ului', details: err });
