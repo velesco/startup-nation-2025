@@ -42,6 +42,7 @@ exports.saveSignature = async (req, res, next) => {
 
 
 // Soluție pentru inserarea directă a imaginii în docxtemplater
+// Soluție pentru inserarea imaginii prin manipulare directă a XML-ului
 
 exports.generateContract = async (req, res, next) => {
   try {
@@ -54,12 +55,19 @@ exports.generateContract = async (req, res, next) => {
     // Procesăm semnătura
     let signatureBase64 = null;
     if (user.signature) {
-      // Curățăm semnătura de whitespace
       const cleanSignature = user.signature.replace(/\s+/g, '');
       if (!cleanSignature.startsWith('data:image/png;base64,')) {
         throw new Error('Semnătura nu este în formatul așteptat.');
       }
       signatureBase64 = cleanSignature;
+      
+      // Extragem datele base64 fără prefix
+      const base64Data = cleanSignature.replace(/^data:image\/png;base64,/, '');
+      const imageBuffer = Buffer.from(base64Data, 'base64');
+      
+      // Obținem dimensiunile imaginii
+      const dimensions = sizeOf(imageBuffer);
+      console.log("Dimensiunile imaginii:", dimensions);
     }
 
     // Obținem IP-ul utilizatorului
@@ -80,71 +88,145 @@ exports.generateContract = async (req, res, next) => {
     const content = fs.readFileSync(templatePath, 'binary');
     const zip = new PizZip(content);
 
-    // Opțiuni pentru modulul de imagini
-    const imageOpts = {
-      centered: false,
-      fileType: 'docx',
-      getImage: function(tagValue) {
-        // Acest callback este apelat pentru fiecare tag de imagine
-        console.log("getImage apelat pentru:", tagValue);
-        
-        // Returnăm direct imaginea din base64 fără a salva fișier
-        if (tagValue === 'semnatura' && signatureBase64) {
-          const base64Data = signatureBase64.split(';base64,').pop();
-          return Buffer.from(base64Data, 'base64');
-        }
-        return null;
-      },
-      getSize: function(img) {
-        try {
-          const dimensions = sizeOf(img);
-          const maxWidth = 150;
-          const ratio = maxWidth / dimensions.width;
-          return [maxWidth, dimensions.height * ratio];
-        } catch (err) {
-          console.error("Eroare la obținerea dimensiunilor imaginii:", err);
-          return [150, 50]; // dimensiuni default
-        }
-      },
-      // Configurare pentru tag-ul {%image semnatura%}
-      tagName: 'image',
-      delimiterStart: '{%', 
-      delimiterEnd: '%}'
-    };
-
-    // Creăm modulul de imagini
-    const imageModule = new ImageModule(imageOpts);
-
-    // Creăm instanța docxtemplater cu modulul de imagini
+    // Pasul 1: Procesăm textul normal cu docxtemplater
     const doc = new Docxtemplater(zip, {
-      modules: [imageModule],
       paragraphLoop: true,
       linebreaks: true,
       delimiters: { start: '{{', end: '}}' }
     });
 
-    // Setăm datele pentru template
-    // IMPORTANT: Pentru tag-ul de imagine, trebuie să setăm valoarea 'semnatura'
-    doc.setData({
-      ...templateData,
-      // Pentru tag-ul {%image semnatura%}, setăm doar valoarea 'semnatura'
-      // Aceasta va fi pasată ca parametru către getImage()
-      semnatura: 'semnatura' 
-    });
-
-    // Renderizăm documentul
+    // Setăm datele pentru text
+    doc.setData(templateData);
     doc.render();
 
+    // Pasul 2: Manipulăm direct XML-ul pentru a insera imaginea
+    if (signatureBase64) {
+      // Extragem datele base64 fără prefix
+      const base64Data = signatureBase64.replace(/^data:image\/png;base64,/, '');
+      const imageBuffer = Buffer.from(base64Data, 'base64');
+      
+      // Obținem dimensiunile imaginii
+      const dimensions = sizeOf(imageBuffer);
+      const maxWidth = 150; // pixeli
+      const ratio = maxWidth / dimensions.width;
+      const height = Math.round(dimensions.height * ratio);
+      
+      // Calculăm dimensiunile în EMU (English Metric Units) pentru Word
+      // 1 inch = 914400 EMU, 1 pixel ≈ 9525 EMU
+      const emuWidth = Math.round(maxWidth * 9525);
+      const emuHeight = Math.round(height * 9525);
+      
+      // Creăm un ID unic pentru imagine
+      const imageId = `image_${Date.now()}`;
+      const imageFileName = `image_${userId}.png`;
+      
+      // Adăugăm imaginea în arhiva docx
+      zip.file(`word/media/${imageFileName}`, imageBuffer);
+      
+      // Verificăm dacă există fișierul de relații, dacă nu, îl creăm
+      let relsXml = "";
+      try {
+        relsXml = zip.file("word/_rels/document.xml.rels").asText();
+      } catch (e) {
+        console.log("Fișierul de relații nu există, va fi creat");
+        relsXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                 '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+      }
+      
+      // Parseăm XML-ul relațiilor pentru a adăuga imaginea
+      const parser = new DOMParser();
+      const relsDoc = parser.parseFromString(relsXml, "application/xml");
+      const relationships = relsDoc.getElementsByTagName("Relationships")[0];
+      
+      // Creăm noua relație pentru imagine
+      const newRel = relsDoc.createElement("Relationship");
+      newRel.setAttribute("Id", imageId);
+      newRel.setAttribute("Type", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image");
+      newRel.setAttribute("Target", `media/${imageFileName}`);
+      relationships.appendChild(newRel);
+      
+      // Serializăm relațiile înapoi în XML
+      const serializer = new XMLSerializer();
+      const updatedRelsXml = serializer.serializeToString(relsDoc);
+      zip.file("word/_rels/document.xml.rels", updatedRelsXml);
+      
+      // Acum trebuie să înlocuim tag-ul {%image semnatura%} cu imaginea
+      // Obținem XML-ul documentului
+      const documentXml = zip.file("word/document.xml").asText();
+      
+      // Pattern pentru a găsi tag-ul {%image semnatura%}
+      const imageTagPattern = /{%image\s+semnatura%}/;
+      
+      // XML pentru desenarea imaginii
+      const imageXml = `<w:drawing>
+        <wp:inline distT="0" distB="0" distL="0" distR="0">
+          <wp:extent cx="${emuWidth}" cy="${emuHeight}"/>
+          <wp:effectExtent l="0" t="0" r="0" b="0"/>
+          <wp:docPr id="1" name="Semnătură"/>
+          <wp:cNvGraphicFramePr>
+            <a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>
+          </wp:cNvGraphicFramePr>
+          <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+            <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+              <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                <pic:nvPicPr>
+                  <pic:cNvPr id="0" name="Semnătură"/>
+                  <pic:cNvPicPr/>
+                </pic:nvPicPr>
+                <pic:blipFill>
+                  <a:blip r:embed="${imageId}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>
+                  <a:stretch>
+                    <a:fillRect/>
+                  </a:stretch>
+                </pic:blipFill>
+                <pic:spPr>
+                  <a:xfrm>
+                    <a:off x="0" y="0"/>
+                    <a:ext cx="${emuWidth}" cy="${emuHeight}"/>
+                  </a:xfrm>
+                  <a:prstGeom prst="rect">
+                    <a:avLst/>
+                  </a:prstGeom>
+                </pic:spPr>
+              </pic:pic>
+            </a:graphicData>
+          </a:graphic>
+        </wp:inline>
+      </w:drawing>`;
+      
+      // Înlocuim tag-ul cu XML-ul pentru imagine
+      // Dar trebuie să fim atenți la contextul XML - tag-ul este probabil înconjurat de run (<w:r>)
+      
+      // Căutăm un pattern mai complex care să includă contextul XML
+      const runWithTagPattern = /<w:r[^>]*>.*?{%image\s+semnatura%}.*?<\/w:r>/;
+      
+      if (runWithTagPattern.test(documentXml)) {
+        // Înlocuim întregul run cu un nou run care conține imaginea
+        const modifiedXml = documentXml.replace(runWithTagPattern, `<w:r>${imageXml}</w:r>`);
+        zip.file("word/document.xml", modifiedXml);
+        console.log("Tag-ul de imagine a fost înlocuit cu succes în cadrul unui run");
+      } else {
+        // Încercăm un pattern mai simplu direct pentru tag
+        if (imageTagPattern.test(documentXml)) {
+          const modifiedXml = documentXml.replace(imageTagPattern, imageXml);
+          zip.file("word/document.xml", modifiedXml);
+          console.log("Tag-ul simplu de imagine a fost înlocuit cu succes");
+        } else {
+          console.error("Nu s-a găsit tag-ul de imagine în document");
+        }
+      }
+    }
+    
     // Generăm documentul final
-    const wordBuffer = doc.getZip().generate({ type: 'nodebuffer' });
-
+    const wordBuffer = zip.generate({ type: 'nodebuffer' });
+    
     // Salvăm documentul pentru verificare
     const uploadsDir = path.join(__dirname, '../../../uploads/contracts');
     await fs.promises.mkdir(uploadsDir, { recursive: true });
     const docxFilename = `contract_${userId}.docx`;
     const docxPath = path.join(uploadsDir, docxFilename);
     fs.writeFileSync(docxPath, wordBuffer);
-
+    
     // Convertim la PDF și continuăm procesul...
   } catch (error) {
     console.error("Eroare:", error);
