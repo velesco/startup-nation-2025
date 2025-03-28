@@ -70,8 +70,6 @@ const ClientStepContent = ({ step, updateUserData, userDocuments }) => {
     case 2:
       return <ClientContractStep onStepComplete={handleStepComplete} userDocuments={userDocuments} />;
     case 3:
-      return <ClientCourseSelectStep onStepComplete={handleStepComplete} userDocuments={userDocuments} />;
-    case 4:
       return <ClientAppDownloadStep onStepComplete={handleStepComplete} userDocuments={userDocuments} />;
     default:
       return <ClientIDUploadStep onStepComplete={handleStepComplete} userDocuments={userDocuments} />;

@@ -1,17 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Bell, Calendar, CheckCircle, User } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Bell, CheckCircle, User } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import eventService from '../../services/eventService';
 import ClientWelcomeCard from '../../components/client/ClientWelcomeCard';
-import ClientEventCard from '../../components/client/ClientEventCard';
 import ClientProgressSteps from '../../components/client/ClientProgressSteps';
 import ClientNotifications from '../../components/client/ClientNotifications';
 import ClientStepContent from '../../components/client/ClientStepContent';
 import ClientHeader from '../../components/client/ClientHeader';
 import ClientProfileContent from '../../components/client/ClientProfileContent';
-import ClientCoursesContent from '../../components/client/ClientCoursesContent';
 import LoadingScreen from '../../components/client/LoadingScreen';
 
 const ClientDashboardPage = () => {
@@ -24,6 +22,7 @@ const ClientDashboardPage = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [activeTab, setActiveTab] = useState('steps');
   const [error, setError] = useState(null);
+  const stepsContentRef = useRef(null);
   
   // Funcție pentru a calcula progresul utilizatorului în funcție de documentele încărcate
   const calculateProgress = useCallback((documents) => {
@@ -94,7 +93,7 @@ const ClientDashboardPage = () => {
             documents.appDownloaded
           ].filter(Boolean).length;
           
-          const progress = Math.round((completedSteps / 4) * 100);
+          const progress = Math.round((completedSteps / 3) * 100);
           
           // Determinăm pasul curent în funcție de progres
           let currentStepValue = 1;
@@ -103,7 +102,7 @@ const ClientDashboardPage = () => {
             currentStepValue = 2; // Pas contract
             
             if (documents.contractSigned) {
-              currentStepValue = 3; // Pas selectare curs
+              currentStepValue = 3; // Pas instalare aplicație
             }
           }
           
@@ -248,8 +247,7 @@ const ClientDashboardPage = () => {
           console.warn('Se folosesc date de test pentru evenimente');
           
           // În ultimul rând, folosim date generate pentru a asigura funcționalitatea UI
-          const generatedEvents = [
-          ];
+          const generatedEvents = [];
           setEvents(generatedEvents);
         }
       }
@@ -417,9 +415,6 @@ const ClientDashboardPage = () => {
       return;
     }
     
-    // Reset all necessary local storage items
-    localStorage.removeItem('selectedCourseId');
-    
     console.log('Reîncărcăm datele utilizatorului...');
     setLoading(true);
     // Forțăm reîncărcarea completă a datelor, ștergem întâi vechile date
@@ -434,6 +429,33 @@ const ClientDashboardPage = () => {
     
     return () => clearTimeout(timer);
   }, [fetchUserData]);
+
+  // Funcție pentru scroll la conținutul pașilor
+  const scrollToStepsContent = useCallback(() => {
+    if (stepsContentRef.current) {
+      stepsContentRef.current.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  }, []);
+
+  // Funcție pentru a gestiona click-ul pe pași și a face scroll
+  const handleStepClick = useCallback((step) => {
+    setCurrentStep(step);
+    
+    // Dacă suntem pe mobil și tab-ul nu este 'steps', mai întâi schimbăm la tab-ul steps
+    if (isMobile && activeTab !== 'steps') {
+      setActiveTab('steps');
+      // Adăugăm un mic delay pentru a permite schimbarea tab-ului înainte de scroll
+      setTimeout(() => {
+        scrollToStepsContent();
+      }, 100);
+    } else {
+      // Altfel, doar facem scroll
+      scrollToStepsContent();
+    }
+  }, [isMobile, activeTab, scrollToStepsContent]);
 
   // Progress steps
   const steps = user ? [
@@ -456,11 +478,21 @@ const ClientDashboardPage = () => {
     return (
       <>
         <ClientWelcomeCard user={user} />
-        <ClientProgressSteps steps={steps} currentStep={currentStep} setCurrentStep={setCurrentStep} />
-        <ClientStepContent step={currentStep} updateUserData={updateUserData} userDocuments={user?.documents} />
+        <ClientProgressSteps 
+          steps={steps} 
+          currentStep={currentStep} 
+          setCurrentStep={handleStepClick} 
+        />
+        <div ref={stepsContentRef}>
+          <ClientStepContent 
+            step={currentStep} 
+            updateUserData={updateUserData} 
+            userDocuments={user?.documents} 
+          />
+        </div>
       </>
     );
-  }, [user, events, steps, currentStep, setCurrentStep, updateUserData]);
+  }, [user, steps, currentStep, handleStepClick, updateUserData]);
 
   // Memoizarea conținutului principal
   const renderMainContent = useCallback(() => {
@@ -484,13 +516,12 @@ const ClientDashboardPage = () => {
             {renderStepsContent()}
           </div>
           <div className="lg:col-span-1 space-y-8">
-            {/* <ClientCoursesContent events={events} /> */}
             <ClientNotifications notifications={user?.notifications || []} />
           </div>
         </div>
       );
     }
-  }, [isMobile, activeTab, renderStepsContent, events, user, handleLogout]);
+  }, [isMobile, activeTab, renderStepsContent, user, handleLogout]);
 
   // Loading screen
   if (loading) {
@@ -540,7 +571,11 @@ const ClientDashboardPage = () => {
         <div className="fixed bottom-0 left-0 right-0 bg-white/70 backdrop-blur-xl border-t border-white/50 flex justify-around py-4 px-6 rounded-t-3xl shadow-lg">
           <div 
             className="flex flex-col items-center cursor-pointer"
-            onClick={() => setActiveTab('steps')}
+            onClick={() => {
+              setActiveTab('steps');
+              // Facem scroll după ce se schimbă tab-ul
+              setTimeout(() => scrollToStepsContent(), 100);
+            }}
           >
             <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-md mb-1 ${
               activeTab === 'steps' ? 'bg-gradient-to-r from-blue-500 to-purple-600' : 'bg-white'
@@ -551,20 +586,6 @@ const ClientDashboardPage = () => {
               activeTab === 'steps' ? 'bg-gradient-to-r from-blue-700 to-purple-700 bg-clip-text text-transparent' : 'text-gray-500'
             }`}>Pași</span>
           </div>
-
-          {/* <div 
-            className="flex flex-col items-center cursor-pointer"
-            onClick={() => setActiveTab('courses')}
-          >
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-md mb-1 ${
-              activeTab === 'courses' ? 'bg-gradient-to-r from-blue-500 to-purple-600' : 'bg-white'
-            }`}>
-              <Calendar className={`h-5 w-5 ${activeTab === 'courses' ? 'text-white' : 'text-gray-500'}`} />
-            </div>
-            <span className={`text-xs font-medium ${
-              activeTab === 'courses' ? 'bg-gradient-to-r from-blue-700 to-purple-700 bg-clip-text text-transparent' : 'text-gray-500'
-            }`}>Cursuri</span>
-          </div> */}
 
           <div 
             className="flex flex-col items-center cursor-pointer"
