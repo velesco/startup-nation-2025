@@ -532,24 +532,6 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
               )}
             </button>
           </div>
-          
-          <button
-            onClick={() => setShowSignatureDialog(true)}
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-xl font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center"
-          >
-            {loading ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
-                <span>Se procesează...</span>
-              </>
-            ) : (
-              <>
-                <PenTool className="h-5 w-5 mr-2" />
-                <span>Semnează contractul</span>
-              </>
-            )}
-          </button>
         </div>
       ) : (
         // Starea inițială - nu a fost generat un contract

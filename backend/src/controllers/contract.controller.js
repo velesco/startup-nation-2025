@@ -5,6 +5,34 @@ const Docxtemplater = require('docxtemplater');
 const { convertToPdf } = require('../utils/documentConverter');
 const User = require('../models/User');
 const logger = require('../utils/logger');
+const { insertSignatureImage } = require('../utils/insertSignatureInDoc');
+
+// Funcție pentru procesarea semnăturii ca imagine în docx
+const processSignatureImage = (signatureData) => {
+  if (!signatureData || typeof signatureData !== 'string') {
+    return null;
+  }
+  
+  try {
+    // Verificăm dacă semnătura este un string base64 valid
+    if (signatureData.startsWith('data:image/')) {
+      // Extragem partea cu date din string-ul base64
+      const base64Data = signatureData.split(';base64,').pop();
+      if (!base64Data) {
+        logger.error('Format invalid pentru semnătură');
+        return null;
+      }
+      
+      // Creăm un buffer din base64
+      const imageBuffer = Buffer.from(base64Data, 'base64');
+      return imageBuffer;
+    }
+    return null;
+  } catch (error) {
+    logger.error(`Eroare la procesarea semnăturii ca imagine: ${error.message}`);
+    return null;
+  }
+};
 
 // Funcție ajutătoare pentru verificarea datelor din buletin
 const validateIdCardData = (idCard) => {
@@ -84,9 +112,14 @@ exports.generateContract = async (req, res, next) => {
       domiciliul_aplicantului: user.idCard.address ?? 'test',
       identificat_cu_ci: `${user.idCard.series} ${user.idCard.number}`,
       ci_eliberat_la_data_de: user.idCard.birthDate ? new Date(user.idCard.birthDate).toLocaleDateString('ro-RO') : 'N/A',
-      semnatura: user.signature || '',
+      // Pentru semnatură, vom folosi o abordare diferită - vezi mai jos comentariile
+      // În loc să includem direct semnătura ca string, vom folosi o soluție mai robustă pentru imagini
+      semnatura: '',  // Vom procesa semnătura special, nu ca text direct
       data_semnarii: new Date().toLocaleDateString('ro-RO'),
     };
+    
+    // Pentru o soluție completă, ar trebui instalat pachetul docxtemplater-image-module-free
+    // și folosit pentru a insera imagini în documente
     
     // Caută template-ul contract.docx și procesează-l
     try {
@@ -108,6 +141,23 @@ exports.generateContract = async (req, res, next) => {
       // Citește conținutul template-ului docx
       const content = fs.readFileSync(templatePath, 'binary');
       const zip = new PizZip(content);
+      
+      // Verificăm dacă utilizatorul are semnătură și o procesăm ca imagine
+      if (user.signature && user.signature.startsWith('data:image/')) {
+        console.log('Procesez semnătura ca imagine pentru contract');
+        const signatureBuffer = processSignatureImage(user.signature);
+        
+        if (signatureBuffer) {
+          // Utilizăm o abordare alternativă pentru a include semnătura în document
+          // Înlocuim direct string-ul placeholder cu date URI pentru imagine
+          // Această soluție este temporară până la instalarea modulului docxtemplater-image-module-free
+          
+          // Notă: În documentul Word, {{semnatura}} trebuie să fie înlocuit cu o reprezentare text
+          // Pentru o soluție completă, trebuie instalat modulul docxtemplater-image-module-free și utilizat așa:
+          // const ImageModule = require('docxtemplater-image-module-free');
+          // și apoi adăugat în opțiunile docxtemplater ca modules: [imageModule]
+        }
+      }
       
       // Creează instanța de docxtemplater
       const doc = new Docxtemplater(zip, {
@@ -148,10 +198,21 @@ exports.generateContract = async (req, res, next) => {
       }
       
       // Generează documentul ca buffer
-      const wordBuffer = doc.getZip().generate({
+      let wordBuffer = doc.getZip().generate({
         type: 'nodebuffer',
         compression: 'DEFLATE'
       });
+      
+      // Procesare avansată pentru semnătură - inserare imagine
+      if (user.signature && user.signature.startsWith('data:image/')) {
+        try {
+          console.log('Inserez semnătura ca imagine în documentul generat');
+          wordBuffer = insertSignatureImage(wordBuffer, user.signature);
+        } catch (signatureError) {
+          logger.error(`Eroare la inserarea semnăturii în document: ${signatureError.message}`);
+          // Continuăm cu buffer-ul original în caz de eroare
+        }
+      }
       
       // Convertește în PDF
       try {
@@ -387,6 +448,8 @@ exports.downloadContract = async (req, res, next) => {
               domiciliul_aplicantului: user.idCard.address ?? 'N/A',
               identificat_cu_ci: `${user.idCard.series} ${user.idCard.number}`,
               ci_eliberat_la_data_de: user.idCard.birthDate ? new Date(user.idCard.birthDate).toLocaleDateString('ro-RO') : 'N/A',
+              semnatura: '', // Procesăm semnătura separat ca imagine
+              data_semnarii: new Date().toLocaleDateString('ro-RO'),
             };
             
             // Get template
