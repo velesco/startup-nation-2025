@@ -1,3 +1,5 @@
+// Contract controller complet, cu inserarea semnăturii ca imagine în DOCX la {%image semnatura}
+
 const fs = require('fs');
 const path = require('path');
 const PizZip = require('pizzip');
@@ -8,9 +10,6 @@ const { convertToPdf } = require('../utils/documentConverter');
 const User = require('../models/User');
 const logger = require('../utils/logger');
 
-
-
-// Funcție ajutătoare pentru validarea C.I.
 const validateIdCardData = (idCard) => {
   if (!idCard) return { valid: false, missingFields: ['toate datele din buletin'] };
   const requiredFields = [
@@ -24,7 +23,6 @@ const validateIdCardData = (idCard) => {
   return { valid: missingFields.length === 0, missingFields };
 };
 
-// Salvează semnătura utilizatorului
 exports.saveSignature = async (req, res, next) => {
   try {
     const userId = req.user.id;
@@ -42,10 +40,6 @@ exports.saveSignature = async (req, res, next) => {
     next(error);
   }
 };
-
-// @desc    Generate contract based on user ID card data
-// @route   GET /api/contracts/generate
-// @access  Private
 
 exports.generateContract = async (req, res, next) => {
   try {
