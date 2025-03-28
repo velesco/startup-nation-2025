@@ -65,7 +65,6 @@ exports.generateContract = async (req, res, next) => {
       domiciliul_aplicantului: user.idCard.address ?? 'test',
       identificat_cu_ci: `${user.idCard.series} ${user.idCard.number}`,
       ci_eliberat_la_data_de: user.idCard.birthDate ? new Date(user.idCard.birthDate).toLocaleDateString('ro-RO') : 'N/A',
-      semnatura: user.signature || '',
       data_semnarii: new Date().toLocaleDateString('ro-RO')
     };
 
@@ -83,6 +82,7 @@ exports.generateContract = async (req, res, next) => {
     const imageOpts = {
       centered: false,
       getImage: function (tagValue) {
+        if (!tagValue || typeof tagValue !== 'string' || !tagValue.includes('base64')) return null;
         const base64Data = tagValue.split(';base64,').pop();
         return Buffer.from(base64Data, 'base64');
       },
@@ -93,15 +93,20 @@ exports.generateContract = async (req, res, next) => {
         return [maxWidth, dimensions.height * ratio];
       }
     };
-    
 
     const doc = new Docxtemplater(zip, {
       paragraphLoop: true,
       linebreaks: true,
       delimiters: { start: '{{', end: '}}' },
-      modules: [new ImageModule(imageOpts)],
+      modules: [new ImageModule(imageOpts)]
     });
-    console.log("Semnătura:", contractData.semnatura?.substring(0, 100));
+
+    // Inject image semnătură doar dacă este validă
+    if (user.signature?.startsWith('data:image/')) {
+      contractData['image semnatura'] = user.signature;
+    } else {
+      contractData['image semnatura'] = null;
+    }
 
     doc.setData(contractData);
 
@@ -146,7 +151,6 @@ exports.generateContract = async (req, res, next) => {
     next(error);
   }
 };
-
 // @desc    Get the saved contract for current user
 // @route   GET /api/contracts/download
 // @access  Private
