@@ -10,6 +10,8 @@ import RegisterPage from './pages/RegisterPage';
 import SetPasswordPage from './pages/SetPasswordPage';
 import AboutProgramPage from './pages/AboutProgramPage';
 import DashboardPage from './pages/DashboardPage';
+import TermsAndConditionsPage from './pages/TermsAndConditionsPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ClientDashboardPage from './pages/client/ClientDashboardPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
@@ -56,6 +58,8 @@ function App() {
         <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
         <Route path="/set-password" element={<PublicRoute><SetPasswordPage /></PublicRoute>} />
         <Route path="/despre-program" element={<AboutProgramPage />} />
+        <Route path="/termeni-conditii" element={<TermsAndConditionsPage />} />
+        <Route path="/politica-confidentialitate" element={<PrivacyPolicyPage />} />
         
         {/* Redirecționare după autentificare în funcție de rol */}
         <Route 

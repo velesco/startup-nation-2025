@@ -1,88 +1,160 @@
 import React from 'react';
 
 const ProgramInfoSection = () => {
+  const steps = [
+    {
+      number: 1,
+      title: 'Aplică mai jos',
+      description: 'Te înscrii în platforma noastră în 2 minute.'
+    },
+    {
+      number: 2,
+      title: 'Semnezi contractul pentru cursuri',
+      description: 'Primești 200 lei la finalizarea cursului. Confirmăm locul tău în programul de formare antreprenorială.'
+    },
+    {
+      number: 3,
+      title: 'Urmezi cursul 100% online',
+      description: 'Flexibil, oriunde, oricând și fără bătăi de cap.'
+    },
+    {
+      number: 4,
+      title: 'Primești consultanță + plan de afaceri gata făcut',
+      description: 'Plan complet, adaptat afacerii tale + depunem proiectul pentru tine.'
+    }
+  ];
+
+  const certifications = [
+    {
+      number: 1,
+      title: 'Inteligență Artificială (AI)'
+    },
+    {
+      number: 2,
+      title: 'Machine Learning'
+    },
+    {
+      number: 3,
+      title: '3D Printing'
+    },
+    {
+      number: 4,
+      title: 'Robotic Process Automation (RPA)'
+    },
+    {
+      number: 5,
+      title: 'Big Data & Analytics'
+    }
+  ];
+
   const benefits = [
     {
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="8" r="7"></circle>
-          <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline>
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
         </svg>
       ),
-      title: 'Finanțare nerambursabilă',
-      description: 'Până la 250.000 lei pentru demararea afacerii tale, fără obligația de a returna suma.'
+      title: '2000 locuri disponibile',
+      description: 'Furnizor acreditat de minister pentru cursul obligatoriu de antreprenoriat'
     },
     {
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
         </svg>
       ),
-      title: 'Consultanță specializată',
-      description: 'Acces la experți care te vor ajuta cu planul de afaceri, documentație și implementare.'
+      title: 'Planuri de afaceri complete',
+      description: 'Cu acces la furnizori și experți din domeniu'
     },
     {
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-          <circle cx="9" cy="7" r="4"></circle>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
         </svg>
       ),
-      title: 'Mentorat pentru creștere',
-      description: 'Programe de mentorat cu antreprenori experimentați pentru a-ți accelera creșterea afacerii.'
+      title: 'Zero birocrație',
+      description: 'Ne ocupăm noi de tot'
+    },
+    {
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+        </svg>
+      ),
+      title: 'Cursuri online tehnice',
+      description: 'Interactive și acreditate internațional'
     }
-  ];
-
-  const eligibility = [
-    'Să fii o societate comercială (SRL, SRL-D, SA) înființată conform Legii 31/1990',
-    'Să nu ai datorii la bugetul de stat și la bugetele locale',
-    'Să creezi cel puțin un loc de muncă cu normă întreagă pe perioadă nedeterminată',
-    'Să menții investiția finanțată pentru cel puțin 3 ani după finalizarea proiectului'
   ];
 
   return (
     <div className="py-16 container mx-auto px-6 relative">
-      <h2 className="text-3xl font-bold text-gradient-gray text-center mb-12">Despre programul Startup Nation 2025</h2>
+      <h2 className="text-3xl font-bold text-gradient-gray text-center mb-12">Pașii către finanțare</h2>
       
-      <div className="max-w-3xl mx-auto mb-16">
-        <p className="text-gray-700 mb-6">
-          Programul Startup Nation 2025 este o inițiativă a Guvernului României pentru sprijinirea 
-          antreprenorilor la început de drum. Prin acest program, poți obține o finanțare nerambursabilă 
-          de până la 250.000 lei pentru a-ți deschide sau dezvolta afacerea.
-        </p>
-        
-        <p className="text-gray-700 mb-6">
-          Programul se adresează IMM-urilor nou înființate sau cu activitate recentă și încurajează 
-          inovația, tehnologia și crearea de locuri de muncă. Domeniile prioritare includ IT, producție, 
-          servicii creative, sănătate, educație și turism.
-        </p>
-      </div>
-      
-      <div className="grid md:grid-cols-3 gap-6 mb-16">
-        {benefits.map((benefit, index) => (
-          <div key={index} className="glassmorphism rounded-2xl p-6 shadow-md hover-scale">
-            <div className="text-blue-500 mb-4">{benefit.icon}</div>
-            <h3 className="text-xl font-semibold mb-2 text-gradient-blue-purple">{benefit.title}</h3>
-            <p className="text-gray-600">{benefit.description}</p>
-          </div>
-        ))}
-      </div>
-      
-      <div className="glassmorphism rounded-2xl p-8 shadow-md">
-        <h3 className="text-xl font-semibold mb-4 text-gradient-orange-pink">Criterii de eligibilitate</h3>
-        <ul className="space-y-3">
-          {eligibility.map((item, index) => (
-            <li key={index} className="flex items-start">
-              <svg className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-              </svg>
-              <span className="text-gray-700">{item}</span>
-            </li>
+      <div className="max-w-4xl mx-auto mb-16">
+        {/* Steps Section */}
+        <div className="grid md:grid-cols-4 gap-6 mb-16">
+          {steps.map((step) => (
+            <div key={step.number} className="glassmorphism rounded-2xl p-6 shadow-md hover-scale relative">
+              <div className="bg-purple-100 text-purple-600 w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg mb-4">
+                {step.number}
+              </div>
+              <h3 className="text-lg font-semibold mb-2 text-gradient-blue-purple">{step.title}</h3>
+              <p className="text-gray-600 text-sm">{step.description}</p>
+            </div>
           ))}
-        </ul>
+        </div>
+
+        {/* Certifications Section */}
+        <div className="mb-16">
+          <h3 className="text-2xl font-bold text-center mb-8 text-gradient-orange-pink">
+            Bonus exclusiv pentru participanții noștri
+          </h3>
+          <p className="text-gray-700 text-center mb-6">
+            Certificări internaționale în domenii de top (în valoare de 17.000 euro):
+          </p>
+          
+          <div className="grid md:grid-cols-5 gap-4">
+            {certifications.map((cert) => (
+              <div key={cert.number} className="glassmorphism rounded-xl p-4 text-center">
+                <div className="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center font-bold text-md mb-3 mx-auto">
+                  {cert.number}
+                </div>
+                <p className="text-gray-800 font-medium">{cert.title}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-gray-700 text-center mt-6">
+            Obții competențe de viitor, recunoscute global.
+          </p>
+        </div>
+        
+        {/* Why Choose Us Section */}
+        <h3 className="text-2xl font-bold text-center mb-8 text-gradient-green-teal">
+          De ce să alegi echipa noastră
+        </h3>
+        
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+          {benefits.map((benefit, index) => (
+            <div key={index} className="flex items-start p-4 glassmorphism rounded-xl shadow-sm">
+              <div className="text-blue-500 mr-4 flex-shrink-0">{benefit.icon}</div>
+              <div>
+                <h4 className="text-lg font-semibold mb-1">{benefit.title}</h4>
+                <p className="text-gray-600 text-sm">{benefit.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        <div className="glassmorphism rounded-2xl p-6 shadow-md text-center bg-orange-50 border border-orange-100 mt-8">
+          <h4 className="text-lg font-semibold text-orange-600 mb-1">ATENȚIE!</h4>
+          <p className="text-gray-700">Înscrierea pentru cursuri tehnice este posibilă până pe 15 aprilie</p>
+        </div>
       </div>
     </div>
   );

@@ -26,7 +26,7 @@ const HeroSection = () => {
             
             <p className="text-xl text-gray-700 mb-8">
               Transformă-ți ideea de afacere în realitate cu finanțare nerambursabilă
-              de până la <span className="font-semibold text-blue-600">250.000 lei</span>
+              de până la <span className="font-semibold text-blue-600">50.000 Euro</span>
             </p>
             
             <div className="space-y-4">
@@ -38,7 +38,7 @@ const HeroSection = () => {
               </button>
               
               <p className="text-sm text-gray-500">
-                Termen limită: 15 iulie 2025
+                Înscriere pentru cursuri tehnice până pe 15 aprilie 2025
               </p>
             </div>
           </div>
@@ -46,16 +46,16 @@ const HeroSection = () => {
           <div className="glassmorphism mt-16 p-6 rounded-xl max-w-3xl mx-auto">
             <div className="grid grid-cols-3 gap-6 text-center">
               <div>
-                <div className="text-2xl font-bold text-gradient-blue-purple mb-1">250M €</div>
-                <div className="text-sm text-gray-500">Fond total</div>
+                <div className="text-2xl font-bold text-gradient-blue-purple mb-1">2000+</div>
+                <div className="text-sm text-gray-500">Locuri disponibile</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-gradient-orange-pink mb-1">10.000+</div>
-                <div className="text-sm text-gray-500">Aplicații estimate</div>
+                <div className="text-2xl font-bold text-gradient-orange-pink mb-1">5</div>
+                <div className="text-sm text-gray-500">Certificări internaționale</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-gradient-green-teal mb-1">3.000+</div>
-                <div className="text-sm text-gray-500">Beneficiari</div>
+                <div className="text-2xl font-bold text-gradient-green-teal mb-1">17.000€</div>
+                <div className="text-sm text-gray-500">Valoare certificări</div>
               </div>
             </div>
           </div>

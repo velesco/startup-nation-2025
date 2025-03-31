@@ -165,6 +165,26 @@ const BusinessPlanTemplatesSection = () => {
             ))}
           </div>
         )}
+        
+        <div className="mt-16 text-center">
+          <div className="glassmorphism rounded-2xl p-6 shadow-md bg-blue-50 border border-blue-100 max-w-2xl mx-auto">
+            <h3 className="text-xl font-semibold text-blue-800 mb-4">Atenție! Înscriere limitată</h3>
+            <p className="text-gray-700 mb-6">
+              Înscrierea pentru cursuri tehnice este posibilă doar până pe 15 aprilie
+            </p>
+            <button 
+              onClick={() => {
+                const element = document.getElementById('apply-section');
+                if (element) {
+                  element.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+              className="bg-gradient-orange-pink shine-effect text-white px-8 py-3 rounded-full text-lg font-medium shadow-md hover:shadow-lg transition-all duration-300"
+            >
+              Înscrie-te acum
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Content Viewer Modal */}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -224,9 +224,9 @@ const ApplicationFormSection = () => {
       
       <div className="container mx-auto px-6 relative z-10">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl font-bold text-gradient-gray text-center mb-2">Aplică pentru finanțare</h2>
+          <h2 className="text-3xl font-bold text-gradient-gray text-center mb-2">Ia 50.000 Euro pentru afacerea ta!</h2>
           <p className="text-gray-600 text-center mb-8">
-            Completează formularul de mai jos pentru a crea un cont și a te alătura programului.
+            Cu sprijinul nostru, Start-Up Nation 2025 devine simplu și sigur. Completează formularul de mai jos pentru a te înscrie.
           </p>
           
           <div className="glassmorphism rounded-2xl p-8 shadow-md">
@@ -331,12 +331,12 @@ const ApplicationFormSection = () => {
                     {submitLoading ? (
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
                     ) : (
-                      'Trimite aplicația'
+                      'Înscrie-te acum'
                     )}
                   </button>
                   
                   <p className="text-xs text-gray-500 text-center">
-                    Prin trimiterea formularului, ești de acord cu <a href="#" className="text-blue-600 hover:underline">Termenii și Condițiile</a> și <a href="#" className="text-blue-600 hover:underline">Politica de Confidențialitate</a>.
+                    Prin trimiterea formularului, ești de acord cu <Link to="/termeni-conditii" className="text-blue-600 hover:underline">Termenii și Condițiile</Link> și <Link to="/politica-confidentialitate" className="text-blue-600 hover:underline">Politica de Confidențialitate</Link>.
                   </p>
                 </div>
               </form>
