@@ -59,7 +59,7 @@ function App() {
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
         <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
-        <Route path="/reset-password" element={<PasswordResetRoute><ResetPasswordPage /></PasswordResetRoute>} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/set-password" element={<PublicRoute><SetPasswordPage /></PublicRoute>} />
         <Route path="/despre-program" element={<AboutProgramPage />} />
         <Route path="/termeni-conditii" element={<TermsAndConditionsPage />} />

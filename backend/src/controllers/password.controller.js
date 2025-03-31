@@ -7,29 +7,28 @@ const nodemailer = require('nodemailer');
 // Utility function to send email
 const sendEmail = async (options) => {
   try {
-    // Check if SMTP credentials are actually configured
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-    
-    if (!smtpUser || !smtpPass || smtpUser === 'your-email@gmail.com') {
-      logger.warn('Email sending skipped: SMTP credentials not properly configured');
-      return { success: false, error: 'SMTP credentials not configured' };
-    }
-    
     const config = {
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
       port: parseInt(process.env.SMTP_PORT || '587', 10),
       secure: process.env.SMTP_SECURE === 'true',
       auth: {
-        user: smtpUser,
-        pass: smtpPass
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
       }
     };
+    
+    // Log email configuration (without password)
+    logger.info(`Attempting to send password reset email with SMTP: ${config.host}:${config.port}, user: ${config.auth.user}`);
+    
+    if (!config.auth.user || !config.auth.pass) {
+      logger.warn('Email sending skipped: SMTP credentials not properly configured');
+      return { success: false, error: 'SMTP credentials not configured' };
+    }
 
     const transporter = nodemailer.createTransport(config);
     
     const mailOptions = {
-      from: `\"Start-Up Nation 2025\" <${config.auth.user}>`,
+      from: process.env.EMAIL_FROM || `\"Start-Up Nation 2025\" <${config.auth.user}>`,
       to: options.to,
       subject: options.subject,
       text: options.text,
