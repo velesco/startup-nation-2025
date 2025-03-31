@@ -64,7 +64,9 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Routes - uncomment these as you implement them
 const authRoutes = require('./routes/auth.routes');
+const passwordRoutes = require('./routes/password.routes');
 app.use('/api/auth', authRateLimiter, authRoutes);
+app.use('/api/auth', authRateLimiter, passwordRoutes);
 
 // Enable these routes as they are implemented
 const userRoutes = require('./routes/user.routes');

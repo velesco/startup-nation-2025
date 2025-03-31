@@ -166,7 +166,7 @@ const LoginPage = () => {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Parolă
+                Parolă (parola standard e numarul de telefon)
               </label>
               <input
                 id="password"
@@ -203,7 +203,7 @@ const LoginPage = () => {
               </div>
 
               <div className="text-sm">
-                <RouterLink to="/reset-password" className="text-blue-600 hover:text-blue-500 transition-colors">
+                <RouterLink to="/forgot-password" className="text-blue-600 hover:text-blue-500 transition-colors">
                   Ai uitat parola?
                 </RouterLink>
               </div>

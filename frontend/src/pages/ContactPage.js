@@ -81,8 +81,7 @@ const ContactPage = () => {
                 </div>
                 <div className="ml-3">
                   <h3 className="text-sm font-medium text-gray-700">Email</h3>
-                  <p className="mt-1 text-gray-600">contact@startupnation.ro</p>
-                  <p className="mt-1 text-gray-600">info@startupnation.ro</p>
+                  <p className="mt-1 text-gray-600">contact@aplica-startup.ro</p>
                 </div>
               </div>
               

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
-import { ProtectedRoute, PublicRoute, RoleBasedRedirect } from './components/AuthMiddleware';
+import { ProtectedRoute, PublicRoute, RoleBasedRedirect, PasswordResetRoute } from './components/AuthMiddleware';
 
 // Pages
 import LandingPage from './pages/LandingPage';
@@ -13,6 +13,8 @@ import DashboardPage from './pages/DashboardPage';
 import TermsAndConditionsPage from './pages/TermsAndConditionsPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import NotFoundPage from './pages/NotFoundPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import ClientDashboardPage from './pages/client/ClientDashboardPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
@@ -56,6 +58,8 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+        <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+        <Route path="/reset-password" element={<PasswordResetRoute><ResetPasswordPage /></PasswordResetRoute>} />
         <Route path="/set-password" element={<PublicRoute><SetPasswordPage /></PublicRoute>} />
         <Route path="/despre-program" element={<AboutProgramPage />} />
         <Route path="/termeni-conditii" element={<TermsAndConditionsPage />} />

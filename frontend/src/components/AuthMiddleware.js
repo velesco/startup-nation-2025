@@ -70,6 +70,21 @@ export const PublicRoute = ({ children }) => {
   return children;
 };
 
+// Middleware pentru pagini de recuperare parolă - nu redirecționează
+export const PasswordResetRoute = ({ children }) => {
+  const { loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+  
+  return children;
+};
+
 // Componenta pentru redirecționare bazată pe rol
 export const RoleBasedRedirect = () => {
   const { currentUser, isAuthenticated, loading } = useAuth();
