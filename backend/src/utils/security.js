@@ -61,9 +61,19 @@ const authRateLimiter = createRateLimiter(
  */
 const apiRateLimiter = createRateLimiter();
 
+/**
+ * Password reset rate limiter with higher limits
+ */
+const passwordResetLimiter = createRateLimiter(
+  60 * 60 * 1000, // 1 hour
+  100, // 100 attempts
+  'Rate limit exceeded for password reset. Please try again later.'
+);
+
 module.exports = {
   createRateLimiter,
   sensitiveRateLimiter,
   authRateLimiter,
-  apiRateLimiter
+  apiRateLimiter,
+  passwordResetLimiter
 };

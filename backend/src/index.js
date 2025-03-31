@@ -10,7 +10,6 @@ const path = require('path');
 const logger = require('./utils/logger');
 const connectDB = require('./config/database');
 const fileUpload = require('express-fileupload');
-const { authRateLimiter, apiRateLimiter } = require('./utils/security');
 
 // Import middlewares
 const { errorHandler } = require('./middlewares/errorHandler');
@@ -65,8 +64,8 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // Routes - uncomment these as you implement them
 const authRoutes = require('./routes/auth.routes');
 const passwordRoutes = require('./routes/password.routes');
-app.use('/api/auth', authRateLimiter, authRoutes);
-app.use('/api/auth', authRateLimiter, passwordRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/auth', passwordRoutes);
 
 // Enable these routes as they are implemented
 const userRoutes = require('./routes/user.routes');
@@ -80,16 +79,16 @@ const activityRoutes = require('./routes/activity.routes');
 const logRoutes = require('./routes/log.routes');
 const contractRoutes = require('./routes/contract.routes');
 
-app.use('/api/users', apiRateLimiter, userRoutes);
-app.use('/api/clients', apiRateLimiter, clientRoutes);
-app.use('/api/groups', apiRateLimiter, groupRoutes);
-app.use('/api/documents', apiRateLimiter, documentRoutes);
-app.use('/api/admin', apiRateLimiter, adminRoutes);
-app.use('/api/meetings', apiRateLimiter, meetingRoutes);
-app.use('/api/notifications', apiRateLimiter, notificationRoutes);
-app.use('/api/activities', apiRateLimiter, activityRoutes);
-app.use('/api/logs', apiRateLimiter, logRoutes);
-app.use('/api/contracts', apiRateLimiter, contractRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/clients', clientRoutes);
+app.use('/api/groups', groupRoutes);
+app.use('/api/documents', documentRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/meetings', meetingRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/activities', activityRoutes);
+app.use('/api/logs', logRoutes);
+app.use('/api/contracts', contractRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
