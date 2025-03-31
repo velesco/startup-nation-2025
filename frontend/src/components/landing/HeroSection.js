@@ -42,23 +42,6 @@ const HeroSection = () => {
               </p>
             </div>
           </div>
-          
-          <div className="glassmorphism mt-16 p-6 rounded-xl max-w-3xl mx-auto">
-            <div className="grid grid-cols-3 gap-6 text-center">
-              <div>
-                <div className="text-2xl font-bold text-gradient-blue-purple mb-1">2000+</div>
-                <div className="text-sm text-gray-500">Locuri disponibile</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gradient-orange-pink mb-1">5</div>
-                <div className="text-sm text-gray-500">Certificări internaționale</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gradient-green-teal mb-1">17.000€</div>
-                <div className="text-sm text-gray-500">Valoare certificări</div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

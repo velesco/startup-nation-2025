@@ -98,7 +98,7 @@ const ProgramInfoSection = () => {
       
       <div className="max-w-4xl mx-auto mb-16">
         {/* Steps Section */}
-        <div className="grid md:grid-cols-4 gap-6 mb-16">
+        <div className="grid md:grid-cols-2 gap-6 mb-16">
           {steps.map((step) => (
             <div key={step.number} className="glassmorphism rounded-2xl p-6 shadow-md hover-scale relative">
               <div className="bg-purple-100 text-purple-600 w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg mb-4">
