@@ -1,4 +1,5 @@
 import React from 'react';
+import topImage from '../../assets/top.jpeg';
 
 const HeroSection = () => {
   const scrollToApplySection = () => {
@@ -10,6 +11,12 @@ const HeroSection = () => {
 
   return (
     <div className="relative overflow-hidden">
+      {/* Top Image Banner */}
+      <div className="container mx-auto px-6 mt-12">
+        <div className="max-w-3xl mx-auto">
+          <img src={topImage} alt="Startup Nation 2025" className="w-full h-auto object-contain" />
+        </div>
+      </div>
       {/* Decorative Background Elements */}
       <div className="decoration-blob bg-blue-500 w-96 h-96 top-20 right-5"></div>
       <div className="decoration-blob bg-orange-400 w-80 h-80 top-40 left-0"></div>
@@ -18,9 +25,6 @@ const HeroSection = () => {
         <div className="container mx-auto px-6 py-24 relative z-10">
           <div className="max-w-3xl mx-auto text-center">
             <div className="mb-6 inline-block">
-              <div className="h-20 w-20 bg-gradient-blue-purple rounded-2xl flex items-center justify-center text-white font-bold text-3xl shadow-lg mx-auto mb-4">
-                SN
-              </div>
               <h1 className="text-5xl font-bold text-gradient-gray mb-4">Startup Nation 2025</h1>
             </div>
             
