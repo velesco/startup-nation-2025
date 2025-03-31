@@ -4,7 +4,7 @@ const ProgramInfoSection = () => {
   const steps = [
     {
       number: 1,
-      title: 'Aplică mai jos',
+      title: 'Aplică pe aplica-startup.ro',
       description: 'Te înscrii în platforma noastră în 2 minute.'
     },
     {
@@ -98,7 +98,7 @@ const ProgramInfoSection = () => {
       
       <div className="max-w-4xl mx-auto mb-16">
         {/* Steps Section */}
-        <div className="grid md:grid-cols-2 gap-6 mb-16">
+        <div className="grid md:grid-cols-4 gap-6 mb-16">
           {steps.map((step) => (
             <div key={step.number} className="glassmorphism rounded-2xl p-6 shadow-md hover-scale relative">
               <div className="bg-purple-100 text-purple-600 w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg mb-4">
@@ -108,6 +108,91 @@ const ProgramInfoSection = () => {
               <p className="text-gray-600 text-sm">{step.description}</p>
             </div>
           ))}
+        </div>
+        
+        {/* Eligibility Criteria Section */}
+        <div className="mb-16">
+          <h3 className="text-2xl font-bold text-center mb-8 text-gradient-blue-purple">
+            Criterii de eligibilitate
+          </h3>
+          
+          <div className="glassmorphism rounded-2xl p-8 shadow-md">
+            <p className="text-gray-700 mb-6 text-center">Programul se adresează următoarelor categorii de persoane:</p>
+            
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="flex items-start">
+                <div className="text-green-500 mr-3 mt-0.5 flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <p className="text-gray-700">Tineri cu vârsta cuprinsă între <strong>18-30 ani</strong></p>
+              </div>
+              
+              <div className="flex items-start">
+                <div className="text-green-500 mr-3 mt-0.5 flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <p className="text-gray-700">Tineri cu vârsta cuprinsă între <strong>30-35 ani</strong></p>
+              </div>
+              
+              <div className="flex items-start">
+                <div className="text-green-500 mr-3 mt-0.5 flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <p className="text-gray-700">Persoane aflate în căutarea unui loc de muncă</p>
+              </div>
+              
+              <div className="flex items-start">
+                <div className="text-green-500 mr-3 mt-0.5 flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <p className="text-gray-700">Șomeri</p>
+              </div>
+              
+              <div className="flex items-start">
+                <div className="text-green-500 mr-3 mt-0.5 flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <p className="text-gray-700">Șomeri de lungă durată</p>
+              </div>
+              
+              <div className="flex items-start">
+                <div className="text-green-500 mr-3 mt-0.5 flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <p className="text-gray-700">Persoane inactive</p>
+              </div>
+              
+              <div className="flex items-start">
+                <div className="text-green-500 mr-3 mt-0.5 flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <p className="text-gray-700">Persoane din <strong>DIASPORA</strong> (persoane care pot face dovada domiciliului sau rezidenței în străinătate 12 luni consecutive anterioare înscrierii)</p>
+              </div>
+              
+              <div className="flex items-start md:col-span-2">
+                <div className="text-green-500 mr-3 mt-0.5 flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <p className="text-gray-700">Persoane din grupurile dezavantajate pe piața muncii (persoane cu nivel scăzut de instruire (ultimul nivel de școlarizare absolvit ISCED 2), persoane cu dizabilități, persoane din comunitățile supuse riscului de excluziune socială, persoane din zonele rurale, persoane eliberate din detenție, tineri postinstituționalizați)</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Certifications Section */}
