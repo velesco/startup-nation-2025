@@ -38,7 +38,7 @@ const HeroSection = () => {
                 <button 
                   onClick={scrollToApplySection}
                   style={{width: "70%", height: "4rem", fontSize: "1.8rem"}}
-                  className="relative bg-gradient-orange-pink shine-effect text-white px-5 py-2 md:px-6 md:py-2 lg:px-8 lg:py-3 rounded-full font-medium shadow-md hover:shadow-lg transition-all duration-300 animate-pulse-attention"
+                  className="bg-gradient-orange-pink text-white px-5 py-2 md:px-6 md:py-2 lg:px-8 lg:py-3 rounded-full font-medium shadow-md hover:shadow-lg transition-all duration-300"
                   aria-label="Aplică pentru finanțare Startup Nation 2025"
                 >
                   Aplică acum

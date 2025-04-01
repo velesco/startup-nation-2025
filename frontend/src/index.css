@@ -173,42 +173,6 @@ code {
   animation: pulse-slow 3s ease-in-out infinite;
 }
 
-.shine-effect.animate-pulse-attention::before {
-  content: '';
-  position: absolute;
-  top: -30%;
-  left: -100%;
-  width: 40%;
-  height: 160%;
-  background: linear-gradient(
-    to right,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.6) 50%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  transform: rotate(25deg);
-  animation: attention-shine 5s ease-in-out infinite;
-  z-index: 1;
-}
-
-@keyframes attention-shine {
-  0% {
-    left: -120%;
-    opacity: 0.5;
-  }
-  30% {
-    left: 120%;
-    opacity: 0.5;
-  }
-  31% {
-    opacity: 0;
-  }
-  100% {
-    left: 120%;
-    opacity: 0;
-  }
-}
-
 @keyframes bounce-right {
   0%, 100% {
     transform: translateX(0);
