@@ -174,7 +174,7 @@ const PremiumBusinessPlanSection = () => {
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        const shareUrl = `https://aplica-startup.ro/share/premium-plan/${plan.id}`;
+                        const shareUrl = `https://aplica-startup.ro/share/plan/${plan.id}`;
                         window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`Planul de afaceri: ${plan.title} ${shareUrl}`)}`, '_blank');
                       }}
                       className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded-md text-xs flex items-center"
@@ -187,7 +187,7 @@ const PremiumBusinessPlanSection = () => {
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        const shareUrl = `https://aplica-startup.ro/share/premium-plan/${plan.id}`;
+                        const shareUrl = `https://aplica-startup.ro/share/plan/${plan.id}`;
                         window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank', 'width=600,height=400');
                       }}
                       className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded-md text-xs flex items-center"
