@@ -15,6 +15,7 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import SharedPlanPage from './pages/SharedPlanPage';
 import ClientDashboardPage from './pages/client/ClientDashboardPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
@@ -64,6 +65,7 @@ function App() {
         <Route path="/despre-program" element={<AboutProgramPage />} />
         <Route path="/termeni-conditii" element={<TermsAndConditionsPage />} />
         <Route path="/politica-confidentialitate" element={<PrivacyPolicyPage />} />
+        <Route path="/share/:type/:id" element={<SharedPlanPage />} />
         
         {/* Redirecționare după autentificare în funcție de rol */}
         <Route 

@@ -5,6 +5,7 @@ import Navbar from '../components/landing/Navbar';
 import HeroSection from '../components/landing/HeroSection';
 import ProgramInfoSection from '../components/landing/ProgramInfoSection';
 import ApplicationFormSection from '../components/landing/ApplicationFormSection';
+import PremiumBusinessPlanSection from '../components/landing/PremiumBusinessPlanSection';
 import BusinessPlanTemplatesSection from '../components/landing/BusinessPlanTemplatesSection';
 import Footer from '../components/common/Footer';
 
@@ -26,6 +27,9 @@ const LandingPage = () => {
       
       {/* Application Form Section */}
       <ApplicationFormSection />
+      
+      {/* Premium Business Plan Section - 100 Points */}
+      <PremiumBusinessPlanSection />
       
       {/* Business Plan Templates Section */}
       <BusinessPlanTemplatesSection />

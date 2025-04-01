@@ -73,6 +73,14 @@ code {
   border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
+.glassmorphism-premium {
+  background: #fff;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 215, 0, 0.5);
+  box-shadow: 0 4px 20px rgba(255, 215, 0, 0.15);
+}
+
 .hover-scale {
   transition: all 0.3s ease;
 }

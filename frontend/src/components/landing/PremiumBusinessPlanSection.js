@@ -74,36 +74,37 @@ const ContentModal = ({ open, handleClose, content }) => {
   );
 };
 
-const BusinessPlanTemplatesSection = () => {
-  const [businessPlans, setBusinessPlans] = useState([]);
+const PremiumBusinessPlanSection = () => {
+  const [premiumPlans, setPremiumPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [selectedContent, setSelectedContent] = useState(null);
 
   useEffect(() => {
-    const fetchBusinessPlans = async () => {
+    const fetchPremiumPlans = async () => {
       try {
         setLoading(true);
-        // Fetch data from the API
-        const response = await axios.get('https://startup.area4u.ro/api/projects');
+        // Fetch data from the different API endpoint
+        const response = await axios.get('https://startup.area4u.ro/api/projects2');
         
         // Transform the API data to match the component's expected format
         const formattedPlans = response.data.map(project => ({
           id: project.id,
           title: project.name,
           imageUrl: `https://startup.area4u.ro/storage/images/${project.image}`,
-          content: project.content // This is the HTML or iframe content
+          content: project.content,
+          score: project.score || 100 // Assuming the API provides a score field, default to 100
         }));
         
-        setBusinessPlans(formattedPlans);
+        setPremiumPlans(formattedPlans);
       } catch (error) {
-        console.error('Error fetching business plans:', error);
+        console.error('Error fetching premium business plans:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchBusinessPlans();
+    fetchPremiumPlans();
   }, []);
 
   // Open content modal
@@ -122,13 +123,13 @@ const BusinessPlanTemplatesSection = () => {
   };
 
   return (
-    <div className="py-16 bg-white">
+    <div className="py-16 bg-gray-50">
       <div className="container mx-auto px-6">
         <h2 className="text-3xl font-bold text-gradient-gray text-center mb-2">
-          Modele de planuri de afaceri
+          Modele de planuri de afaceri de 100 de puncte
         </h2>
         <p className="text-gray-600 text-center mb-12">
-          Descarcă și consultă modele de planuri de afaceri pentru diverse domenii de activitate.
+          Consultă modele premium de planuri de afaceri care au obținut punctaj maxim în cadrul programului.
         </p>
 
         {loading ? (
@@ -137,18 +138,21 @@ const BusinessPlanTemplatesSection = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {businessPlans.map((plan) => (
+            {premiumPlans.map((plan) => (
               <div 
                 key={plan.id} 
-                className="glassmorphism-darker rounded-xl overflow-hidden shadow-md hover-scale cursor-pointer"
+                className="glassmorphism-premium rounded-xl overflow-hidden shadow-lg hover-scale cursor-pointer"
                 onClick={() => handleOpenContent(plan.content)}
               >
-                <div className="h-48 overflow-hidden">
+                <div className="h-48 overflow-hidden relative">
                   <img 
                     src={plan.imageUrl} 
                     alt={plan.title}
                     className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
                   />
+                  <div className="absolute top-3 right-3 bg-yellow-400 text-blue-900 font-bold px-3 py-1 rounded-full text-sm">
+                    {plan.score} puncte
+                  </div>
                 </div>
                 <div className="p-6">
                   <h3 className="text-xl font-semibold mb-2">{plan.title}</h3>
@@ -160,7 +164,7 @@ const BusinessPlanTemplatesSection = () => {
                         handleOpenContent(plan.content);
                       }}
                     >
-                      Vizualizează
+                      Vizualizează planul premium
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
                       </svg>
@@ -170,7 +174,7 @@ const BusinessPlanTemplatesSection = () => {
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        const shareUrl = `https://aplica-startup.ro/share/plan/${plan.id}`;
+                        const shareUrl = `https://aplica-startup.ro/share/premium-plan/${plan.id}`;
                         window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`Planul de afaceri: ${plan.title} ${shareUrl}`)}`, '_blank');
                       }}
                       className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded-md text-xs flex items-center"
@@ -183,7 +187,7 @@ const BusinessPlanTemplatesSection = () => {
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        const shareUrl = `https://aplica-startup.ro/share/plan/${plan.id}`;
+                        const shareUrl = `https://aplica-startup.ro/share/premium-plan/${plan.id}`;
                         window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank', 'width=600,height=400');
                       }}
                       className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded-md text-xs flex items-center"
@@ -199,26 +203,6 @@ const BusinessPlanTemplatesSection = () => {
             ))}
           </div>
         )}
-        
-        <div className="mt-16 text-center">
-          <div className="glassmorphism rounded-2xl p-6 shadow-md bg-blue-50 border border-blue-100 max-w-2xl mx-auto">
-            <h3 className="text-xl font-semibold text-blue-800 mb-4">Atenție! Înscriere limitată</h3>
-            <p className="text-gray-700 mb-6">
-              Înscrierea pentru cursuri tehnice este posibilă doar până pe 15 aprilie
-            </p>
-            <button 
-              onClick={() => {
-                const element = document.getElementById('apply-section');
-                if (element) {
-                  element.scrollIntoView({ behavior: 'smooth' });
-                }
-              }}
-              className="bg-gradient-orange-pink shine-effect text-white px-8 py-3 rounded-full text-lg font-medium shadow-md hover:shadow-lg transition-all duration-300"
-            >
-              Înscrie-te acum
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* Content Viewer Modal */}
@@ -231,4 +215,4 @@ const BusinessPlanTemplatesSection = () => {
   );
 };
 
-export default BusinessPlanTemplatesSection;
+export default PremiumBusinessPlanSection;
