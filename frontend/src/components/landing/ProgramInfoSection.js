@@ -119,7 +119,7 @@ const ProgramInfoSection = () => {
           <div className="glassmorphism rounded-2xl p-8 shadow-md">
             <p className="text-gray-700 mb-6 text-center">Programul se adresează următoarelor categorii de persoane:</p>
             
-            <div className="grid md:grid-cols-1 gap-4">
+            <div className="grid md:grid-cols-2 gap-4">
               <div className="flex items-start">
                 <div className="text-green-500 mr-3 mt-0.5 flex-shrink-0">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
