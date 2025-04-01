@@ -93,8 +93,10 @@ const ProgramInfoSection = () => {
   ];
 
   return (
-    <div className="py-16 container mx-auto px-6 relative">
-      <h2 className="text-3xl font-bold text-gradient-gray text-center mb-12">Pașii către finanțare</h2>
+    <section className="py-16 container mx-auto px-6 relative" id="program-info">
+      <h2 className="text-3xl font-bold text-gradient-gray text-center mb-12">
+        Pașii către finanțare
+      </h2>
       
       <div className="max-w-4xl mx-auto mb-16">
         {/* Steps Section */}
@@ -233,7 +235,7 @@ const ProgramInfoSection = () => {
           <p className="text-gray-700">Înscrierea pentru cursuri tehnice este posibilă până pe 15 aprilie</p>
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 

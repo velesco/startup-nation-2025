@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/landing/Navbar';
 import Footer from '../components/common/Footer';
+import { processHtmlContent } from '../utils/linkModifier';
 
 const SharedPlanPage = () => {
   const { type, id } = useParams();
@@ -62,12 +63,34 @@ const SharedPlanPage = () => {
         // Handle iframe if present
         const iframe = container.querySelector('iframe');
         if (iframe) {
+          // Style the iframe
           iframe.style.width = '100%';
           iframe.style.height = '100%';
           iframe.style.position = 'absolute';
           iframe.style.top = '0';
           iframe.style.left = '0';
           iframe.style.border = 'none';
+          
+          // Add event listener for when iframe loads to modify its links
+          iframe.onload = () => {
+            try {
+              const iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
+              
+              // Find all links in the iframe
+              const links = iframeDocument.querySelectorAll('a');
+              
+              // Modify each link to open in a new tab
+              links.forEach(link => {
+                link.setAttribute('target', '_blank');
+                link.setAttribute('rel', 'noopener noreferrer');
+              });
+              
+              console.log(`Modified ${links.length} links to open in new tabs`);
+            } catch (e) {
+              // Handle cross-origin errors
+              console.error('Could not modify iframe links due to cross-origin restrictions', e);
+            }
+          };
         }
       }
     };
@@ -89,6 +112,11 @@ const SharedPlanPage = () => {
   // Function to determine if content is an iframe or HTML content
   const isIframeContent = (str) => {
     return str && typeof str === 'string' && (str.includes('<iframe') || str.includes('<html') || str.includes('<!DOCTYPE') || str.includes('<head'));
+  };
+
+  // Function to modify iframe content to allow links to open in new tab
+  const modifyIframeContent = (content) => {
+    return processHtmlContent(content);
   };
 
   return (
@@ -157,7 +185,7 @@ const SharedPlanPage = () => {
             >
               <div 
                 ref={contentContainerRef} 
-                dangerouslySetInnerHTML={{ __html: plan.content }} 
+                dangerouslySetInnerHTML={{ __html: modifyIframeContent(plan.content) }} 
                 className={`w-full h-full relative ${!isIframeContent(plan.content) ? 'prose prose-lg max-w-none' : ''}`}
               />
             </div>

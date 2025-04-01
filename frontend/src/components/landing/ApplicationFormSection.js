@@ -218,13 +218,15 @@ const ApplicationFormSection = () => {
   });
 
   return (
-    <div className="py-16 bg-gray-50 relative overflow-hidden" id="apply-section">
+    <section className="py-16 bg-gray-50 relative overflow-hidden" id="apply-section" aria-labelledby="apply-heading">
       {/* Decorative Background Elements */}
-      <div className="decoration-blob bg-green-400 w-80 h-80 bottom-0 right-10"></div>
+      <div className="decoration-blob bg-green-400 w-80 h-80 bottom-0 right-10" aria-hidden="true"></div>
       
       <div className="container mx-auto px-6 relative z-10">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl font-bold text-gradient-gray text-center mb-2">Ia 50.000 Euro pentru afacerea ta!</h2>
+          <h2 id="apply-heading" className="text-3xl font-bold text-gradient-gray text-center mb-2">
+            Ia 50.000 Euro pentru afacerea ta!
+          </h2>
           <p className="text-gray-600 text-center mb-8">
             Cu sprijinul nostru, Start-Up Nation 2025 devine simplu și sigur. Completează formularul de mai jos pentru a te înscrie.
           </p>
@@ -255,17 +257,16 @@ const ApplicationFormSection = () => {
                       id="name"
                       name="name"
                       placeholder="Introduceti numele complet"
-                      className={`w-full px-4 py-3 rounded-xl border ${
-                        formik.touched.name && formik.errors.name 
-                          ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                          : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                      } shadow-sm focus:outline-none focus:ring-2`}
+                      aria-required="true"
+                      aria-invalid={formik.touched.name && Boolean(formik.errors.name)}
+                      aria-describedby={formik.touched.name && formik.errors.name ? "name-error" : undefined}
+                      className={`w-full px-4 py-3 rounded-xl border ${formik.touched.name && formik.errors.name ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'} shadow-sm focus:outline-none focus:ring-2`}
                       value={formik.values.name}
                       onChange={formik.handleChange}
                       onBlur={formik.handleBlur}
                     />
                     {formik.touched.name && formik.errors.name && (
-                      <p className="mt-1 text-sm text-red-600">{formik.errors.name}</p>
+                      <p id="name-error" className="mt-1 text-sm text-red-600">{formik.errors.name}</p>
                     )}
                   </div>
                   
@@ -279,17 +280,16 @@ const ApplicationFormSection = () => {
                         id="email"
                         name="email"
                         placeholder="nume@exemplu.com"
-                        className={`w-full px-4 py-3 rounded-xl border ${
-                          formik.touched.email && formik.errors.email 
-                            ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                            : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                        } shadow-sm focus:outline-none focus:ring-2`}
+                        aria-required="true"
+                        aria-invalid={formik.touched.email && Boolean(formik.errors.email)}
+                        aria-describedby={formik.touched.email && formik.errors.email ? "email-error" : undefined}
+                        className={`w-full px-4 py-3 rounded-xl border ${formik.touched.email && formik.errors.email ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'} shadow-sm focus:outline-none focus:ring-2`}
                         value={formik.values.email}
                         onChange={formik.handleChange}
                         onBlur={formik.handleBlur}
                       />
                       {formik.touched.email && formik.errors.email && (
-                        <p className="mt-1 text-sm text-red-600">{formik.errors.email}</p>
+                        <p id="email-error" className="mt-1 text-sm text-red-600">{formik.errors.email}</p>
                       )}
                     </div>
                     
@@ -302,17 +302,16 @@ const ApplicationFormSection = () => {
                         id="phone"
                         name="phone"
                         placeholder="07XX XXX XXX"
-                        className={`w-full px-4 py-3 rounded-xl border ${
-                          formik.touched.phone && formik.errors.phone 
-                            ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                            : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                        } shadow-sm focus:outline-none focus:ring-2`}
+                        aria-required="true"
+                        aria-invalid={formik.touched.phone && Boolean(formik.errors.phone)}
+                        aria-describedby={formik.touched.phone && formik.errors.phone ? "phone-error" : undefined}
+                        className={`w-full px-4 py-3 rounded-xl border ${formik.touched.phone && formik.errors.phone ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'} shadow-sm focus:outline-none focus:ring-2`}
                         value={formik.values.phone}
                         onChange={formik.handleChange}
                         onBlur={formik.handleBlur}
                       />
                       {formik.touched.phone && formik.errors.phone && (
-                        <p className="mt-1 text-sm text-red-600">{formik.errors.phone}</p>
+                        <p id="phone-error" className="mt-1 text-sm text-red-600">{formik.errors.phone}</p>
                       )}
                     </div>
                   </div>
@@ -326,6 +325,8 @@ const ApplicationFormSection = () => {
                   <button
                     type="submit"
                     disabled={submitLoading}
+                    aria-busy={submitLoading}
+                    aria-label="Înscrie-te în programul Startup Nation 2025"
                     className="w-full bg-gradient-blue-purple text-white px-6 py-3 rounded-xl font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center"
                   >
                     {submitLoading ? (
@@ -344,7 +345,7 @@ const ApplicationFormSection = () => {
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 
