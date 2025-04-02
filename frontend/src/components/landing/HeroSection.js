@@ -42,7 +42,7 @@ const HeroSection = () => {
                   aria-label="Aplică pentru finanțare Startup Nation 2025"
                 >
                   Aplică acum
-                  <span className="ml-2 inline-block animate-bounce-right">→</span>
+                  <span className="ml-2 inline-block">&rarr;</span>
                 </button>
               </div>
               
