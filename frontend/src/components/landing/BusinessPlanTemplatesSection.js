@@ -151,7 +151,7 @@ const BusinessPlanTemplatesSection = () => {
                 className="glassmorphism-darker rounded-xl overflow-hidden shadow-md hover-scale cursor-pointer"
                 onClick={() => handleOpenContent(plan.content)}
               >
-                <div className="h-48 overflow-hidden">
+                <div className="overflow-hidden">
                   <img 
                     src={plan.imageUrl} 
                     alt={plan.title}

@@ -152,7 +152,7 @@ const PremiumBusinessPlanSection = () => {
                 className="glassmorphism-premium rounded-xl overflow-hidden shadow-lg hover-scale cursor-pointer"
                 onClick={() => handleOpenContent(plan.content)}
               >
-                <div className="h-48 overflow-hidden relative">
+                <div className="overflow-hidden relative">
                   <img 
                     src={plan.imageUrl} 
                     alt={plan.title}
