@@ -63,6 +63,12 @@ export const createIframeLinkModifierScript = () => {
             if (iframe.contentDocument) {
               modifyIframeLinks(iframe);
             }
+
+            // Force reload the iframe to apply changes
+            if (iframe.src) {
+              const currentSrc = iframe.src;
+              iframe.src = currentSrc;
+            }
           });
         }
         
@@ -73,10 +79,14 @@ export const createIframeLinkModifierScript = () => {
             if (iframeDoc) {
               const links = iframeDoc.querySelectorAll('a');
               links.forEach(link => {
-                if (!link.getAttribute('target')) {
-                  link.setAttribute('target', '_blank');
-                  link.setAttribute('rel', 'noopener noreferrer');
-                }
+                link.setAttribute('target', '_blank');
+                link.setAttribute('rel', 'noopener noreferrer');
+                
+                // Prevent default to ensure it opens in new tab
+                link.addEventListener('click', function(e) {
+                  e.preventDefault();
+                  window.open(this.href, '_blank');
+                });
               });
               
               // Check for nested iframes
@@ -103,9 +113,10 @@ export const createIframeLinkModifierScript = () => {
           document.addEventListener('DOMContentLoaded', setIframeLinksToBlank);
         }
         
-        // Run again after a delay to catch dynamically loaded iframes
+        // Run again after delay windows to catch dynamically loaded iframes
         setTimeout(setIframeLinksToBlank, 1000);
         setTimeout(setIframeLinksToBlank, 3000);
+        setTimeout(setIframeLinksToBlank, 5000);
         
         // MutationObserver to detect when iframes are added to the DOM
         const observer = new MutationObserver(mutations => {

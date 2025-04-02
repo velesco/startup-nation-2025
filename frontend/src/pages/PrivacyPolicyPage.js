@@ -1,14 +1,29 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import Navbar from '../components/landing/Navbar';
 import Footer from '../components/common/Footer';
 
 const PrivacyPolicyPage = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Verifică dacă URL-ul conține un hash și navigheaza la ancora respectivă
+    if (location.hash) {
+      const element = document.getElementById(location.hash.substring(1));
+      if (element) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [location]);
+
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div id="privacy-policy" className="bg-gray-50 min-h-screen">
       {/* Navigation Bar */}
       <Navbar />
       
-      <div className="container mx-auto px-6 py-12">
+      <div className="container mx-auto px-6 py-12 mt-24">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold text-gray-800 mb-8">Politica de Confidențialitate și Protecția Datelor (GDPR)</h1>
           

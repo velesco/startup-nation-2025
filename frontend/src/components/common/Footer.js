@@ -1,54 +1,59 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import './FooterCustomStyles.css'; // Importăm stilurile personalizate
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
   
   return (
-    <footer className="bg-gradient-blue-purple text-white py-12 relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-full h-8 bg-gray-50 rounded-b-[50%]"></div>
-      
-      <div className="container mx-auto px-6 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-          <div>
-            <div className="flex items-center mb-6">
-              <div className="h-10 w-10 bg-white rounded-xl flex items-center justify-center text-blue-600 font-bold text-lg shadow-md mr-3">
-                SN
-              </div>
-              <span className="text-xl font-bold">Startup Nation 2025</span>
-            </div>
-            <p className="text-blue-50 mb-6">
-              Program de finanțare pentru antreprenori susținut de Guvernul României.
-              Transformă-ți ideea într-o afacere de succes cu ajutorul nostru.
-            </p>
-          </div>
-          
-          
-          <div>
-            <h3 className="text-lg font-semibold mb-6">Contact</h3>
-            <ul className="space-y-3">
-              <li className="flex items-start">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 mt-0.5 text-blue-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                <span className="text-blue-50">contact@aplica-startup.ro</span>
-              </li>
-            </ul>
-          </div>
+    <footer>
+      <div className="footer-top">
+        <div>
+          <Link to="/" className="footer-logo">Startup Nation 2025</Link>
+          <p className="footer-text">Transformă-ți ideea de afacere în realitate cu ajutorul programului Startup Nation 2025 și obține finanțare nerambursabilă de până la 50.000 Euro.</p>
         </div>
         
-        <div className="border-t border-blue-400/30 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-blue-100 text-sm mb-4 md:mb-0">
-            &copy; {currentYear} Startup Nation 2025. Toate drepturile rezervate.
-          </p>
-          <div className="flex space-x-6">
-            <Link to="/termeni-conditii" className="text-blue-100 text-sm hover:text-white transition-colors duration-300">
-              Termeni și condiții
-            </Link>
-            <Link to="/politica-confidentialitate" className="text-blue-100 text-sm hover:text-white transition-colors duration-300">
-              Politica de confidențialitate
-            </Link>
+        <div>
+          <h4 className="footer-title">Link-uri utile</h4>
+          <ul className="footer-links">
+            <li><Link to="/">Acasă</Link></li>
+            <li><Link to="/despre-program#about-program">Despre Program</Link></li>
+            <li><Link to="/login?role=trainer">Formatori</Link></li>
+            <li><Link to="/login?role=partner">Parteneri</Link></li>
+            <li><Link to="/intrebari-frecvente">Întrebări frecvente</Link></li>
+            <li><Link to="/termeni-conditii#terms-and-conditions">Termeni și condiții</Link></li>
+            <li><Link to="/politica-confidentialitate#privacy-policy">Politica de confidențialitate</Link></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h4 className="footer-title">Contact</h4>
+          
+          <div className="footer-contact-item">
+            <div className="footer-contact-icon">✉️</div>
+            <div className="footer-contact-text">contact@aplica-startup.ro</div>
           </div>
+          
+          <div className="footer-contact-item">
+            <div className="footer-contact-icon">📍</div>
+            <div className="footer-contact-text">București, România</div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="footer-bottom">
+        <p>&copy; {currentYear} Startup Nation. Toate drepturile rezervate.</p>
+        
+        <div className="eu-funding">
+          <img src="https://european-union.europa.eu/themes/contrib/oe_theme/dist/eu/images/logo/standard-version/positive/logo-eu--en.svg" alt="Uniunea Europeană" className="eu-logo" />
+          <img src="https://mfe.gov.ro/logomic.png" alt="Ministerul Investițiilor și Proiectelor Europene" className="eu-logo" />
+          <p>Program finanțat prin fonduri europene nerambursabile aferente Programului Educație și Ocupare 2021-2027</p>
+        </div>
+        
+        <div className="official-links">
+          <a href="https://mfe.gov.ro/" target="_blank" rel="noopener noreferrer">Ministerul Investițiilor și Proiectelor Europene</a>
+          <a href="https://www.fonduri-ue.ro/" target="_blank" rel="noopener noreferrer">Fonduri Europene</a>
+          <a href="https://www.fonduri-structurale.ro/" target="_blank" rel="noopener noreferrer">Fonduri Structurale</a>
         </div>
       </div>
     </footer>

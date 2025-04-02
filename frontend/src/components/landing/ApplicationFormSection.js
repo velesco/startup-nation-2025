@@ -218,131 +218,114 @@ const ApplicationFormSection = () => {
   });
 
   return (
-    <section className="py-16 bg-gray-50 relative overflow-hidden" id="apply-section" aria-labelledby="apply-heading">
-      {/* Decorative Background Elements */}
-      <div className="decoration-blob bg-green-400 w-80 h-80 bottom-0 right-10" aria-hidden="true"></div>
+    <section className="form-section" id="apply-section" aria-labelledby="apply-heading">
+      <h2 id="apply-heading" className="section-title">Înscrie-te acum</h2>
       
-      <div className="container mx-auto px-6 relative z-10">
-        <div className="max-w-3xl mx-auto">
-          <h2 id="apply-heading" className="text-3xl font-bold text-gradient-gray text-center mb-2">
-            Ia 50.000 Euro pentru afacerea ta!
-          </h2>
-          <p className="text-gray-600 text-center mb-8">
-            Cu sprijinul nostru, Start-Up Nation 2025 devine simplu și sigur. Completează formularul de mai jos pentru a te înscrie.
-          </p>
-          
-          <div className="glassmorphism rounded-2xl p-8 shadow-md">
-            {submitSuccess ? (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-2">Aplicația ta a fost trimisă cu succes!</h3>
-                <p className="text-gray-600 mb-4">
-                  Te vom redirecționa pentru a continua...
-                </p>
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+      <div className="form-container">
+        <div className="form-header">
+          <h3 className="form-title">Cu sprijinul nostru, Start-Up Nation 2025 devine simplu</h3>
+          <p className="form-subtitle">Completează formularul pentru a te înscrie</p>
+        </div>
+        
+        <div className="form-body">
+          {submitSuccess ? (
+            <div className="text-center py-8">
+              <div className="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
               </div>
-            ) : (
-              <form onSubmit={formik.handleSubmit}>
-                <div className="space-y-6">
-                  <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                      Nume și prenume
-                    </label>
-                    <input
-                      type="text"
-                      id="name"
-                      name="name"
-                      placeholder="Introduceti numele complet"
-                      aria-required="true"
-                      aria-invalid={formik.touched.name && Boolean(formik.errors.name)}
-                      aria-describedby={formik.touched.name && formik.errors.name ? "name-error" : undefined}
-                      className={`w-full px-4 py-3 rounded-xl border ${formik.touched.name && formik.errors.name ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'} shadow-sm focus:outline-none focus:ring-2`}
-                      value={formik.values.name}
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
-                    />
-                    {formik.touched.name && formik.errors.name && (
-                      <p id="name-error" className="mt-1 text-sm text-red-600">{formik.errors.name}</p>
-                    )}
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        placeholder="nume@exemplu.com"
-                        aria-required="true"
-                        aria-invalid={formik.touched.email && Boolean(formik.errors.email)}
-                        aria-describedby={formik.touched.email && formik.errors.email ? "email-error" : undefined}
-                        className={`w-full px-4 py-3 rounded-xl border ${formik.touched.email && formik.errors.email ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'} shadow-sm focus:outline-none focus:ring-2`}
-                        value={formik.values.email}
-                        onChange={formik.handleChange}
-                        onBlur={formik.handleBlur}
-                      />
-                      {formik.touched.email && formik.errors.email && (
-                        <p id="email-error" className="mt-1 text-sm text-red-600">{formik.errors.email}</p>
-                      )}
-                    </div>
-                    
-                    <div>
-                      <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                        Telefon
-                      </label>
-                      <input
-                        type="text"
-                        id="phone"
-                        name="phone"
-                        placeholder="07XX XXX XXX"
-                        aria-required="true"
-                        aria-invalid={formik.touched.phone && Boolean(formik.errors.phone)}
-                        aria-describedby={formik.touched.phone && formik.errors.phone ? "phone-error" : undefined}
-                        className={`w-full px-4 py-3 rounded-xl border ${formik.touched.phone && formik.errors.phone ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'} shadow-sm focus:outline-none focus:ring-2`}
-                        value={formik.values.phone}
-                        onChange={formik.handleChange}
-                        onBlur={formik.handleBlur}
-                      />
-                      {formik.touched.phone && formik.errors.phone && (
-                        <p id="phone-error" className="mt-1 text-sm text-red-600">{formik.errors.phone}</p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {submitError && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                      {errorMessage || "A apărut o eroare la trimiterea formularului. Te rugăm să încerci din nou."}
-                    </div>
-                  )}
-                  
-                  <button
-                    type="submit"
-                    disabled={submitLoading}
-                    aria-busy={submitLoading}
-                    aria-label="Înscrie-te în programul Startup Nation 2025"
-                    className="w-full bg-gradient-blue-purple text-white px-6 py-3 rounded-xl font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center"
-                  >
-                    {submitLoading ? (
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                    ) : (
-                      'Înscrie-te acum'
-                    )}
-                  </button>
-                  
-                  <p className="text-xs text-gray-500 text-center">
-                    Prin trimiterea formularului, ești de acord cu <Link to="/termeni-conditii" className="text-blue-600 hover:underline">Termenii și Condițiile</Link> și <Link to="/politica-confidentialitate" className="text-blue-600 hover:underline">Politica de Confidențialitate</Link>.
-                  </p>
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">Aplicația ta a fost trimisă cu succes!</h3>
+              <p className="text-gray-600 mb-4">
+                Te vom redirecționa pentru a continua...
+              </p>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+            </div>
+          ) : (
+            <form onSubmit={formik.handleSubmit}>
+              <div className="form-group">
+                <label className="form-label" htmlFor="name">Nume și prenume</label>
+                <input 
+                  type="text" 
+                  id="name" 
+                  name="name"
+                  className="form-input" 
+                  value={formik.values.name}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  required
+                />
+                {formik.touched.name && formik.errors.name && (
+                  <div className="text-red-500 text-sm mt-1">{formik.errors.name}</div>
+                )}
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label" htmlFor="email">Email</label>
+                <input 
+                  type="email" 
+                  id="email" 
+                  name="email"
+                  className="form-input" 
+                  value={formik.values.email}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  required
+                />
+                {formik.touched.email && formik.errors.email && (
+                  <div className="text-red-500 text-sm mt-1">{formik.errors.email}</div>
+                )}
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label" htmlFor="phone">Telefon</label>
+                <input 
+                  type="tel" 
+                  id="phone" 
+                  name="phone"
+                  className="form-input" 
+                  value={formik.values.phone}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  required
+                />
+                {formik.touched.phone && formik.errors.phone && (
+                  <div className="text-red-500 text-sm mt-1">{formik.errors.phone}</div>
+                )}
+              </div>
+              
+              {submitError && (
+                <div className="text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg mb-4">
+                  {errorMessage}
                 </div>
-              </form>
-            )}
-          </div>
+              )}
+              
+              <div className="form-check">
+                <input type="checkbox" id="terms" className="form-checkbox" required />
+                <label htmlFor="terms" className="form-terms">
+                  Prin trimiterea formularului, sunt de acord cu <Link to="/termeni-conditii" className="text-blue-600">Termenii și Condițiile</Link> și <Link to="/politica-confidentialitate" className="text-blue-600">Politica de Confidențialitate</Link>.
+                </label>
+              </div>
+              
+              <button 
+                type="submit" 
+                className="btn form-submit"
+                disabled={submitLoading}
+              >
+                {submitLoading ? (
+                  <span className="inline-flex items-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Se procesează...
+                  </span>
+                ) : (
+                  'Înscrie-te acum'
+                )}
+              </button>
+            </form>
+          )}
         </div>
       </div>
     </section>

@@ -1,240 +1,152 @@
 import React from 'react';
 
 const ProgramInfoSection = () => {
-  const steps = [
-    {
-      number: 1,
-      title: 'Aplică mai jos',
-      description: 'Te înscrii în platforma noastră în 2 minute.'
-    },
-    {
-      number: 2,
-      title: 'Semnezi contractul pentru cursuri',
-      description: 'Primești 200 lei la finalizarea cursului. Confirmăm locul tău în programul de formare antreprenorială.'
-    },
-    {
-      number: 3,
-      title: 'Urmezi cursul 100% online',
-      description: 'Flexibil, oriunde, oricând și fără bătăi de cap.'
-    },
-    {
-      number: 4,
-      title: 'Primești consultanță + plan de afaceri gata făcut',
-      description: 'Plan complet, adaptat afacerii tale + depunem proiectul pentru tine.'
-    }
-  ];
-
-  const certifications = [
-    {
-      number: 1,
-      title: 'Inteligență Artificială (AI)'
-    },
-    {
-      number: 2,
-      title: 'Machine Learning'
-    },
-    {
-      number: 3,
-      title: '3D Printing'
-    },
-    {
-      number: 4,
-      title: 'Robotic Process Automation (RPA)'
-    },
-    {
-      number: 5,
-      title: 'Big Data & Analytics'
-    }
-  ];
-
-  const benefits = [
-    {
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <polyline points="12 6 12 12 16 14"></polyline>
-        </svg>
-      ),
-      title: '2000 locuri disponibile',
-      description: 'Furnizor acreditat de minister pentru cursul obligatoriu de antreprenoriat'
-    },
-    {
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14 2 14 8 20 8"></polyline>
-          <line x1="16" y1="13" x2="8" y2="13"></line>
-          <line x1="16" y1="17" x2="8" y2="17"></line>
-          <polyline points="10 9 9 9 8 9"></polyline>
-        </svg>
-      ),
-      title: 'Planuri de afaceri complete',
-      description: 'Cu acces la furnizori și experți din domeniu'
-    },
-    {
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-        </svg>
-      ),
-      title: 'Zero birocrație',
-      description: 'Ne ocupăm noi de tot'
-    },
-    {
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
-        </svg>
-      ),
-      title: 'Cursuri online tehnice',
-      description: 'Interactive și acreditate internațional'
-    }
-  ];
-
   return (
-    <section className="py-16 container mx-auto px-6 relative" id="program-info">
-      <h2 className="text-3xl font-bold text-gradient-gray text-center mb-12">
-        Pașii către finanțare
-      </h2>
+    <section className="py-16 relative">
+      {/* Eligibility Section */}
+      <section className="eligibility" id="eligibility">
+        <h2 className="section-title">Ești eligibil?</h2>
+        
+        <div className="eligibility-list">
+          <div className="eligibility-item">
+            <div className="eligibility-icon">👨‍👩‍👧‍👦</div>
+            <h3 className="eligibility-title">Tineri între 18-30 ani</h3>
+            <p className="eligibility-text">Dacă ai între 18 și 30 de ani, poți accesa fondurile pentru ideea ta de afacere.</p>
+          </div>
+          
+          <div className="eligibility-item">
+            <div className="eligibility-icon">🔍</div>
+            <h3 className="eligibility-title">Persoane care caută un loc de muncă</h3>
+            <p className="eligibility-text">Orice persoană care caută un loc de muncă <span className="no-age-limit">fără limită de vârstă</span> poate aplica.</p>
+          </div>
+          
+          <div className="eligibility-item">
+            <div className="eligibility-icon">📋</div>
+            <h3 className="eligibility-title">Șomeri</h3>
+            <p className="eligibility-text">Persoanele înregistrate ca șomeri, inclusiv șomeri de lungă durată, <span className="no-age-limit">fără limită de vârstă</span>.</p>
+          </div>
+          
+          <div className="eligibility-item">
+            <div className="eligibility-icon">🌍</div>
+            <h3 className="eligibility-title">Persoane din DIASPORA</h3>
+            <p className="eligibility-text">Dacă poți dovedi domiciliul în străinătate pentru 12 luni consecutive, <span className="no-age-limit">fără limită de vârstă</span>.</p>
+          </div>
+          
+          <div className="eligibility-item">
+            <div className="eligibility-icon">👨‍👩‍👧‍👦</div>
+            <h3 className="eligibility-title">Persoane inactive</h3>
+            <p className="eligibility-text">Persoane care nu sunt angajate și nu sunt înregistrate ca șomeri, <span className="no-age-limit">fără limită de vârstă</span>.</p>
+          </div>
+          
+          <div className="eligibility-item">
+            <div className="eligibility-icon">🤝</div>
+            <h3 className="eligibility-title">Grupuri dezavantajate</h3>
+            <p className="eligibility-text">Persoane cu nivel scăzut de instruire, persoane cu dizabilități, din comunități supuse riscului de excluziune, <span className="no-age-limit">fără limită de vârstă</span>.</p>
+          </div>
+        </div>
+      </section>
       
-      <div className="max-w-4xl mx-auto mb-16">
-        {/* Steps Section */}
-        <div className="grid md:grid-cols-2 gap-6 mb-16">
-          {steps.map((step) => (
-            <div key={step.number} className="glassmorphism rounded-2xl p-6 shadow-md hover-scale relative">
-              <div className="bg-purple-100 text-purple-600 w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg mb-4">
-                {step.number}
-              </div>
-              <h3 className="text-lg font-semibold mb-2 text-gradient-blue-purple">{step.title}</h3>
-              <p className="text-gray-600 text-sm">{step.description}</p>
-            </div>
-          ))}
-        </div>
+      {/* Steps Section */}
+      <section className="steps" id="steps">
+        <h2 className="section-title">Pașii spre finanțare</h2>
         
-        {/* Eligibility Criteria Section */}
-        <div className="mb-16">
-          <h3 className="text-2xl font-bold text-center mb-8 text-gradient-blue-purple">
-            Criterii de eligibilitate
-          </h3>
+        <div className="steps-container">
+          <div className="step-card">
+            <div className="step-number">1</div>
+            <div className="step-icon">✅</div>
+            <h3 className="step-title">Aplică mai jos</h3>
+            <p className="step-text">Te înscrii în platforma noastră în doar 2 minute. Procesul este simplu și rapid.</p>
+          </div>
           
-          <div className="glassmorphism rounded-2xl p-8 shadow-md">
-            <p className="text-gray-700 mb-6 text-center">Programul se adresează următoarelor categorii de persoane:</p>
-            
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="flex items-start">
-                <div className="text-green-500 mr-3 mt-0.5 flex-shrink-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <p className="text-gray-700">Tineri cu vârsta cuprinsă între <strong>18-30 ani</strong></p>
-              </div>
-              
-              
-              <div className="flex items-start">
-                <div className="text-green-500 mr-3 mt-0.5 flex-shrink-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <p className="text-gray-700">Persoane aflate în căutarea unui loc de muncă</p>
-              </div>
-              
-              <div className="flex items-start">
-                <div className="text-green-500 mr-3 mt-0.5 flex-shrink-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <p className="text-gray-700">Șomeri</p>
-              </div>
-              
-              <div className="flex items-start">
-                <div className="text-green-500 mr-3 mt-0.5 flex-shrink-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <p className="text-gray-700">Șomeri de lungă durată</p>
-              </div>
-              
-              <div className="flex items-start">
-                <div className="text-green-500 mr-3 mt-0.5 flex-shrink-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <p className="text-gray-700">Persoane inactive</p>
-              </div>
-              
-              <div className="flex items-start">
-                <div className="text-green-500 mr-3 mt-0.5 flex-shrink-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <p className="text-gray-700">Persoane din <strong>DIASPORA</strong> (persoane care pot face dovada domiciliului sau rezidenței în străinătate 12 luni consecutive anterioare înscrierii)</p>
-              </div>
-              
-              <div className="flex items-start md:col-span-2">
-                <div className="text-green-500 mr-3 mt-0.5 flex-shrink-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <p className="text-gray-700">Persoane din grupurile dezavantajate pe piața muncii (persoane cu nivel scăzut de instruire (ultimul nivel de școlarizare absolvit ISCED 2), persoane cu dizabilități, persoane din comunitățile supuse riscului de excluziune socială, persoane din zonele rurale, persoane eliberate din detenție, tineri postinstituționalizați)</p>
-              </div>
-            </div>
+          <div className="step-card">
+            <div className="step-number">2</div>
+            <div className="step-icon">📝</div>
+            <h3 className="step-title">Semnezi contractul pentru cursuri</h3>
+            <p className="step-text">Primești 200 lei la finalizarea cursului. Confirmăm locul tău în programul de formare antreprenorială.</p>
+          </div>
+          
+          <div className="step-card">
+            <div className="step-number">3</div>
+            <div className="step-icon">💻</div>
+            <h3 className="step-title">Urmezi cursul 100% online</h3>
+            <p className="step-text">Flexibil, oriunde, oricând și fără bătăi de cap. Învață în ritmul tău.</p>
+          </div>
+          
+          <div className="step-card">
+            <div className="step-number">4</div>
+            <div className="step-icon">📊</div>
+            <h3 className="step-title">Primești consultanță + plan de afaceri</h3>
+            <p className="step-text">Plan complet, adaptat afacerii tale + depunem proiectul pentru tine. Zero birocrație!</p>
           </div>
         </div>
-
-        {/* Certifications Section */}
-        <div className="mb-16">
-          <h3 className="text-2xl font-bold text-center mb-8 text-gradient-orange-pink">
-            Bonus exclusiv pentru participanții noștri
-          </h3>
-          <p className="text-gray-700 text-center mb-6">
-            Certificări internaționale în domenii de top (în valoare de 17.000 euro):
-          </p>
-          
-          <div className="grid md:grid-cols-5 gap-4">
-            {certifications.map((cert) => (
-              <div key={cert.number} className="glassmorphism rounded-xl p-4 text-center">
-                <div className="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center font-bold text-md mb-3 mx-auto">
-                  {cert.number}
-                </div>
-                <p className="text-gray-800 font-medium">{cert.title}</p>
-              </div>
-            ))}
+      </section>
+      
+      {/* Benefits Section */}
+      <section className="benefits" id="benefits">
+        <h2 className="section-title">Beneficii exclusive</h2>
+        
+        <div className="benefits-grid">
+          <div className="benefit-card">
+            <div className="benefit-icon">🎓</div>
+            <h3 className="benefit-title">Curs acreditat de antreprenoriat</h3>
+            <p className="benefit-text">Participi la un curs complet de antreprenoriat, acreditat de Ministerul Educației, care îți oferă toate competențele necesare pentru a-ți porni afacerea.</p>
           </div>
-          <p className="text-gray-700 text-center mt-6">
-            Obții competențe de viitor, recunoscute global.
-          </p>
+          
+          <div className="benefit-card">
+            <div className="benefit-icon">📋</div>
+            <h3 className="benefit-title">Zero birocrație</h3>
+            <p className="benefit-text">Ne ocupăm noi de tot procesul birocratic, inclusiv de întocmirea planului de afaceri și depunerea proiectului.</p>
+          </div>
+          
+          <div className="benefit-card">
+            <div className="benefit-icon">👨‍💼</div>
+            <h3 className="benefit-title">Consultanță personalizată</h3>
+            <p className="benefit-text">Experții noștri te ghidează în fiecare etapă a proiectului, oferindu-ți sfaturi personalizate pentru afacerea ta.</p>
+          </div>
+          
+          <div className="benefit-card">
+            <div className="benefit-icon">💰</div>
+            <h3 className="benefit-title">Finanțare nerambursabilă</h3>
+            <p className="benefit-text">Cu sprijinul echipei noastre, șansele de a obține finanțarea de până la 50.000 Euro cresc considerabil.</p>
+          </div>
         </div>
-        
-        {/* Why Choose Us Section */}
-        <h3 className="text-2xl font-bold text-center mb-8 text-gradient-green-teal">
-          De ce să alegi echipa noastră
-        </h3>
-        
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-          {benefits.map((benefit, index) => (
-            <div key={index} className="flex items-start p-4 glassmorphism rounded-xl shadow-sm">
-              <div className="text-blue-500 mr-4 flex-shrink-0">{benefit.icon}</div>
-              <div>
-                <h4 className="text-lg font-semibold mb-1">{benefit.title}</h4>
-                <p className="text-gray-600 text-sm">{benefit.description}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-        
-        <div className="glassmorphism rounded-2xl p-6 shadow-md text-center bg-orange-50 border border-orange-100 mt-8">
-          <h4 className="text-lg font-semibold text-orange-600 mb-1">ATENȚIE!</h4>
-          <p className="text-gray-700">Înscrierea pentru cursuri tehnice este posibilă până pe 15 aprilie</p>
-        </div>
-      </div>
+      </section>
+      
+      {/* Countdown Section */}
+      <section className="countdown" id="countdown">
+        <h2 className="countdown-title">ATENȚIE! Înscrierea pentru cursul de antreprenoriat este posibilă până pe 15 aprilie</h2>
+      </section>
+      
+      {/* JavaScript for countdown */}
+      <script dangerouslySetInnerHTML={{
+        __html: `
+          // Countdown Timer
+          const countDownDate = new Date("Apr 15, 2025 23:59:59").getTime();
+          
+          const countdown = setInterval(function() {
+              const now = new Date().getTime();
+              const distance = countDownDate - now;
+              
+              const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+              const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+              const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)) ;
+              const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+              
+              document.getElementById("days").innerHTML = days.toString().padStart(2, '0');
+              document.getElementById("hours").innerHTML = hours.toString().padStart(2, '0');
+              document.getElementById("minutes").innerHTML = minutes.toString().padStart(2, '0');
+              document.getElementById("seconds").innerHTML = seconds.toString().padStart(2, '0');
+              
+              if (distance < 0) {
+                  clearInterval(countdown);
+                  document.getElementById("days").innerHTML = "00";
+                  document.getElementById("hours").innerHTML = "00";
+                  document.getElementById("minutes").innerHTML = "00";
+                  document.getElementById("seconds").innerHTML = "00";
+              }
+          }, 1000);
+        `
+      }} />
     </section>
   );
 };

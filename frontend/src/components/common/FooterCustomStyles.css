@@ -1,0 +1,29 @@
+/* Stiluri personalizate pentru logo-urile din footer */
+.eu-funding {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 2rem;
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.eu-logo {
+  height: 40px;
+  object-fit: contain;
+  background-color: white;
+  padding: 5px;
+  border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+  .eu-funding {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .eu-logo {
+    max-width: 200px;
+  }
+}

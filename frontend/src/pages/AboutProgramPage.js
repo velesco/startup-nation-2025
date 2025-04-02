@@ -1,15 +1,30 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import Navbar from '../components/landing/Navbar';
 import Footer from '../components/common/Footer';
 
 const AboutProgramPage = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Verifică dacă URL-ul conține un hash și navigheaza la ancora respectivă
+    if (location.hash) {
+      const element = document.getElementById(location.hash.substring(1));
+      if (element) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [location]);
+
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div id="about-program" className="bg-gray-50 min-h-screen">
       {/* Navigation Bar */}
       <Navbar />
       
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-12">
+      <div className="container mx-auto px-4 py-12 mt-24">
         <h1 className="text-4xl font-bold text-gray-800 mb-6 text-center">Despre programul Startup Nation 2025</h1>
         
         <div className="max-w-4xl mx-auto">
