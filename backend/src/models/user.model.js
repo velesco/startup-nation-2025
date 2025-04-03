@@ -22,6 +22,7 @@ const userSchema = new mongoose.Schema(
     phone: {
       type: String,
       trim: true,
+      // Allow any string format including '+' character
     },
     role: {
       type: String,
