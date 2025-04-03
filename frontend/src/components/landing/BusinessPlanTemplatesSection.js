@@ -98,6 +98,7 @@ const BusinessPlanTemplatesSection = () => {
         // Transform the API data to match the component's expected format
         const formattedPlans = response.data.map(project => ({
           id: project.id,
+          pdf: project.pdf,
           title: project.name,
           imageUrl: `https://startup.area4u.ro/storage/images/${project.image}`,
           content: project.content // This is the HTML or iframe content
@@ -175,6 +176,16 @@ const BusinessPlanTemplatesSection = () => {
                     </span>
                   </div>
                   <div className="flex space-x-2">
+                    <a 
+                      href={`https://startup.area4u.ro/storage/pdfs/${plan.pdf}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-sm btn-red"
+                      download
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Descarca
+                    </a>
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();

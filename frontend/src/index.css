@@ -544,6 +544,10 @@ nav a:hover::after {
   background: linear-gradient(45deg, #003399, #0066cc);
 }
 
+.btn-red {
+  background: linear-gradient(45deg, #cc0000, #ff3333);
+}
+
 /* Form Section */
 .form-section {
   padding: 2rem 5% 6rem;

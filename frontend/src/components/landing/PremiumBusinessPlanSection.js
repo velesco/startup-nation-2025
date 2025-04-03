@@ -99,6 +99,7 @@ const PremiumBusinessPlanSection = () => {
         const formattedPlans = response.data.map(project => ({
           id: project.id,
           title: project.name,
+          pdf: project.pdf,
           imageUrl: `https://startup.area4u.ro/storage/images/${project.image}`,
           content: project.content,
           score: project.score || 100 // Assuming the API provides a score field, default to 100
@@ -179,6 +180,16 @@ const PremiumBusinessPlanSection = () => {
                     </span>
                   </div>
                   <div className="flex space-x-2">
+                    <a 
+                      href={`https://startup.area4u.ro/storage/pdfs/${plan.pdf}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-sm btn-red"
+                      download
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Descarca
+                    </a>
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();

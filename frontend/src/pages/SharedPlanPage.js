@@ -186,6 +186,19 @@ const SharedPlanPage = () => {
             <div className="bg-gray-100 p-4 border-b flex items-center justify-between">
               <p className="text-sm text-gray-600">Distribuie acest plan:</p>
               <div className="flex space-x-2">
+                <a 
+                  href={`https://startup.area4u.ro/storage/pdfs/${plan.pdf}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm flex items-center"
+                  download
+                >
+                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M19.5 12c0-1.2-1-2.1-2.2-2.1H10V17l-4-5.1v6.2H3c-1.1 0-2-.9-2-2.1V4.8c0-1.2 1-2.1 2.2-2.1H18c1.2 0 2.2.9 2.2 2.1V12h-1.7zM11 9.1h4v2h-4v-2zm0-3.6h8v2h-8v-2zm0-3.6h8v2h-8v-2z"/>
+                    <path d="M19 22.3l-5-4.9v-1.4h2.3L12 21l-4.3-5H10v1.4l-5 4.9h14z"/>
+                  </svg>
+                  PDF
+                </a>
                 <button 
                   onClick={() => {
                     const shareUrl = window.location.href;
