@@ -2,7 +2,7 @@ import React from 'react';
 
 const ProgramInfoSection = () => {
   return (
-    <section className="py-16 relative">
+    <section className="relative">
       {/* Eligibility Section */}
       <section className="eligibility" id="eligibility">
         <h2 className="section-title">Ești eligibil?</h2>
@@ -114,7 +114,8 @@ const ProgramInfoSection = () => {
       
       {/* Countdown Section */}
       <section className="countdown" id="countdown">
-        <h2 className="countdown-title">ATENȚIE! Înscrierea pentru cursul de antreprenoriat este posibilă până pe 15 aprilie</h2>
+        <h2 className="countdown-title">ATENTIE! Numarul de cursuri obligatorii la nivel national sunt limitate (primul venit - primul servit) 
+        Dupa finalizare, fiecare cursant va primi 200 lei.</h2>
       </section>
       
       {/* JavaScript for countdown */}

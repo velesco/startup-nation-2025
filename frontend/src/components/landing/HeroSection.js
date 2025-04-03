@@ -16,7 +16,7 @@ const HeroSection = () => {
           <div className="typing-animation typing-1" style={{opacity: 1, width: "100%"}}>Startup Nation 2025</div>
           <div className="typing-animation typing-2" style={{opacity: 1, width: "100%"}}>Transformă-ți ideea în realitate</div>
         </h1>
-        <p className="hero-subtitle" style={{opacity: 1, transform: "none", color: "#222"}}>Obține finanțare nerambursabilă de până la 50.000 Euro pentru afacerea ta! Programul este deschis unei game largi de persoane, indiferent de vârstă.</p>
+        <p className="hero-subtitle hide-on-mobile" style={{opacity: 1, transform: "none", color: "#222"}}>Obține finanțare nerambursabilă de până la 50.000 Euro pentru afacerea ta! Programul este deschis unei game largi de persoane, indiferent de vârstă.</p>
         <a href="#apply-section" onClick={scrollToApplySection} className="btn hero-cta desktop-cta" style={{opacity: 1, transform: "none"}}>Aplică acum</a>
       </div>
       
@@ -27,6 +27,11 @@ const HeroSection = () => {
       {/* Buton pentru versiunea mobilă care apare sub imagine */}
       <div className="mobile-cta-container">
         <a href="#apply-section" onClick={scrollToApplySection} className="btn hero-cta mobile-cta" style={{opacity: 1, transform: "none"}}>Aplică acum</a>
+        
+        {/* Text pentru versiunea mobilă - apare doar pe ecrane mici */}
+        <p className="mobile-hero-text mt-4 text-gray-800 font-medium text-center">
+          Obține finanțare nerambursabilă de până la 50.000 Euro pentru afacerea ta! Programul este deschis unei game largi de persoane, indiferent de vârstă.
+        </p>
       </div>
     </section>
   );

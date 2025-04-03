@@ -130,7 +130,7 @@ const BusinessPlanTemplatesSection = () => {
   };
 
   return (
-    <div className="py-16 bg-white">
+    <div className="bg-white">
       <div className="container mx-auto px-6">
         <h2 className="text-3xl font-bold text-gradient-gray text-center mb-2">
           Modele de planuri de afaceri

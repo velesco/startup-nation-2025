@@ -41,6 +41,18 @@ body {
   display: inline-block;
   margin: 0 auto;
 }
+
+.mobile-hero-text {
+  display: none;
+  margin-top: 1rem;
+  max-width: 90%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.hide-on-mobile {
+  display: block;
+}
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
@@ -534,7 +546,7 @@ nav a:hover::after {
 
 /* Form Section */
 .form-section {
-  padding: 8rem 5% 6rem;
+  padding: 2rem 5% 6rem;
   background: var(--bg-light);
   position: relative;
   overflow: hidden;
@@ -814,7 +826,7 @@ footer {
 
 /* Eligibility Section */
 .eligibility {
-  padding: 8rem 5%;
+  padding: 2rem 5%;
   background: var(--bg-light);
   position: relative;
   overflow: hidden;
@@ -919,7 +931,7 @@ footer {
 
 /* Steps Section */
 .steps {
-  padding: 8rem 5%;
+  padding: 2rem 5%;
   position: relative;
 }
 
@@ -1009,7 +1021,7 @@ footer {
 
 /* Benefits Section */
 .benefits {
-  padding: 8rem 5%;
+  padding: 2rem 5%;
   background: var(--bg-light);
   position: relative;
   overflow: hidden;
@@ -1226,6 +1238,14 @@ footer {
   
   .mobile-cta-container {
     display: block;
+  }
+  
+  .mobile-hero-text {
+    display: block;
+  }
+  
+  .hide-on-mobile {
+    display: none;
   }
   
   .hero {
