@@ -131,7 +131,7 @@ const PremiumBusinessPlanSection = () => {
   };
 
   return (
-    <div className=" bg-gray-50">
+    <div className="mb-12 bg-gray-50">
       <div className="container mx-auto px-6">
         <h2 className="text-3xl font-bold text-gradient-gray text-center mb-2">
           Modele de planuri de afaceri de 100 de puncte

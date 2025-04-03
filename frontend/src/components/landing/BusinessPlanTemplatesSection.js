@@ -131,7 +131,7 @@ const BusinessPlanTemplatesSection = () => {
 
   return (
     <div className="bg-white">
-      <div className="container mx-auto px-6">
+      <div className="container mx-auto px-6 py-16">
         <h2 className="text-3xl font-bold text-gradient-gray text-center mb-2">
           Modele de planuri de afaceri
         </h2>
@@ -151,7 +151,7 @@ const BusinessPlanTemplatesSection = () => {
                 className="glassmorphism-darker rounded-xl overflow-hidden shadow-md hover-scale cursor-pointer"
                 onClick={() => handleOpenContent(plan.content)}
               >
-                <div className="overflow-hidden">
+                <div className="h-48 overflow-hidden">
                   <img 
                     src={plan.imageUrl} 
                     alt={plan.title}
