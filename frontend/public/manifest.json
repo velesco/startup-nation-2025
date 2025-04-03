@@ -1,11 +1,16 @@
 {
-  "short_name": "Startup Nation 2025",
-  "name": "Startup Nation 2025 - Portal Parteneri",
+  "short_name": "SN 2025",
+  "name": "Startup Nation 2025",
   "icons": [
     {
       "src": "favicon.ico",
       "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/x-icon"
+    },
+    {
+      "src": "favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
     },
     {
       "src": "logo192.png",
@@ -20,6 +25,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#2e5bb0",
+  "theme_color": "#003399",
   "background_color": "#ffffff"
 }
