@@ -1,12 +1,4 @@
 User-agent: *
 Allow: /
-Allow: /despre-program
-Allow: /termeni-conditii
-Allow: /politica-confidentialitate
-Allow: /login
-Allow: /register
-Disallow: /admin/
-Disallow: /client/dashboard
-Disallow: /trainer/
 
 Sitemap: https://aplica-startup.ro/sitemap.xml

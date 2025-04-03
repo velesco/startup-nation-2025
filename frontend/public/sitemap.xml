@@ -2,37 +2,37 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://aplica-startup.ro/</loc>
-    <lastmod>2025-04-01</lastmod>
+    <lastmod>2025-04-03</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://aplica-startup.ro/despre-program</loc>
-    <lastmod>2025-04-01</lastmod>
+    <lastmod>2025-04-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://aplica-startup.ro/termeni-conditii</loc>
-    <lastmod>2025-04-01</lastmod>
-    <changefreq>yearly</changefreq>
+    <lastmod>2025-04-03</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://aplica-startup.ro/politica-confidentialitate</loc>
-    <lastmod>2025-04-01</lastmod>
-    <changefreq>yearly</changefreq>
+    <lastmod>2025-04-03</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://aplica-startup.ro/login</loc>
-    <lastmod>2025-04-01</lastmod>
+    <lastmod>2025-04-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://aplica-startup.ro/register</loc>
-    <lastmod>2025-04-01</lastmod>
+    <lastmod>2025-04-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
