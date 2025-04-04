@@ -40,7 +40,7 @@ app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 // Configurație pentru express-fileupload cu limite rezonabile
 app.use((req, res, next) => {
   // Excludem rutele pentru contracte de la middleware-ul fileUpload pentru a evita probleme cu body parser-ul
-  if (req.originalUrl.includes('/api/contracts/')) {
+  if (req.originalUrl.includes('/api/contracts/') || req.originalUrl.includes('/contracts/')) {
     console.log(`Bypassing fileUpload middleware for contract route: ${req.originalUrl}`);
     return next();
   }
@@ -89,6 +89,9 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/contracts', contractRoutes);
+
+// Rute alternative pentru compatibilitate cu aplicația mobilă
+app.use('/contracts', contractRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
