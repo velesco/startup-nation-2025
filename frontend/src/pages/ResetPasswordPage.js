@@ -45,7 +45,7 @@ const ResetPasswordPage = () => {
         const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
         
         // Verify token validity
-        const response = await axios.post(`${API_URL}/auth/verify-reset-token`, {
+        const response = await axios.post(`${API_URL}/password/verify-reset-token`, {
           token,
           email
         });
@@ -84,7 +84,7 @@ const ResetPasswordPage = () => {
         const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
         
         // Call the reset password API
-        const response = await axios.post(`${API_URL}/auth/reset-password`, {
+        const response = await axios.post(`${API_URL}/password/reset-password`, {
           token,
           email,
           password: values.password

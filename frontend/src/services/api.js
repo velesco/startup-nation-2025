@@ -88,8 +88,9 @@ const apiService = {
     getProfile: () => api.get('/auth/me'),
     updateProfile: (userData) => api.put('/auth/update-details', userData),
     updatePassword: (passwords) => api.put('/auth/update-password', passwords),
-    forgotPassword: (email) => api.post('/auth/forgot-password', email),
-    resetPassword: (token, password) => api.put(`/auth/reset-password/${token}`, { password }),
+    forgotPassword: (email) => api.post('/password/forgot-password', email),
+    verifyResetToken: (token, email) => api.post('/password/verify-reset-token', { token, email }),
+    resetPassword: (token, email, password) => api.post('/password/reset-password', { token, email, password }),
     updateIdCard: (idCardData) => api.put('/auth/update-id-card', idCardData),
     checkEmail: (email) => api.post('/auth/check-email', { email })
   },

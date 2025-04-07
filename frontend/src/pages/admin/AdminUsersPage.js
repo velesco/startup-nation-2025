@@ -11,12 +11,14 @@ import {
   Building,
   Mail,
   Calendar,
-  Clock
+  Clock,
+  Send
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import DashboardLayout from '../../components/layouts/DashboardLayout';
 import LoadingScreen from '../../components/client/LoadingScreen';
 import AddUserModal from '../../components/admin/AddUserModal';
+import SendEmailModal from '../../components/admin/SendEmailModal';
 
 const roleColors = {
   'admin': 'bg-purple-100 text-purple-700',
@@ -33,6 +35,8 @@ const AdminUsersPage = () => {
   const [users, setUsers] = useState([]);
   const [error, setError] = useState(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
   
   // Pagination and filtering
   const [page, setPage] = useState(1);
@@ -101,6 +105,12 @@ const AdminUsersPage = () => {
     // După adăugarea utilizatorului, reîmprospătăm lista
     fetchUsers();
     setIsAddModalOpen(false);
+  };
+
+  // Handle email sending to a user
+  const handleSendEmail = (user) => {
+    setSelectedUser(user);
+    setIsEmailModalOpen(true);
   };
 
   // Generam inițialele pentru utilizator
@@ -243,6 +253,9 @@ const AdminUsersPage = () => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Înregistrat
                   </th>
+                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Acțiuni
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white/50">
@@ -305,6 +318,18 @@ const AdminUsersPage = () => {
                         {formatDate(user.createdAt)}
                       </div>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation(); // Oprim propagarea pentru a nu naviga la profil
+                          handleSendEmail(user);
+                        }}
+                        className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-2 rounded-lg hover:opacity-90 transition-all focus:outline-none focus:ring-2 focus:ring-green-500 mr-2"
+                        title="Trimite email"
+                      >
+                        <Send className="h-4 w-4" />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -365,6 +390,17 @@ const AdminUsersPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal pentru trimitere email */}
+      {isEmailModalOpen && selectedUser && (
+        <SendEmailModal
+          isOpen={isEmailModalOpen}
+          onClose={() => setIsEmailModalOpen(false)}
+          userId={selectedUser._id}
+          userEmail={selectedUser.email}
+          userName={selectedUser.name}
+        />
+      )}
 
       {/* Modal pentru adăugare utilizator */}
       {isAddModalOpen && (

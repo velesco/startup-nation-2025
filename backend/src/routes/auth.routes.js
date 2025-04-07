@@ -9,8 +9,6 @@ const {
   getMe, 
   updateDetails, 
   updatePassword, 
-  forgotPassword, 
-  resetPassword,
   refreshToken,
   checkEmail,
   updateIdCard
@@ -20,9 +18,7 @@ const {
 router.post('/register', register);
 router.post('/login', login);
 router.post('/refresh-token', refreshToken);
-router.post('/forgot-password', forgotPassword);
-router.put('/reset-password/:resettoken', resetPassword);
-router.post('/check-email', checkEmail); // Nou endpoint pentru verificarea existenței emailului
+router.post('/check-email', checkEmail); // Endpoint pentru verificarea existenței emailului
 
 // Protected routes
 router.get('/logout', protect, apiRateLimiter, logout);

@@ -7,6 +7,20 @@ const User = require('../models/User');
 const logger = require('../utils/logger');
 const nodemailer = require('nodemailer');
 
+// Funcție pentru înlocuirea diacriticelor cu caracterele fără diacritice
+const removeDiacritics = (str) => {
+  if (!str) return str;
+  return str
+    .replace(/[ăâ]/g, 'a')
+    .replace(/[î]/g, 'i')
+    .replace(/[șş]/g, 's')
+    .replace(/[țţ]/g, 't')
+    .replace(/[ĂÂ]/g, 'A')
+    .replace(/[Î]/g, 'I')
+    .replace(/[ȘŞ]/g, 'S')
+    .replace(/[ȚŢ]/g, 'T');
+};
+
 // Utility function to send email with attachment
 const sendContractEmail = async (user, attachmentPath, attachmentName, isDocx = false) => {
   try {
@@ -199,7 +213,7 @@ exports.generateContract = async (req, res, next) => {
       
       // Trimitem email cu contractul PDF
       let displayName = user.idCard.fullName || user.name || userId;
-      displayName = displayName.replace(/\s+/g, '_');
+      displayName = removeDiacritics(displayName).replace(/\s+/g, '_');
       logger.info(`Sending contract email to ${user.email} and contact@aplica-startup.ro`);
       const emailResult = await sendContractEmail(
         user, 
@@ -230,7 +244,7 @@ exports.generateContract = async (req, res, next) => {
     
     // Trimitem email cu contractul DOCX
     let displayName = user.idCard.fullName || user.name || userId;
-    displayName = displayName.replace(/\s+/g, '_');
+    displayName = removeDiacritics(displayName).replace(/\s+/g, '_');
     
     logger.info(`Sending DOCX contract email to ${user.email} and contact@aplica-startup.ro`);
     const emailResult = await sendContractEmail(
@@ -370,7 +384,8 @@ exports.downloadContract = async (req, res, next) => {
       if (!displayName || displayName === 'test') {
         displayName = user.name || userId;
       }
-      const fileName = `contract_${displayName.replace(/\s+/g, '_')}${isDocx ? '.docx' : '.pdf'}`;
+      displayName = removeDiacritics(displayName).replace(/\s+/g, '_');
+      const fileName = `contract_${displayName}${isDocx ? '.docx' : '.pdf'}`;
       
       console.log(`Using display name for contract: ${displayName}`);
       
@@ -382,7 +397,7 @@ exports.downloadContract = async (req, res, next) => {
         res.setHeader('Content-Type', 'application/pdf');
       }
       
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`);
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
       console.log(`Set headers for download, filename: ${fileName}`);
       
       if (req.files) {

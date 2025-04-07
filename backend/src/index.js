@@ -65,7 +65,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 const authRoutes = require('./routes/auth.routes');
 const passwordRoutes = require('./routes/password.routes');
 app.use('/api/auth', authRoutes);
-app.use('/api/auth', passwordRoutes);
+app.use('/api/password', passwordRoutes);
 
 // Enable these routes as they are implemented
 const userRoutes = require('./routes/user.routes');
@@ -78,6 +78,7 @@ const notificationRoutes = require('./routes/notification.routes');
 const activityRoutes = require('./routes/activity.routes');
 const logRoutes = require('./routes/log.routes');
 const contractRoutes = require('./routes/contract.routes');
+const emailRoutes = require('./routes/email.routes');
 
 app.use('/api/users', userRoutes);
 app.use('/api/clients', clientRoutes);
@@ -89,6 +90,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/contracts', contractRoutes);
+app.use('/api/email', emailRoutes);
 
 // Rute alternative pentru compatibilitate cu aplicația mobilă
 app.use('/contracts', contractRoutes);

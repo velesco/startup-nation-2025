@@ -14,13 +14,15 @@ import {
   Shield, 
   Building, 
   Clock,
-  User
+  User,
+  Send
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import DashboardLayout from '../../components/layouts/DashboardLayout';
 import LoadingScreen from '../../components/client/LoadingScreen';
 import UserDocumentsPanel from '../../components/users/UserDocumentsPanel';
 import EditUserForm from '../../components/users/EditUserForm';
+import SendEmailModal from '../../components/admin/SendEmailModal';
 
 const UserDetailPage = () => {
   const { id } = useParams();
@@ -31,6 +33,7 @@ const UserDetailPage = () => {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   // Fetch user data
   useEffect(() => {
@@ -178,15 +181,26 @@ const UserDetailPage = () => {
                   <div>
                     <div className="flex justify-between items-center mb-6">
                       <h2 className="text-xl font-semibold text-gray-800">Detalii profil</h2>
-                      {currentUser && currentUser.role === 'admin' && (
-                        <button
-                          onClick={() => setIsEditing(true)}
-                          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-                        >
-                          <Save className="h-4 w-4 mr-2" />
-                          Editează
-                        </button>
-                      )}
+                      <div className="flex space-x-2">
+                        {currentUser && (currentUser.role === 'admin' || currentUser.role === 'super-admin') && (
+                          <button
+                            onClick={() => setIsEmailModalOpen(true)}
+                            className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-lg hover:opacity-90 transition-colors flex items-center"
+                          >
+                            <Send className="h-4 w-4 mr-2" />
+                            Trimite email
+                          </button>
+                        )}
+                        {currentUser && (currentUser.role === 'admin' || currentUser.role === 'super-admin') && (
+                          <button
+                            onClick={() => setIsEditing(true)}
+                            className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:opacity-90 transition-colors flex items-center"
+                          >
+                            <Save className="h-4 w-4 mr-2" />
+                            Editează
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -289,6 +303,17 @@ const UserDetailPage = () => {
           </div>
         )}
       </div>
+
+      {/* Modal pentru trimitere email */}
+      {isEmailModalOpen && user && (
+        <SendEmailModal
+          isOpen={isEmailModalOpen}
+          onClose={() => setIsEmailModalOpen(false)}
+          userId={user._id}
+          userEmail={user.email}
+          userName={user.name}
+        />
+      )}
     </DashboardLayout>
   );
 };

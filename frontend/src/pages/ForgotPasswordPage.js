@@ -32,7 +32,7 @@ const ForgotPasswordPage = () => {
         const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
         
         // Call the reset password API
-        const response = await axios.post(`${API_URL}/auth/forgot-password`, {
+        const response = await axios.post(`${API_URL}/password/forgot-password`, {
           email: values.email
         });
         
