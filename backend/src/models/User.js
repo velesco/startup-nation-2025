@@ -128,6 +128,9 @@ const UserSchema = new mongoose.Schema(
       birthDate: {
         type: Date
       },
+      issueDate: {
+        type: Date
+      },
       expiryDate: {
         type: Date
       },
