@@ -11,7 +11,9 @@ import {
   UserPlus, 
   UserMinus,
   X, 
-  Check 
+  Check,
+  MoreVertical,
+  ExternalLink
 } from 'lucide-react';
 
 const ParticipantsTab = ({ 
@@ -27,6 +29,7 @@ const ParticipantsTab = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedClients, setSelectedClients] = useState([]);
+  const [activeDropdown, setActiveDropdown] = useState(null);
   
   // Format date for display
   const formatDate = (dateString) => {
@@ -91,6 +94,7 @@ const ParticipantsTab = ({
       setError(error.response?.data?.message || 'Nu s-a putut elimina participantul. Vă rugăm să încercați din nou.');
     } finally {
       setLoading(false);
+      setActiveDropdown(null);
     }
   };
   
@@ -131,9 +135,18 @@ const ParticipantsTab = ({
     }
   };
   
+  // Toggle action dropdown for mobile view
+  const toggleDropdown = (participantId) => {
+    if (activeDropdown === participantId) {
+      setActiveDropdown(null);
+    } else {
+      setActiveDropdown(participantId);
+    }
+  };
+  
   // Filter available clients based on search term in modal
   const filteredAvailableClients = availableParticipants.filter(client => {
-    if (!searchTerm) return true;
+    if (!searchTerm && showAddModal) return true;
     
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -146,8 +159,8 @@ const ParticipantsTab = ({
   return (
     <div>
       {/* Header with search and add button */}
-      <div className="mb-6 flex flex-wrap gap-4 items-center justify-between">
-        <div className="relative flex-1 min-w-[250px]">
+      <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <div className="relative flex-1 min-w-0">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="h-5 w-5 text-gray-400" />
           </div>
@@ -166,7 +179,7 @@ const ParticipantsTab = ({
             setSelectedClients([]);
             setShowAddModal(true);
           }}
-          className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-2 rounded-lg flex items-center shadow-md hover:shadow-lg transition-all"
+          className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-2 rounded-lg flex items-center justify-center sm:justify-start shadow-md hover:shadow-lg transition-all"
           disabled={loading}
         >
           <UserPlus className="h-5 w-5 mr-2" />
@@ -176,8 +189,8 @@ const ParticipantsTab = ({
       
       {/* Participants list */}
       {filteredParticipants.length === 0 ? (
-        <div className="glassmorphism rounded-xl p-10 shadow-lg text-center">
-          <User className="h-12 w-12 mx-auto text-gray-400 mb-3" />
+        <div className="glassmorphism rounded-xl p-6 sm:p-10 shadow-lg text-center">
+          <User className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-gray-400 mb-3" />
           <h3 className="text-lg font-medium text-gray-700 mb-2">Nu există participanți în această grupă</h3>
           <p className="text-gray-500 mb-4">Adăugați participanți pentru a începe cursurile cu această grupă.</p>
           <button
@@ -194,8 +207,9 @@ const ParticipantsTab = ({
           </button>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <div className="glassmorphism rounded-xl shadow-lg">
+        <>
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto glassmorphism rounded-xl shadow-lg">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-white/70">
                 <tr>
@@ -284,7 +298,87 @@ const ParticipantsTab = ({
               </tbody>
             </table>
           </div>
-        </div>
+          
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-3">
+            {filteredParticipants.map((participant) => (
+              <div key={participant._id} className="glassmorphism rounded-lg p-3 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold">
+                      {getInitials(participant.name)}
+                    </div>
+                    <div className="ml-3">
+                      <div className="text-sm font-medium text-gray-900">{participant.name}</div>
+                      <div className="text-xs text-gray-500">ID: {participant._id.substring(participant._id.length - 4)}</div>
+                    </div>
+                  </div>
+                  
+                  {/* Mobile actions dropdown */}
+                  <div className="relative">
+                    <button 
+                      onClick={() => toggleDropdown(participant._id)}
+                      className="p-1 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                    >
+                      <MoreVertical className="h-5 w-5" />
+                    </button>
+                    
+                    {activeDropdown === participant._id && (
+                      <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                        <div className="py-1">
+                          <button
+                            onClick={() => {
+                              navigate(`/admin/clients/${participant._id}`);
+                              setActiveDropdown(null);
+                            }}
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                          >
+                            <ExternalLink className="h-4 w-4 mr-2 text-blue-500" />
+                            Vizualizare detalii
+                          </button>
+                          <button
+                            onClick={() => handleRemoveParticipant(participant._id)}
+                            className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center"
+                            disabled={loading}
+                          >
+                            <UserMinus className="h-4 w-4 mr-2" />
+                            Eliminare din grupă
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="mt-3 space-y-1 text-xs text-gray-600">
+                  <div className="flex items-center">
+                    <Mail className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
+                    <span className="truncate">{participant.email}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Phone className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
+                    <span>{participant.phone}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Calendar className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
+                    <span>{formatDate(participant.registrationDate)}</span>
+                  </div>
+                </div>
+                
+                <div className="mt-3">
+                  <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                    participant.status === 'Nou' ? 'bg-orange-100 text-orange-700' :
+                    participant.status === 'În progres' ? 'bg-blue-100 text-blue-700' :
+                    participant.status === 'Complet' ? 'bg-green-100 text-green-700' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {participant.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
       
       {/* Add clients modal */}

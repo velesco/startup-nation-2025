@@ -157,16 +157,16 @@ const UserDocumentsPanel = ({ userId }) => {
   };
 
   // Handle document download
-  const handleDownloadDocument = async (document) => {
+  const handleDownloadDocument = async (doc) => {
     try {
-      if (!document || !document._id) {
+      if (!doc || !doc._id) {
         showNotification('error', 'ID-ul documentului lipsește');
         return;
       }
       
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
       
-      const response = await axios.get(`${API_URL}/admin/documents/${document._id}/download`, {
+      const response = await axios.get(`${API_URL}/admin/documents/${doc._id}/download`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         },
@@ -175,10 +175,10 @@ const UserDocumentsPanel = ({ userId }) => {
       
       // Create a blob URL and trigger download
       const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
+      const link = window.document.createElement('a');
       link.href = url;
-      link.setAttribute('download', document.originalName || 'document');
-      document.body.appendChild(link);
+      link.setAttribute('download', doc.originalName || 'document');
+      window.document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);

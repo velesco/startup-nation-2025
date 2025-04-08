@@ -34,7 +34,7 @@ const StatCard = ({ title, value, icon, colorClass = 'blue' }) => {
           <p className="text-sm text-gray-500 mb-1">{title}</p>
           <p className="text-2xl font-bold text-gray-800">{value}</p>
         </div>
-        <div className={`w-14 h-14 rounded-full ${bg} flex items-center justify-center ${text}`}>
+        <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full ${bg} flex items-center justify-center ${text}`}>
           {icon}
         </div>
       </div>

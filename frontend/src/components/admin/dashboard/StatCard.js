@@ -9,11 +9,11 @@ const StatCard = ({ title, value, icon, backgroundColor, change, link }) => {
   
   return (
     <Link to={link || '#'} className="block">
-      <div className={`${backgroundColor || 'bg-blue-50'} p-5 rounded-xl transition-all duration-200 hover:shadow-md`}>
+      <div className={`${backgroundColor || 'bg-blue-50'} p-4 sm:p-5 rounded-xl transition-all duration-200 hover:shadow-md`}>
         <div className="flex justify-between items-start">
           <div>
             <h3 className="text-sm font-medium text-gray-500 mb-1">{title}</h3>
-            <p className="text-2xl font-bold text-gray-800">{value}</p>
+            <p className="text-xl sm:text-2xl font-bold text-gray-800">{value}</p>
             
             {hasChange && (
               <div className="flex items-center mt-2">

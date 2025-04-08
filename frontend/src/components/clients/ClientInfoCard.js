@@ -1,95 +1,72 @@
 import React from 'react';
-import {
-  Box,
-  Typography,
-  Paper,
-  Divider,
-  Chip,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText
-} from '@mui/material';
-import {
-  Person as PersonIcon,
-  Email as EmailIcon,
-  Phone as PhoneIcon,
-  Event as EventIcon,
-  Group as GroupIcon
-} from '@mui/icons-material';
+import { User, Mail, Phone, Calendar, Users } from 'lucide-react';
 
 const ClientInfoCard = ({ client }) => {
   return (
-    <Paper sx={{ height: '100%' }}>
-      <Box sx={{ p: 2 }}>
-        <Typography variant="h6" gutterBottom>
-          Informații client
-        </Typography>
-        <Divider sx={{ mb: 2 }} />
+    <div className="bg-white rounded-xl shadow-sm h-full p-4">
+      <h3 className="text-lg font-semibold text-gray-800 mb-3">Informații client</h3>
+      <div className="h-px bg-gray-200 mb-4"></div>
+      
+      <div className="space-y-3">
+        <div className="flex items-start">
+          <div className="mt-0.5 mr-3 text-blue-500">
+            <User size={18} />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Nume</p>
+            <p className="font-medium text-gray-800">{client.name}</p>
+          </div>
+        </div>
         
-        <List dense disablePadding>
-          <ListItem disableGutters>
-            <ListItemIcon sx={{ minWidth: 36 }}>
-              <PersonIcon color="primary" fontSize="small" />
-            </ListItemIcon>
-            <ListItemText
-              primary="Nume"
-              secondary={client.name}
-              primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
-              secondaryTypographyProps={{ variant: 'body1' }}
-            />
-          </ListItem>
-          
-          <ListItem disableGutters sx={{ mt: 1 }}>
-            <ListItemIcon sx={{ minWidth: 36 }}>
-              <EmailIcon color="primary" fontSize="small" />
-            </ListItemIcon>
-            <ListItemText
-              primary="Email"
-              secondary={client.email}
-              primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
-              secondaryTypographyProps={{ variant: 'body1' }}
-            />
-          </ListItem>
-          
-          <ListItem disableGutters sx={{ mt: 1 }}>
-            <ListItemIcon sx={{ minWidth: 36 }}>
-              <PhoneIcon color="primary" fontSize="small" />
-            </ListItemIcon>
-            <ListItemText
-              primary="Telefon"
-              secondary={client.phone}
-              primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
-              secondaryTypographyProps={{ variant: 'body1' }}
-            />
-          </ListItem>
-          
-          <ListItem disableGutters sx={{ mt: 1 }}>
-            <ListItemIcon sx={{ minWidth: 36 }}>
-              <EventIcon color="primary" fontSize="small" />
-            </ListItemIcon>
-            <ListItemText
-              primary="Data înregistrării"
-              secondary={client.registrationDate}
-              primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
-              secondaryTypographyProps={{ variant: 'body1' }}
-            />
-          </ListItem>
-          
-          <ListItem disableGutters sx={{ mt: 1 }}>
-            <ListItemIcon sx={{ minWidth: 36 }}>
-              <GroupIcon color="primary" fontSize="small" />
-            </ListItemIcon>
-            <ListItemText
-              primary="Grupă"
-              secondary={client.group}
-              primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
-              secondaryTypographyProps={{ variant: 'body1' }}
-            />
-          </ListItem>
-        </List>
-      </Box>
-    </Paper>
+        <div className="flex items-start">
+          <div className="mt-0.5 mr-3 text-blue-500">
+            <Mail size={18} />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Email</p>
+            <p className="font-medium text-gray-800 break-all">{client.email}</p>
+          </div>
+        </div>
+        
+        <div className="flex items-start">
+          <div className="mt-0.5 mr-3 text-blue-500">
+            <Phone size={18} />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Telefon</p>
+            <p className="font-medium text-gray-800">{client.phone}</p>
+          </div>
+        </div>
+        
+        <div className="flex items-start">
+          <div className="mt-0.5 mr-3 text-blue-500">
+            <Calendar size={18} />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Data înregistrării</p>
+            <p className="font-medium text-gray-800">{client.registrationDate}</p>
+          </div>
+        </div>
+        
+        <div className="flex items-start">
+          <div className="mt-0.5 mr-3 text-blue-500">
+            <Users size={18} />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Grupă</p>
+            <div className="mt-1">
+              {client.group ? (
+                <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                  {client.group}
+                </span>
+              ) : (
+                <span className="text-gray-500 text-sm">Nealocat</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

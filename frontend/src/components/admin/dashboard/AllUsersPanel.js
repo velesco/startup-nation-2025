@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { Users, ArrowRight, Search, RefreshCw } from 'lucide-react';
+import { Users, ArrowRight, Search, RefreshCw, Mail, Phone, Calendar } from 'lucide-react';
 
 const AllUsersPanel = () => {
   const [users, setUsers] = useState([]);
@@ -116,19 +116,21 @@ const AllUsersPanel = () => {
   }
 
   return (
-    <div className="bg-white p-5 rounded-xl shadow-sm">
-      <div className="flex justify-between items-center mb-4">
+    <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 space-y-2 sm:space-y-0">
         <h2 className="text-lg font-semibold text-gray-800">Toți Utilizatorii</h2>
-        <div className="flex items-center">
+        <div className="flex items-center w-full sm:w-auto">
           <button
             onClick={fetchUsers}
             className="text-sm text-blue-600 hover:text-blue-800 flex items-center mr-3"
           >
             <RefreshCw className="h-4 w-4 mr-1" />
-            Reîncarcă
+            <span className="hidden sm:inline">Reîncarcă</span>
           </button>
           <Link to="/admin/users" className="text-sm text-blue-600 hover:text-blue-800 flex items-center">
-            Vizualizează toți <ArrowRight className="h-4 w-4 ml-1" />
+            <span className="hidden sm:inline">Vizualizează toți</span>
+            <span className="sm:hidden">Vezi toți</span>
+            <ArrowRight className="h-4 w-4 ml-1" />
           </Link>
         </div>
       </div>
@@ -148,7 +150,8 @@ const AllUsersPanel = () => {
         </div>
       </div>
 
-      <div className="overflow-y-auto max-h-96">
+      {/* Desktop Table View */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -198,14 +201,53 @@ const AllUsersPanel = () => {
             ))}
           </tbody>
         </table>
-        
-        {filteredUsers.length === 0 && (
-          <div className="text-center py-12">
-            <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">Nu au fost găsiți utilizatori care să corespundă criteriilor tale de căutare.</p>
-          </div>
-        )}
       </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden">
+        <div className="space-y-3 overflow-y-auto max-h-96">
+          {filteredUsers.map((user) => (
+            <div key={user._id} className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+              <div className="flex items-center mb-2">
+                <div className="h-10 w-10 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold mr-3">
+                  {getInitials(user.name)}
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                  <div className="text-xs text-gray-500">ID: {user._id ? user._id.substr(-5) : 'N/A'}</div>
+                </div>
+                <div className="ml-auto">
+                  <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleColor(user.role)}`}>
+                    {user.role}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="ml-1 text-xs space-y-1">
+                <div className="flex items-center text-gray-600">
+                  <Mail className="h-3 w-3 mr-2" />
+                  {user.email}
+                </div>
+                <div className="flex items-center text-gray-600">
+                  <Phone className="h-3 w-3 mr-2" />
+                  {user.phone || 'Fără telefon'}
+                </div>
+                <div className="flex items-center text-gray-600">
+                  <Calendar className="h-3 w-3 mr-2" />
+                  {formatDate(user.createdAt)}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+        
+      {filteredUsers.length === 0 && (
+        <div className="text-center py-12">
+          <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500">Nu au fost găsiți utilizatori care să corespundă criteriilor tale de căutare.</p>
+        </div>
+      )}
     </div>
   );
 };
