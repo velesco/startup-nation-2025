@@ -71,6 +71,7 @@ const SignatureCapture = ({ onSave, onCancel, required = true, clearAfterSave = 
 
   // Handle mouse/touch down
   const startDrawing = (e) => {
+    e.preventDefault(); // Prevent scrolling on touch devices
     setError('');
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -80,8 +81,8 @@ const SignatureCapture = ({ onSave, onCancel, required = true, clearAfterSave = 
 
     // Get mouse/touch position
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX || e.touches[0].clientX) - rect.left;
-    const y = (e.clientY || e.touches[0].clientY) - rect.top;
+    const x = (e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0)) - rect.left;
+    const y = (e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0)) - rect.top;
     
     ctx.moveTo(x, y);
     setIsDrawing(true);
@@ -89,6 +90,7 @@ const SignatureCapture = ({ onSave, onCancel, required = true, clearAfterSave = 
 
   // Handle mouse/touch move
   const draw = (e) => {
+    e.preventDefault(); // Prevent scrolling on touch devices
     if (!isDrawing) return;
     
     const canvas = canvasRef.current;
@@ -98,8 +100,8 @@ const SignatureCapture = ({ onSave, onCancel, required = true, clearAfterSave = 
     
     // Get mouse/touch position
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX || e.touches[0].clientX) - rect.left;
-    const y = (e.clientY || e.touches[0].clientY) - rect.top;
+    const x = (e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0)) - rect.left;
+    const y = (e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0)) - rect.top;
     
     ctx.lineTo(x, y);
     ctx.stroke();
@@ -107,7 +109,8 @@ const SignatureCapture = ({ onSave, onCancel, required = true, clearAfterSave = 
   };
 
   // Handle mouse/touch up or out
-  const stopDrawing = () => {
+  const stopDrawing = (e) => {
+    e.preventDefault(); // Prevent scrolling on touch devices
     if (isDrawing) {
       setIsDrawing(false);
     }
@@ -190,11 +193,12 @@ const SignatureCapture = ({ onSave, onCancel, required = true, clearAfterSave = 
         </button>
       </div>
 
-      {/* Signature canvas with border */}
-      <div className="border-2 border-gray-300 bg-white rounded-lg mb-4 p-4">
+      {/* Signature canvas with border - added position relative and overflow hidden for Android fix */}
+      <div className="border-2 border-gray-300 bg-white rounded-lg mb-4 p-4 relative overflow-hidden">
         <canvas
           ref={canvasRef}
           className="w-full touch-none cursor-crosshair"
+          style={{ touchAction: 'none' }} /* Required CSS property to fix Android issues */
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={stopDrawing}
@@ -202,11 +206,12 @@ const SignatureCapture = ({ onSave, onCancel, required = true, clearAfterSave = 
           onTouchStart={startDrawing}
           onTouchMove={draw}
           onTouchEnd={stopDrawing}
+          onTouchCancel={stopDrawing}
         />
       </div>
 
       <p className="text-xs text-gray-500 mb-4">
-        Semnați în spațiul de mai sus folosind mouse-ul sau, dacă sunteți pe un dispozitiv mobil, cu degetul. Semnătura va fi inclusă în contract.
+        Semnați în spațiul de mai sus folosind mouse-ul sau, dacă sunteți pe un dispozitiv mobil, cu degetul. Semnătura va fi inclusă în contract. Țineți dispozitivul în poziție fixă pentru a semna mai ușor.
       </p>
 
       <div className="flex space-x-3 justify-end">

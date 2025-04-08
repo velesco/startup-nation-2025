@@ -69,28 +69,50 @@ const SignatureCanvas = ({ onSave, onCancel }) => {
 
   // Handle touch events
   const handleTouchStart = (e) => {
-    e.preventDefault();
+    e.preventDefault(); // Prevent scrolling
+    if (!e.touches || !e.touches[0]) return;
+    
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
     const touch = e.touches[0];
-    const mouseEvent = new MouseEvent('mousedown', {
-      clientX: touch.clientX,
-      clientY: touch.clientY
-    });
-    startDrawing(mouseEvent);
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    setIsDrawing(true);
   };
 
   const handleTouchMove = (e) => {
-    e.preventDefault();
+    e.preventDefault(); // Prevent scrolling
+    if (!isDrawing || !e.touches || !e.touches[0]) return;
+    
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
     const touch = e.touches[0];
-    const mouseEvent = new MouseEvent('mousemove', {
-      clientX: touch.clientX,
-      clientY: touch.clientY
-    });
-    draw(mouseEvent);
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    setHasSignature(true);
   };
 
   const handleTouchEnd = (e) => {
+    e.preventDefault(); // Prevent scrolling
+    if (isDrawing) {
+      ctx.closePath();
+      setIsDrawing(false);
+    }
+  };
+  
+  // Add touch cancel handler
+  const handleTouchCancel = (e) => {
     e.preventDefault();
-    stopDrawing();
+    if (isDrawing) {
+      ctx.closePath();
+      setIsDrawing(false);
+    }
   };
 
   // Clear signature
@@ -112,10 +134,11 @@ const SignatureCanvas = ({ onSave, onCancel }) => {
 
   return (
     <div className="flex flex-col items-center">
-      <div className="relative w-full max-w-md border rounded-lg border-gray-300 bg-white">
+      <div className="relative w-full max-w-md border rounded-lg border-gray-300 bg-white overflow-hidden">
         <canvas
           ref={canvasRef}
           className="w-full h-40 cursor-crosshair touch-none"
+          style={{ touchAction: 'none' }} /* Required CSS property to fix Android issues */
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={stopDrawing}
@@ -123,6 +146,7 @@ const SignatureCanvas = ({ onSave, onCancel }) => {
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchCancel}
         ></canvas>
         
         {/* Placeholder text */}
