@@ -3,7 +3,6 @@ import { Bell, CheckCircle, User } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import eventService from '../../services/eventService';
 import ClientWelcomeCard from '../../components/client/ClientWelcomeCard';
 import ClientProgressSteps from '../../components/client/ClientProgressSteps';
 import ClientNotifications from '../../components/client/ClientNotifications';
@@ -18,7 +17,6 @@ const ClientDashboardPage = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
-  const [events, setEvents] = useState([]);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [activeTab, setActiveTab] = useState('steps');
   const [error, setError] = useState(null);
@@ -278,7 +276,6 @@ const ClientDashboardPage = () => {
   const handleRefresh = useCallback(() => {
     setLoading(true);
     setUser(null);
-    setEvents([]);
     setError(null);
     
     console.log('Forțăm resetarea cache-ului și reîncărcarea datelor...');
@@ -322,7 +319,6 @@ const ClientDashboardPage = () => {
     setLoading(true);
     // Forțăm reîncărcarea completă a datelor, ștergem întâi vechile date
     setUser(null);
-    setEvents([]);
     setError(null);
     
     // Folosim setTimeout doar pentru a evita problema de Maximum update depth exceeded
