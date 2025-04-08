@@ -223,6 +223,7 @@ exports.updateIdCard = async (req, res, next) => {
       number, 
       issuedBy, 
       birthDate, 
+      issueDate, // Adăugat data eliberării
       expiryDate 
     } = req.body;
 
@@ -237,6 +238,7 @@ exports.updateIdCard = async (req, res, next) => {
         'idCard.number': number,
         'idCard.issuedBy': issuedBy,
         'idCard.birthDate': birthDate ? new Date(birthDate) : undefined,
+        'idCard.issueDate': issueDate ? new Date(issueDate) : undefined, // Adăugat conversia datei eliberării
         'idCard.expiryDate': expiryDate ? new Date(expiryDate) : undefined,
         'documents.id_cardUploaded': true
       },

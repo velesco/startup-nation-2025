@@ -13,11 +13,15 @@ const ClientIDCardDataForm = ({ onCompleted, onCancel }) => {
     number: '',
     issuedBy: '',
     birthDate: '',
+    issueDate: '', // adăugat câmp pentru data eliberării
     expiryDate: '',
     // Pentru dropdown selectare zi/lună/an
     birthDay: '',
     birthMonth: '',
     birthYear: '',
+    issueDay: '', // adăugat pentru data eliberării
+    issueMonth: '',
+    issueYear: '',
     expiryDay: '',
     expiryMonth: '',
     expiryYear: ''
@@ -31,6 +35,7 @@ const ClientIDCardDataForm = ({ onCompleted, onCancel }) => {
       const { idCard } = currentUser;
       let birthDay = '', birthMonth = '', birthYear = '';
       let expiryDay = '', expiryMonth = '', expiryYear = '';
+      let issueDay = '', issueMonth = '', issueYear = '';
       
       // Parsează data nașterii dacă există
       if (idCard.birthDate) {
@@ -39,6 +44,15 @@ const ClientIDCardDataForm = ({ onCompleted, onCancel }) => {
         birthDay = birthDate.getDate().toString().padStart(2, '0');
         birthMonth = (birthDate.getMonth() + 1).toString().padStart(2, '0');
         birthYear = birthDate.getFullYear().toString();
+      }
+      
+      // Parsează data eliberării dacă există
+      if (idCard.issueDate) {
+        const issueDate = new Date(idCard.issueDate);
+        const formattedIssueDate = issueDate.toISOString().split('T')[0];
+        issueDay = issueDate.getDate().toString().padStart(2, '0');
+        issueMonth = (issueDate.getMonth() + 1).toString().padStart(2, '0');
+        issueYear = issueDate.getFullYear().toString();
       }
       
       // Parsează data expirării dacă există
@@ -58,10 +72,14 @@ const ClientIDCardDataForm = ({ onCompleted, onCancel }) => {
         number: idCard.number || '',
         issuedBy: idCard.issuedBy || '',
         birthDate: idCard.birthDate ? new Date(idCard.birthDate).toISOString().split('T')[0] : '',
+        issueDate: idCard.issueDate ? new Date(idCard.issueDate).toISOString().split('T')[0] : '',
         expiryDate: idCard.expiryDate ? new Date(idCard.expiryDate).toISOString().split('T')[0] : '',
         birthDay,
         birthMonth,
         birthYear,
+        issueDay,
+        issueMonth,
+        issueYear,
         expiryDay,
         expiryMonth,
         expiryYear
@@ -82,6 +100,14 @@ const ClientIDCardDataForm = ({ onCompleted, onCancel }) => {
         if (updated.birthYear && updated.birthMonth && updated.birthDay) {
           const isoDate = `${updated.birthYear}-${updated.birthMonth.padStart(2, '0')}-${updated.birthDay.padStart(2, '0')}`;
           updated.birthDate = isoDate;
+        }
+      }
+      
+      // Actualizează formatul ISO pentru data eliberării când se modifică zi/lună/an
+      if (name === 'issueDay' || name === 'issueMonth' || name === 'issueYear') {
+        if (updated.issueYear && updated.issueMonth && updated.issueDay) {
+          const isoDate = `${updated.issueYear}-${updated.issueMonth.padStart(2, '0')}-${updated.issueDay.padStart(2, '0')}`;
+          updated.issueDate = isoDate;
         }
       }
       
@@ -113,7 +139,7 @@ const ClientIDCardDataForm = ({ onCompleted, onCancel }) => {
       
       // Validări de bază
       if (!formData.CNP || !formData.fullName || !formData.address || !formData.series || 
-          !formData.number || !formData.issuedBy || !formData.birthDate) {
+          !formData.number || !formData.issuedBy || !formData.birthDate || !formData.issueDate) {
         throw new Error('Te rugăm să completezi toate câmpurile obligatorii.');
       }
       
@@ -376,6 +402,95 @@ const ClientIDCardDataForm = ({ onCompleted, onCancel }) => {
                 id="birthDate"
                 name="birthDate"
                 value={formData.birthDate}
+              />
+            </div>
+          </div>
+
+          {/* Adăugat câmp pentru DATA ELIBERĂRII */}
+          <div>
+            <label htmlFor="issueDate" className="block text-sm font-medium text-gray-700 mb-1">
+              Data Eliberării *
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {/* Selector zi */}
+              <div className="relative">
+                <select
+                  id="issueDay"
+                  name="issueDay"
+                  value={formData.issueDay}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition appearance-none"
+                  required
+                >
+                  <option value="">Zi</option>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                    <option key={day} value={day.toString().padStart(2, '0')}>
+                      {day}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-2.5 h-5 w-5 text-gray-400 pointer-events-none" />
+              </div>
+              
+              {/* Selector lună */}
+              <div className="relative">
+                <select
+                  id="issueMonth"
+                  name="issueMonth"
+                  value={formData.issueMonth}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition appearance-none"
+                  required
+                >
+                  <option value="">Lună</option>
+                  {[
+                    { value: '01', label: 'Ian' },
+                    { value: '02', label: 'Feb' },
+                    { value: '03', label: 'Mar' },
+                    { value: '04', label: 'Apr' },
+                    { value: '05', label: 'Mai' },
+                    { value: '06', label: 'Iun' },
+                    { value: '07', label: 'Iul' },
+                    { value: '08', label: 'Aug' },
+                    { value: '09', label: 'Sep' },
+                    { value: '10', label: 'Oct' },
+                    { value: '11', label: 'Noi' },
+                    { value: '12', label: 'Dec' }
+                  ].map(month => (
+                    <option key={month.value} value={month.value}>
+                      {month.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-2.5 h-5 w-5 text-gray-400 pointer-events-none" />
+              </div>
+              
+              {/* Selector an */}
+              <div className="relative">
+                <select
+                  id="issueYear"
+                  name="issueYear"
+                  value={formData.issueYear}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition appearance-none"
+                  required
+                >
+                  <option value="">An</option>
+                  {Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                    <option key={year} value={year.toString()}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-2.5 h-5 w-5 text-gray-400 pointer-events-none" />
+              </div>
+              
+              {/* Input ascuns pentru a păstra compatibilitatea cu formatul ISO */}
+              <input
+                type="hidden"
+                id="issueDate"
+                name="issueDate"
+                value={formData.issueDate}
               />
             </div>
           </div>

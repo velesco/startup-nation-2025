@@ -93,7 +93,8 @@ const validateIdCardData = (idCard) => {
     { field: 'fullName', label: 'nume și prenume' },
     { field: 'address', label: 'adresa' },
     { field: 'series', label: 'seria' },
-    { field: 'number', label: 'numărul' }
+    { field: 'number', label: 'numărul' },
+    { field: 'issueDate', label: 'data eliberării' }
   ];
   const missingFields = requiredFields.filter(f => !idCard[f.field]).map(f => f.label);
   return { valid: missingFields.length === 0, missingFields };
@@ -147,6 +148,7 @@ exports.generateContract = async (req, res, next) => {
     formData.append('idSeries', user.idCard.series);
     formData.append('idNumber', user.idCard.number);
     formData.append('birthDate', user.idCard.birthDate ? new Date(user.idCard.birthDate).toLocaleDateString('ro-RO') : '');
+    formData.append('issueDate', user.idCard.issueDate ? new Date(user.idCard.issueDate).toLocaleDateString('ro-RO') : ''); // Adăugat data eliberării
     
     // Adăugăm IP-ul utilizatorului
     const userIp = req.ip || req.connection.remoteAddress || "IP necunoscut";
@@ -443,7 +445,7 @@ exports.validateIdCard = async (req, res, next) => {
       });
     }
     
-    const { CNP, fullName, address, series, number, issuedBy, birthDate, expiryDate } = req.body;
+    const { CNP, fullName, address, series, number, issuedBy, birthDate, issueDate, expiryDate } = req.body;
     
     const updatedIdCard = {
       CNP: CNP || user.idCard?.CNP,
@@ -453,6 +455,7 @@ exports.validateIdCard = async (req, res, next) => {
       number: number || user.idCard?.number,
       issuedBy: issuedBy || user.idCard?.issuedBy,
       birthDate: birthDate ? new Date(birthDate) : user.idCard?.birthDate,
+      issueDate: issueDate ? new Date(issueDate) : user.idCard?.issueDate,
       expiryDate: expiryDate ? new Date(expiryDate) : user.idCard?.expiryDate
     };
     
