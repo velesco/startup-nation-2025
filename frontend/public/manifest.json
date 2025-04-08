@@ -1,6 +1,7 @@
 {
   "short_name": "SN 2025",
-  "name": "Startup Nation 2025",
+  "name": "Startup Nation 2025 - Program Oficial",
+  "description": "Program oficial de finanțare nerambursabilă pentru antreprenori din România",
   "icons": [
     {
       "src": "favicon.ico",
@@ -13,9 +14,25 @@
       "sizes": "any"
     },
     {
+      "src": "favicon-16x16.png",
+      "type": "image/png",
+      "sizes": "16x16"
+    },
+    {
+      "src": "favicon-32x32.png",
+      "type": "image/png",
+      "sizes": "32x32"
+    },
+    {
+      "src": "apple-touch-icon.png",
+      "type": "image/png",
+      "sizes": "180x180"
+    },
+    {
       "src": "logo192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any maskable"
     },
     {
       "src": "logo512.png",
@@ -24,7 +41,8 @@
     }
   ],
   "start_url": ".",
+  "scope": "/",
   "display": "standalone",
-  "theme_color": "#003399",
+  "theme_color": "#2962FF",
   "background_color": "#ffffff"
 }

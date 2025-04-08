@@ -1,4 +1,12 @@
+# robots.txt pentru Startup Nation 2025
 User-agent: *
 Allow: /
 
+# Sitemap
 Sitemap: https://aplica-startup.ro/sitemap.xml
+
+# Pagini care nu trebuie indexate
+Disallow: /login
+Disallow: /register
+Disallow: /admin
+Disallow: /dashboard

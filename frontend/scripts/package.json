@@ -1,0 +1,12 @@
+{
+  "name": "favicon-generator",
+  "version": "1.0.0",
+  "description": "Script pentru generarea favicon-urilor din SVG",
+  "main": "generate-favicons.js",
+  "scripts": {
+    "generate": "node generate-favicons.js"
+  },
+  "dependencies": {
+    "sharp": "^0.32.1"
+  }
+}
