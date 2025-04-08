@@ -46,7 +46,7 @@ const sendEmail = async (options) => {
 
 /**
  * @desc    Send email to a user
- * @route   POST /api/admin/email/user/:id
+ * @route   POST /api/email/user/:id
  * @access  Private/Admin
  */
 exports.sendEmailToUser = async (req, res, next) => {
@@ -100,8 +100,64 @@ exports.sendEmailToUser = async (req, res, next) => {
 };
 
 /**
+ * @desc    Send email to a client
+ * @route   POST /api/email/client/:id
+ * @access  Private/Admin/Partner
+ */
+exports.sendEmailToClient = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { subject, message, htmlMessage } = req.body;
+
+    // Validate input
+    if (!subject || (!message && !htmlMessage)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Subiectul și mesajul sunt obligatorii'
+      });
+    }
+
+    // Find client
+    const Client = require('../models/Client'); // Import client model
+    const client = await Client.findById(id);
+    if (!client) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clientul nu a fost găsit'
+      });
+    }
+
+    // Send email
+    const emailResult = await sendEmail({
+      to: client.email,
+      subject,
+      text: message || '',
+      html: htmlMessage || message
+    });
+
+    if (!emailResult.success) {
+      return res.status(500).json({
+        success: false,
+        message: `Eroare la trimiterea email-ului: ${emailResult.error}`
+      });
+    }
+
+    // Log the email sending
+    logger.info(`Email sent to client ${client._id} (${client.email}): ${subject}`);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Email trimis cu succes'
+    });
+  } catch (error) {
+    logger.error(`Send email to client error: ${error.message}`);
+    next(error);
+  }
+};
+
+/**
  * @desc    Send bulk emails to users
- * @route   POST /api/admin/email/bulk
+ * @route   POST /api/email/bulk
  * @access  Private/Admin
  */
 exports.sendBulkEmails = async (req, res, next) => {
@@ -163,6 +219,75 @@ exports.sendBulkEmails = async (req, res, next) => {
     });
   } catch (error) {
     logger.error(`Send bulk emails error: ${error.message}`);
+    next(error);
+  }
+};
+
+/**
+ * @desc    Send bulk emails to clients
+ * @route   POST /api/email/bulk-clients
+ * @access  Private/Admin/Partner
+ */
+exports.sendBulkEmailsToClients = async (req, res, next) => {
+  try {
+    const { clientIds, subject, message, htmlMessage } = req.body;
+
+    // Validate input
+    if (!clientIds || !Array.isArray(clientIds) || clientIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Lista de clienți este obligatorie'
+      });
+    }
+
+    if (!subject || (!message && !htmlMessage)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Subiectul și mesajul sunt obligatorii'
+      });
+    }
+
+    // Find all clients
+    const Client = require('../models/Client'); // Import client model
+    const clients = await Client.find({ _id: { $in: clientIds } });
+    if (clients.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Nu s-au găsit clienți'
+      });
+    }
+
+    // Send emails
+    const emailsCount = clients.length;
+    const emailPromises = clients.map(client => 
+      sendEmail({
+        to: client.email,
+        subject,
+        text: message || '',
+        html: htmlMessage || message
+      })
+    );
+
+    const results = await Promise.allSettled(emailPromises);
+    
+    // Count successes and failures
+    const successes = results.filter(result => result.value && result.value.success).length;
+    const failures = emailsCount - successes;
+
+    // Log the results
+    logger.info(`Bulk email sent to ${successes} clients. Failed: ${failures}`);
+
+    return res.status(200).json({
+      success: true,
+      message: `Email-uri trimise: ${successes} din ${emailsCount} (eșuate: ${failures})`,
+      details: {
+        total: emailsCount,
+        successful: successes,
+        failed: failures
+      }
+    });
+  } catch (error) {
+    logger.error(`Send bulk emails to clients error: ${error.message}`);
     next(error);
   }
 };

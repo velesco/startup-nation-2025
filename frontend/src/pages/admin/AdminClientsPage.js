@@ -10,7 +10,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
-  Users
+  Users,
+  Send,
+  Mail
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import DashboardLayout from '../../components/layouts/DashboardLayout';
@@ -18,6 +20,7 @@ import LoadingScreen from '../../components/client/LoadingScreen';
 import AddClientModal from '../../components/admin/AddClientModal';
 import ImportClientsModal from '../../components/clients/ImportClientsModal';
 import ExportClientsModal from '../../components/clients/ExportClientsModal';
+import SendEmailToClientModal from '../../components/admin/SendEmailToClientModal';
 
 const statusColors = {
   'Nou': 'bg-orange-100 text-orange-700',
@@ -35,6 +38,8 @@ const AdminClientsPage = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState(null);
   const [statsData, setStatsData] = useState(null);
   
   // Pagination and filtering
@@ -212,6 +217,12 @@ const AdminClientsPage = () => {
       .map(part => part[0].toUpperCase())
       .slice(0, 2)
       .join('');
+  };
+
+  const handleSendEmail = (client, e) => {
+    e.stopPropagation(); // Prevent navigating to client details
+    setSelectedClient(client);
+    setIsEmailModalOpen(true);
   };
 
   // Formatare dată pentru afișare
@@ -440,7 +451,15 @@ const AdminClientsPage = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-center">
+                      <div className="flex items-center justify-center space-x-2">
+                        <button 
+                          className="p-2 text-orange-600 hover:bg-orange-50 rounded-md transition-colors"
+                          onClick={(e) => handleSendEmail(client, e)}
+                          title="Trimite email"
+                        >
+                          <Mail className="h-5 w-5" />
+                        </button>
+                        
                         <button 
                           className="text-blue-600 hover:text-blue-800 px-4 py-2 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors"
                           onClick={(e) => {
@@ -515,6 +534,17 @@ const AdminClientsPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal pentru trimitere email */}
+      {isEmailModalOpen && selectedClient && (
+        <SendEmailToClientModal
+          isOpen={isEmailModalOpen}
+          onClose={() => setIsEmailModalOpen(false)}
+          clientId={selectedClient._id}
+          clientEmail={selectedClient.email}
+          clientName={selectedClient.name}
+        />
+      )}
 
       {/* Modal pentru adăugare client */}
       {isAddModalOpen && (
