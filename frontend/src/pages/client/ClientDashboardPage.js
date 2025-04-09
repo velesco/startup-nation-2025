@@ -381,7 +381,7 @@ const ClientDashboardPage = () => {
   const steps = user ? [
     { id: 1, name: "Încărcare Buletin", icon: "document", completed: user.documents?.id_cardUploaded },
     { id: 2, name: "Contract Participare", icon: "document", completed: user.documents?.contractSigned },
-    { id: 3, name: "Instalare Aplicație", icon: "check", completed: user.documents?.appDownloaded }
+    // { id: 3, name: "Instalare Aplicație", icon: "check", completed: user.documents?.appDownloaded }
   ] : [];
 
   const handleLogout = async () => {
