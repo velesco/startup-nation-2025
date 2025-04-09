@@ -510,7 +510,7 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
           </div>
           <h3 className="text-lg font-semibold text-blue-700 mb-2">Contract generat cu succes!</h3>
           <p className="text-center text-gray-600 mb-6">
-            Te rugăm să descarci contractul, să îl citești cu atenție, și apoi să confirmi că ești de acord cu termenii și condițiile.
+            Te rugăm să descarci contractul, să îl citești cu atenție.
           </p>
           
           <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 mb-6">
