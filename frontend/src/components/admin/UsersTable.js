@@ -7,7 +7,11 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-  Send
+  Send,
+  Check,
+  X,
+  FileText,
+  UserCheck
 } from 'lucide-react';
 
 /**
@@ -101,6 +105,12 @@ const UsersTable = ({
                   Înregistrat
                 </th>
                 <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Contract
+                </th>
+                <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Buletin
+                </th>
+                <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Acțiuni
                 </th>
               </tr>
@@ -164,6 +174,40 @@ const UsersTable = ({
                       <Calendar className="h-4 w-4 mr-1 text-gray-400" />
                       {formatDate(user.createdAt)}
                     </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    {user.contractSigned || user.documents?.contractGenerated ? (
+                      <div className="flex items-center justify-center">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          <Check className="h-3 w-3 mr-1" />
+                          {user.contractSigned ? 'Semnat' : 'Generat'}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          <X className="h-3 w-3 mr-1" />
+                          Lipsă
+                        </span>
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    {user.documents?.id_cardUploaded || user.idCard?.verified ? (
+                      <div className="flex items-center justify-center">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          <FileText className="h-3 w-3 mr-1" />
+                          Încărcat
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          <X className="h-3 w-3 mr-1" />
+                          Lipsă
+                        </span>
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     <button

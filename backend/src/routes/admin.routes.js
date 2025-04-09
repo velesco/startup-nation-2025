@@ -26,6 +26,7 @@ const {
   generateUserToken,
   downloadUserContract,
   sendUserDataToExternalAPI,
+  updateDocumentFlags,
   // Notification controllers
   getNotifications,
   deleteNotification,
@@ -81,6 +82,9 @@ router.get('/users/:id/download-contract', authorize('admin', 'super-admin'), do
 
 // Send user data to external API
 router.post('/users/:id/send-data', authorize('admin', 'super-admin'), sendUserDataToExternalAPI);
+
+// Update document flags for all users and clients
+router.post('/update-document-flags', authorize('admin', 'super-admin'), updateDocumentFlags);
 
 // User Document routes
 router.route('/users/:id/documents')

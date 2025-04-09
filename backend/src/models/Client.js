@@ -140,6 +140,18 @@ const ClientSchema = new mongoose.Schema(
     isArchived: {
       type: Boolean,
       default: false
+    },
+    contractSigned: {
+      type: Boolean,
+      default: false
+    },
+    contractSignedAt: {
+      type: Date
+    },
+    // Flag pentru a marca dacă documentele au fost verificate și validate
+    documentsVerified: {
+      type: Boolean,
+      default: false
     }
   },
   {

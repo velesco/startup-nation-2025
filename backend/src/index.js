@@ -79,6 +79,7 @@ const activityRoutes = require('./routes/activity.routes');
 const logRoutes = require('./routes/log.routes');
 const contractRoutes = require('./routes/contract.routes');
 const emailRoutes = require('./routes/email.routes');
+const documentFlagsRoutes = require('./routes/documentFlags.routes');
 
 app.use('/api/users', userRoutes);
 app.use('/api/clients', clientRoutes);
@@ -91,6 +92,7 @@ app.use('/api/activities', activityRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/contracts', contractRoutes);
 app.use('/api/email', emailRoutes);
+app.use('/api/document-flags', documentFlagsRoutes);
 
 // Rute alternative pentru compatibilitate cu aplicația mobilă
 app.use('/contracts', contractRoutes);

@@ -9,6 +9,7 @@ import SendEmailModal from '../../components/admin/SendEmailModal';
 import UsersTable from '../../components/admin/UsersTable';
 import UsersFilter from '../../components/admin/UsersFilter';
 import UsersFilterModal from '../../components/admin/UsersFilterModal';
+import UpdateDocumentFlagsButton from '../../components/admin/UpdateDocumentFlagsButton';
 import useUsersData from '../../hooks/useUsersData';
 
 const AdminUsersPage = () => {
@@ -125,6 +126,13 @@ const AdminUsersPage = () => {
           handleSearch={handleSearch}
           onOpenFilterModal={() => setIsFilterModalOpen(true)}
         />
+        
+        {/* Buton pentru actualizarea flag-urilor de documente */}
+        {currentUser && (currentUser.role === 'super-admin' || currentUser.role === 'admin') && (
+          <div className="flex justify-end mb-4">
+            <UpdateDocumentFlagsButton />
+          </div>
+        )}
 
         {/* Tabel Utilizatori */}
         <UsersTable 

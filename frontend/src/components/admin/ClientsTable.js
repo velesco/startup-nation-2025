@@ -5,7 +5,10 @@ import {
   Mail,
   Users,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Check,
+  X,
+  FileText
 } from 'lucide-react';
 
 /**
@@ -83,6 +86,12 @@ const ClientsTable = ({
                   Grupă
                 </th>
                 <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Contract
+                </th>
+                <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Buletin
+                </th>
+                <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Acțiuni
                 </th>
               </tr>
@@ -140,6 +149,42 @@ const ClientsTable = ({
                       </span>
                     ) : (
                       <span className="text-sm text-gray-500">Nealocat</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    {client.contractSigned || client.documents?.contractGenerated || (client.userId && client.userId.documents?.contractGenerated) ? (
+                      <div className="flex items-center justify-center">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          <Check className="h-3 w-3 mr-1" />
+                          {client.contractSigned ? 'Semnat' : 'Generat'}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          <X className="h-3 w-3 mr-1" />
+                          Lipsă
+                        </span>
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    {client.documents?.id_cardUploaded || 
+                     (client.userId && client.userId.documents?.id_cardUploaded) || 
+                     (client.userId && client.userId.idCard?.verified) ? (
+                      <div className="flex items-center justify-center">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          <FileText className="h-3 w-3 mr-1" />
+                          Încărcat
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          <X className="h-3 w-3 mr-1" />
+                          Lipsă
+                        </span>
+                      </div>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
