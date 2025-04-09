@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const logger = require('../utils/logger');
 const sendEmail = require('../utils/sendEmail');
 const logActivity = require('../utils/activityLogger');
+const axios = require('axios');
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -38,6 +39,40 @@ exports.register = async (req, res, next) => {
     // Set the lastLogin to now for all users since they will be auto-logged in
     user.lastLogin = Date.now();
     await user.save({ validateBeforeSave: false });
+
+    // Send client data to Google Sheets if it's a client
+    if (user.role === 'client') {
+      try {
+        // Folosim API-ul existent pentru trimiterea datelor la sheet
+        const spreadsheetId = '1FaANFeivKVUB6LGp_4EN9OD8-6i1SGTM4w9yaDupXGg';
+        const range = "'Startup Nation 2025'!A2";
+        const values = [
+          'aplica-startup.ro',
+          user.name, // nume_prenume
+          user.email,
+          user.phone || '' // telefon (dacă este disponibil)
+        ];
+        
+        // Facem cererea către API-ul extern
+        const response = await axios.post('https://aipro.ro/api/trimite_sheet', {
+          spreadsheetId,
+          range,
+          values
+        });
+        
+        if (response.status === 200) {
+          user.dataSentToSheet = true;
+          user.dataSentToSheetAt = Date.now();
+          await user.save({ validateBeforeSave: false });
+          logger.info(`User ${user._id} data sent to sheet successfully`);
+        } else {
+          logger.warn(`Failed to send user ${user._id} data to sheet: Status ${response.status}`);
+        }
+      } catch (sheetError) {
+        logger.error(`Error sending user data to sheet: ${sheetError.message}`);
+        // We don't want to stop the registration if sheet update fails
+      }
+    }
 
     // Send response with token
     sendTokenResponse(user, 201, res);
