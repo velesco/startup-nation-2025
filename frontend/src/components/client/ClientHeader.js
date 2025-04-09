@@ -67,15 +67,6 @@ const ClientHeader = ({ user, onLogout, onRefresh, onShowNotifications }) => {
                 <p className="text-sm font-medium text-gray-800">{user?.name || 'Utilizator'}</p>
                 <p className="text-xs text-gray-500">{user?.email || 'email@exemplu.com'}</p>
               </div>
-              <button className="flex items-center w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-blue-50/50 transition-colors">
-                <User className="h-4 w-4 mr-2 text-gray-500" />
-                Profil
-              </button>
-              <button className="flex items-center w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-blue-50/50 transition-colors">
-                <Settings className="h-4 w-4 mr-2 text-gray-500" />
-                Setări
-              </button>
-              <div className="border-t border-gray-100 my-1"></div>
               <button 
                 onClick={onLogout}
                 className="flex items-center w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-red-50/50 transition-colors"
