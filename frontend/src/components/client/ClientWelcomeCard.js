@@ -28,9 +28,6 @@ const ClientWelcomeCard = ({ user }) => {
         <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full bg-white/10 -ml-10 -mb-10"></div>
         
         <h2 className="text-2xl font-bold mb-2 relative z-10">Încărcare...</h2>
-        <div className="h-3 bg-white/20 backdrop-blur-sm rounded-full mb-2 relative z-10 overflow-hidden shadow-inner">
-          <div className="h-3 bg-white/50 rounded-full animate-pulse"></div>
-        </div>
       </div>
     );
   }
@@ -42,14 +39,6 @@ const ClientWelcomeCard = ({ user }) => {
       
       <h2 className="text-2xl font-bold mb-2 relative z-10">Salut, {user.name}!</h2>
       <p className="text-blue-100 mb-4 relative z-10">Continuă înscrierea în programul Startup Nation 2025</p>
-      
-      <div className="bg-white/20 backdrop-blur-sm h-3 rounded-full mb-2 relative z-10 overflow-hidden shadow-inner">
-        <div 
-          className="bg-gradient-to-r from-orange-400 to-pink-500 h-3 rounded-full relative"
-          style={{ width: `${progress}%` }}
-        ></div>
-      </div>
-      <div className="text-sm text-blue-100 relative z-10">Progres: {progress}% completat</div>
     </div>
   );
 };

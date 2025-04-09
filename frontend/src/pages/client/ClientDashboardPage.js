@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Bell, CheckCircle, User } from 'lucide-react';
+import { Bell, CheckCircle, User, X, Info, AlertTriangle, AlertCircle, Check, Activity, FileText } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -20,6 +20,7 @@ const ClientDashboardPage = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [activeTab, setActiveTab] = useState('steps');
   const [error, setError] = useState(null);
+  const [showAllNotificationsModal, setShowAllNotificationsModal] = useState(false);
   const stepsContentRef = useRef(null);
   
   // Funcție pentru a calcula progresul utilizatorului în funcție de documentele încărcate
@@ -355,6 +356,26 @@ const ClientDashboardPage = () => {
       scrollToStepsContent();
     }
   }, [isMobile, activeTab, scrollToStepsContent]);
+  
+  // Funcție pentru obținerea iconiței în funcție de tipul notificării
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'info':
+        return <Info className="h-5 w-5 text-blue-500" />;
+      case 'success':
+        return <Check className="h-5 w-5 text-green-500" />;
+      case 'warning':
+        return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
+      case 'error':
+        return <AlertCircle className="h-5 w-5 text-red-500" />;
+      case 'meeting':
+        return <Activity className="h-5 w-5 text-purple-500" />;
+      case 'document':
+        return <FileText className="h-5 w-5 text-orange-500" />;
+      default:
+        return <Bell className="h-5 w-5 text-gray-500" />;
+    }
+  };
 
   // Progress steps
   const steps = user ? [
@@ -401,7 +422,10 @@ const ClientDashboardPage = () => {
         case 'steps':
           return renderStepsContent();
         case 'notifications':
-          return <ClientNotifications notifications={user?.notifications || []} />;
+          return <ClientNotifications 
+            notifications={user?.notifications || []} 
+            onShowAllNotifications={() => setShowAllNotificationsModal(true)} 
+          />;
         case 'profile':
           return <ClientProfileContent user={user} onLogout={handleLogout} />;
         default:
@@ -415,7 +439,10 @@ const ClientDashboardPage = () => {
             {renderStepsContent()}
           </div>
           <div className="lg:col-span-1 space-y-8">
-            <ClientNotifications notifications={user?.notifications || []} />
+            <ClientNotifications 
+              notifications={user?.notifications || []} 
+              onShowAllNotifications={() => setShowAllNotificationsModal(true)} 
+            />
           </div>
         </div>
       );
@@ -433,8 +460,92 @@ const ClientDashboardPage = () => {
       <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-gradient-to-br from-orange-400/20 to-pink-500/20 blur-3xl -z-10"></div>
       <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-gradient-to-tr from-blue-500/20 to-purple-600/20 blur-3xl -z-10"></div>
       
+      {/* Modal pentru toate notificările */}
+      {showAllNotificationsModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-xl mx-auto my-auto">
+            <div className="flex justify-between items-center p-4 border-b border-gray-100">
+              <h3 className="text-xl font-bold text-gray-800 flex items-center">
+                <Bell className="h-6 w-6 text-blue-500 mr-2" />
+                Toate notificările
+              </h3>
+              <button 
+                onClick={() => setShowAllNotificationsModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            
+            <div className="overflow-y-auto flex-1 p-4">
+              {user?.notifications && user.notifications.length > 0 ? (
+                <div className="space-y-4">
+                  {user.notifications.map(notification => (
+                    <div 
+                      key={notification.id || notification._id} 
+                      className={`p-4 rounded-2xl transition-all ${!notification.read ? 
+                        'bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-100/50 shadow-md' : 
+                        'bg-white/80 border border-gray-100 hover:border-gray-200 hover:shadow-sm'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <div className="flex items-start">
+                          <div className="mr-3 mt-1">
+                            {getNotificationIcon(notification.type)}
+                          </div>
+                          <h3 className={`font-semibold ${!notification.read ? 
+                            'bg-gradient-to-r from-blue-700 to-purple-700 bg-clip-text text-transparent' : 
+                            'text-gray-800'
+                          }`}>
+                            {notification.title}
+                          </h3>
+                        </div>
+                        <span className="text-xs text-gray-500 bg-white/80 px-2 py-1 rounded-full shadow-sm">
+                          {notification.time || (notification.createdAt ? new Date(notification.createdAt).toLocaleDateString('ro-RO') : '')}
+                        </span>
+                      </div>
+                      <div className="mt-3">
+                        <p className="text-sm text-gray-600 bg-white/80 p-3 rounded-xl">
+                          {notification.description || notification.message}
+                        </p>
+                        {notification.actionLink && (
+                          <a 
+                            href={notification.actionLink} 
+                            className="mt-2 text-sm text-blue-600 hover:text-blue-800 inline-flex items-center"
+                          >
+                            Vezi detalii
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-4 text-center text-gray-500">
+                  Nu ai notificări noi
+                </div>
+              )}
+            </div>
+            
+            <div className="p-4 border-t border-gray-100">
+              <button 
+                onClick={() => setShowAllNotificationsModal(false)}
+                className="w-full py-2 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition-colors"
+              >
+                Închide
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Header */}
-      <ClientHeader user={user} onLogout={handleLogout} onRefresh={handleRefresh} />
+      <ClientHeader 
+        user={user} 
+        onLogout={handleLogout} 
+        onRefresh={handleRefresh} 
+        onShowNotifications={() => setShowAllNotificationsModal(true)} 
+      />
 
       {/* Content */}
       <div className="flex-1 overflow-auto px-6 pt-6 pb-24 md:pb-6">
@@ -467,7 +578,7 @@ const ClientDashboardPage = () => {
 
       {/* Bottom Navigation - doar pentru mobil */}
       {isMobile && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white/70 backdrop-blur-xl border-t border-white/50 flex justify-around py-4 px-6 rounded-t-3xl shadow-lg">
+        <div className="fixed bottom-0 left-0 right-0 bg-white/70 backdrop-blur-xl border-t border-white/50 flex justify-around py-4 px-6 rounded-t-3xl shadow-lg z-[9000]">
           <div 
             className="flex flex-col items-center cursor-pointer"
             onClick={() => {

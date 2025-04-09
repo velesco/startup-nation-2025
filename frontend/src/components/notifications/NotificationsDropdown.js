@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import ReactDOM from 'react-dom';
 import {
   Bell,
   Check,
@@ -49,14 +50,17 @@ const NotificationsDropdown = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
   // Închide dropdown-ul când se face clic în afara lui
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
+      // Verificăm dacă click-ul a fost în afara modalului
+      if (isOpen) {
+        const modal = document.getElementById('notifications-modal');
+        if (modal && !modal.contains(event.target) && !event.target.closest('button[aria-label="Notificări"]')) {
+          setIsOpen(false);
+        }
       }
     };
     
@@ -64,7 +68,7 @@ const NotificationsDropdown = () => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, []);
+  }, [isOpen]);
 
   // Încarcă notificările și numărul de notificări necitite
   const fetchNotifications = async () => {
@@ -182,7 +186,7 @@ const NotificationsDropdown = () => {
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <>
       <button
         onClick={() => {
           setIsOpen(!isOpen);
@@ -202,111 +206,23 @@ const NotificationsDropdown = () => {
         )}
       </button>
 
-      {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-[80vh] flex flex-col">
-          <div className="p-3 border-b border-gray-200 flex justify-between items-center bg-gray-50 rounded-t-lg">
-            <h3 className="font-medium text-gray-800 flex items-center">
-              <Bell className="h-5 w-5 text-blue-500 mr-2" />
-              Notificări
-              {unreadCount > 0 && (
-                <span className="ml-2 bg-red-100 text-red-800 text-xs font-semibold px-2 py-0.5 rounded-full">
-                  {unreadCount} necitite
-                </span>
-              )}
-            </h3>
-            
-            {unreadCount > 0 && (
-              <button
-                onClick={markAllAsRead}
-                className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
-              >
-                <CheckCircle className="h-4 w-4 mr-1" />
-                Marchează toate ca citite
-              </button>
-            )}
-          </div>
-          
-          <div className="overflow-y-auto flex-1">
-            {isLoading && notifications.length === 0 ? (
-              <div className="p-4 text-center">
-                <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-                <p className="text-gray-500 mt-2">Se încarcă notificările...</p>
-              </div>
-            ) : error ? (
-              <div className="p-4 text-center">
-                <AlertCircle className="h-6 w-6 text-red-500 mx-auto" />
-                <p className="text-red-500 mt-2">{error}</p>
-              </div>
-            ) : notifications.length === 0 ? (
-              <div className="p-8 text-center">
-                <Bell className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500">Nu ai nicio notificare</p>
-              </div>
-            ) : (
-              <div>
-                {notifications.map((notification) => (
-                  <div 
-                    key={notification._id}
-                    className={`border-b border-gray-100 hover:bg-gray-50 transition-colors p-3 ${notification.read ? 'bg-white' : 'bg-blue-50'}`}
-                  >
-                    <div className="flex">
-                      <div className="flex-shrink-0 mt-1">
-                        {getNotificationIcon(notification.type)}
-                      </div>
-                      <div className="ml-3 flex-1">
-                        <div className="flex justify-between items-start">
-                          <p className={`text-sm font-medium ${notification.read ? 'text-gray-700' : 'text-gray-900'}`}>
-                            {notification.title}
-                          </p>
-                          {!notification.read && (
-                            <button
-                              onClick={() => markAsRead(notification._id)}
-                              className="ml-2 text-blue-500 hover:text-blue-700"
-                              title="Marchează ca citit"
-                            >
-                              <Check className="h-4 w-4" />
-                            </button>
-                          )}
-                        </div>
-                        <p className={`text-sm ${notification.read ? 'text-gray-500' : 'text-gray-700'}`}>
-                          {notification.message}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {getRelativeTime(notification.createdAt)}
-                        </p>
-                        
-                        {notification.actionLink && (
-                          <a 
-                            href={notification.actionLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-blue-600 hover:text-blue-800 mt-1 inline-block"
-                          >
-                            Vezi detalii
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          
-          <div className="p-2 border-t border-gray-200 bg-gray-50 rounded-b-lg text-center">
-            <button
-              onClick={() => {
-                setIsOpen(false);
-                navigate('/notifications');
-              }}
-              className="text-sm text-blue-600 hover:text-blue-800"
+      {isOpen && ReactDOM.createPortal(
+        <div className="fixed inset-0 z-[9999] bg-black/30 flex items-start justify-center">
+          <div className="w-full max-w-md z-[10000] mt-0 bg-white shadow-xl flex flex-col rounded-b-2xl overflow-hidden" style={{background: "white"}}>
+            <div className="p-4 text-center text-gray-700 bg-white">
+              <p>Nu ai notificări noi</p>
+            </div>
+            <button 
+              className="w-full text-center p-4 bg-blue-100 cursor-pointer hover:bg-blue-200 transition-colors text-blue-700 border-t border-gray-200"
+              onClick={() => setIsOpen(false)}
             >
-              Vezi toate notificările
+              Închide
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 };
 
