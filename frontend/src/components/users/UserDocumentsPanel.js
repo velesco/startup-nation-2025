@@ -233,6 +233,75 @@ const UserDocumentsPanel = ({ userId }) => {
     return types[type] || 'Document';
   };
 
+  // Download contract from contract API
+  const handleDownloadContract = async () => {
+    try {
+      setError(null); // Reset error state
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      
+      const response = await axios.get(`${API_URL}/contracts/download`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        responseType: 'blob'
+      });
+      
+      // Verify if response has content
+      if (response.data.size === 0) {
+        throw new Error('Contractul descărcat este gol sau invalid');
+      }
+      
+      // Create a blob URL and trigger download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = window.document.createElement('a');
+      link.href = url;
+      
+      // Determine file extension for setting file name
+      const contentType = response.headers['content-type'];
+      const extension = contentType === 'application/pdf' ? '.pdf' : '.docx';
+      
+      link.setAttribute('download', `contract_${userId}${extension}`);
+      window.document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      showNotification('success', 'Contract descărcat cu succes');
+    } catch (err) {
+      console.error('Error downloading contract:', err);
+      showNotification('error', err.response?.data?.message || err.message || 'Descărcarea contractului a eșuat');
+    }
+  };
+
+  // Check if user has a contract
+  const [hasContract, setHasContract] = useState(false);
+
+  // Check for contract
+  useEffect(() => {
+    const checkContract = async () => {
+      try {
+        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+        
+        const response = await axios.get(`${API_URL}/admin/users/${userId}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        if (response.data && response.data.success) {
+          const user = response.data.data;
+          setHasContract(user.documents?.contractGenerated || false);
+        }
+      } catch (err) {
+        console.error('Error checking contract status:', err);
+      }
+    };
+
+    if (userId) {
+      checkContract();
+    }
+  }, [userId]);
+
   return (
     <div>
       {/* Header */}
@@ -308,6 +377,30 @@ const UserDocumentsPanel = ({ userId }) => {
             <div className="ml-3">
               <p className="text-sm text-red-700">{error}</p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contract Section */}
+      {hasContract && (
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="h-10 w-10 rounded-md bg-blue-100 flex items-center justify-center text-blue-600 mr-3">
+                <FileText className="h-6 w-6" />
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-800">Contract</h4>
+                <p className="text-sm text-gray-500">Contract generat pentru utilizator</p>
+              </div>
+            </div>
+            <button
+              onClick={handleDownloadContract}
+              className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              <span>Descarcă</span>
+            </button>
           </div>
         </div>
       )}

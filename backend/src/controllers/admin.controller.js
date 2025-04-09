@@ -5,6 +5,7 @@ const Document = require('../models/Document');
 const mongoose = require('mongoose');
 const logger = require('../utils/logger');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
@@ -1098,6 +1099,57 @@ exports.assignClientToGroup = async (req, res, next) => {
     });
   } catch (error) {
     logger.error(`Error assigning client to group: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc    Generate a temporary user token for contract download
+// @route   POST /api/admin/generate-user-token
+// @access  Private (Admin, Partner)
+exports.generateUserToken = async (req, res, next) => {
+  try {
+    const { userId } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+    
+    // Find the user to ensure it exists
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    // Verifică dacă utilizatorul are contract generat
+    if (!user.documents || !user.documents.contractGenerated) {
+      return res.status(400).json({
+        success: false,
+        message: 'Utilizatorul nu are un contract generat'
+      });
+    }
+    
+    // Generate a new JWT token for this user (valid for short time)
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '15m' } // Token expires in 15 minutes
+    );
+    
+    // Return the generated token
+    return res.status(200).json({
+      success: true,
+      token,
+      message: 'Token generated successfully'
+    });
+  } catch (error) {
+    logger.error(`Error generating user token: ${error.message}`);
     next(error);
   }
 };

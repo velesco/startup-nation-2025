@@ -22,6 +22,8 @@ const ClientDocumentsPanel = ({ clientId }) => {
   const [previewDocument, setPreviewDocument] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [hasContract, setHasContract] = useState(false);
+  const [client, setClient] = useState(null);
   
   // Încărcă documentele clientului
   const fetchClientDocuments = async () => {
@@ -48,10 +50,45 @@ const ClientDocumentsPanel = ({ clientId }) => {
     }
   };
 
+  // Fetch client data to check for contract
+  const fetchClientData = async () => {
+    try {
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      
+      const response = await axios.get(`${API_URL}/admin/clients/${clientId}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.data && response.data.success) {
+        const clientData = response.data.data;
+        setClient(clientData);
+        
+        // Check if user associated with client has a contract
+        if (clientData.userId) {
+          const userResponse = await axios.get(`${API_URL}/admin/users/${clientData.userId}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+          
+          if (userResponse.data && userResponse.data.success) {
+            const userData = userResponse.data.data;
+            setHasContract(userData.documents?.contractGenerated || false);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching client data:', err);
+    }
+  };
+
   // Încărcăm documentele la inițializare
   useEffect(() => {
     if (clientId) {
       fetchClientDocuments();
+      fetchClientData();
     }
   }, [clientId]);
 
@@ -65,6 +102,67 @@ const ClientDocumentsPanel = ({ clientId }) => {
       return () => clearTimeout(timer);
     }
   }, [uploadSuccess]);
+
+  // Download contract
+  const handleDownloadContract = async () => {
+    if (!client || !client.userId) {
+      setError('Utilizatorul asociat clientului nu a fost găsit');
+      return;
+    }
+    
+    try {
+      setError(null); // Reset error state
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      
+      // Generate token for this specific user to download contract
+      const tokenResponse = await axios.post(`${API_URL}/admin/generate-user-token`, 
+        { userId: client.userId },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+      
+      if (!tokenResponse.data || !tokenResponse.data.success) {
+        throw new Error(tokenResponse.data?.message || 'Nu s-a putut genera token-ul pentru descărcare');
+      }
+      
+      const userToken = tokenResponse.data.token;
+      
+      // Use the token to download the contract
+      const response = await axios.get(`${API_URL}/contracts/download`, {
+        headers: {
+          Authorization: `Bearer ${userToken}`
+        },
+        responseType: 'blob'
+      });
+      
+      // Verify if response has content
+      if (response.data.size === 0) {
+        throw new Error('Contractul descărcat este gol sau invalid');
+      }
+      
+      // Create a blob URL and trigger download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Determine file extension based on content type
+      const contentType = response.headers['content-type'];
+      const extension = contentType === 'application/pdf' ? '.pdf' : '.docx';
+      
+      const clientName = client.name.replace(/\s+/g, '_');
+      link.setAttribute('download', `contract_${clientName}${extension}`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error downloading contract:', err);
+      setError(err.response?.data?.message || err.message || 'Descărcarea contractului a eșuat');
+    }
+  };
 
   // Funcție pentru încărcarea documentelor
   const handleFileChange = (e) => {
@@ -223,6 +321,30 @@ const ClientDocumentsPanel = ({ clientId }) => {
   return (
     <div className="space-y-6">
       <h3 className="text-lg font-semibold mb-4">Documente Client</h3>
+      
+      {/* Contract Section */}
+      {hasContract && (
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="h-10 w-10 rounded-md bg-blue-100 flex items-center justify-center text-blue-600 mr-3">
+                <FileText className="h-6 w-6" />
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-800">Contract</h4>
+                <p className="text-sm text-gray-500">Contract generat pentru acest client</p>
+              </div>
+            </div>
+            <button
+              onClick={handleDownloadContract}
+              className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              <span>Descarcă</span>
+            </button>
+          </div>
+        </div>
+      )}
       
       {error && (
         <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-lg">

@@ -22,7 +22,8 @@ const {
   getUserDocuments,
   uploadUserDocument,
   downloadDocument,
-  deleteDocument
+  deleteDocument,
+  generateUserToken
 } = require('../controllers/admin.controller');
 
 // Apply protection middleware to all routes
@@ -71,5 +72,8 @@ router.route('/users/:id')
 router.route('/users/:id/documents')
   .get(authorize('admin', 'super-admin'), getUserDocuments)
   .post(authorize('admin', 'super-admin'), uploadUserDocument);
+
+// User Token Generation for Contract Download
+router.post('/generate-user-token', authorize('admin', 'partner', 'super-admin'), generateUserToken);
 
 module.exports = router;
