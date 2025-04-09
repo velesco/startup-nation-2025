@@ -509,9 +509,6 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
             <FileText className="h-8 w-8 text-blue-600" />
           </div>
           <h3 className="text-lg font-semibold text-blue-700 mb-2">Contract generat cu succes!</h3>
-          <p className="text-center text-gray-600 mb-6">
-            Te rugăm să descarci contractul, să îl citești cu atenție.
-          </p>
           
           <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 mb-6">
             <button
@@ -532,6 +529,13 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
               )}
             </button>
           </div>
+
+          <p className="text-center text-gray-600 mb-6">
+            Felicitări pentru înscriere! <br/>
+            Procesul de înscriere pe aplicația ministerului va fi realizat de consultanți mai departe.  <br/>
+            Va vom contacta când vor începe cursurile.  <br/>
+            Zi frumoasă. <br/>
+          </p>
         </div>
       ) : (
         // Starea inițială - nu a fost generat un contract
