@@ -2,6 +2,7 @@ const Client = require('../models/Client');
 const Group = require('../models/Group');
 const User = require('../models/User');
 const Document = require('../models/Document');
+const Notification = require('../models/Notification');
 const mongoose = require('mongoose');
 const logger = require('../utils/logger');
 const bcrypt = require('bcryptjs');
@@ -1221,6 +1222,268 @@ exports.getClientStatistics = async (req, res, next) => {
     });
   } catch (error) {
     logger.error(`Error getting client statistics: ${error.message}`);
+    next(error);
+  }
+};
+
+// NOTIFICATIONS MANAGEMENT CONTROLLERS
+
+// @desc    Get all notifications (admin view)
+// @route   GET /api/admin/notifications
+// @access  Private (Admin)
+exports.getNotifications = async (req, res, next) => {
+  try {
+    // Pregătim opțiunile de filtrare
+    let filter = {};
+    
+    // Filtru pentru tip de notificare
+    if (req.query.type && req.query.type !== 'all') {
+      filter.type = req.query.type;
+    }
+    
+    // Căutare în titlu sau mesaj
+    if (req.query.search) {
+      filter.$or = [
+        { title: { $regex: req.query.search, $options: 'i' } },
+        { message: { $regex: req.query.search, $options: 'i' } }
+      ];
+    }
+    
+    // Opțiuni paginare
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    
+    // Opțiuni sortare
+    const sort = { createdAt: -1 }; // Sortare implicită după data creării (descendent)
+    
+    // Executăm query pentru notificări cu paginare
+    const notifications = await Notification.find(filter)
+      .populate('recipient', 'name email')
+      .populate('sender', 'name email')
+      .sort(sort)
+      .skip(skip)
+      .limit(limit);
+    
+    // Obține numărul total pentru paginare
+    const total = await Notification.countDocuments(filter);
+    
+    // Trimite răspunsul
+    res.status(200).json({
+      success: true,
+      count: notifications.length,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit)
+      },
+      data: notifications
+    });
+  } catch (error) {
+    logger.error(`Error getting admin notifications: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc    Delete notification (admin)
+// @route   DELETE /api/admin/notifications/:id
+// @access  Private (Admin)
+exports.deleteNotification = async (req, res, next) => {
+  try {
+    const notification = await Notification.findById(req.params.id);
+    
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: 'Notification not found'
+      });
+    }
+    
+    await notification.remove();
+    
+    res.status(200).json({
+      success: true,
+      data: {}
+    });
+  } catch (error) {
+    logger.error(`Error deleting notification: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc    Create system notification for multiple recipients
+// @route   POST /api/admin/notifications
+// @access  Private (Admin)
+exports.createSystemNotification = async (req, res, next) => {
+  try {
+    const { title, message, type, recipients, recipientRole, priority, actionLink, expiresAt } = req.body;
+    
+    // Validăm datele de intrare
+    if (!title || !message) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide title and message'
+      });
+    }
+    
+    // Pregătim array-ul pentru destinatari
+    let userIds = [];
+    
+    // Determinăm lista de utilizatori destinatari
+    if (recipientRole) {
+      // Trimitem notificări către toți utilizatorii cu un anumit rol
+      const users = await User.find({ role: recipientRole, isActive: true });
+      userIds = users.map(user => user._id);
+    } else if (recipients && Array.isArray(recipients) && recipients.length > 0) {
+      // Trimitem notificări către lista specifică de utilizatori
+      userIds = recipients;
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide either recipients array or recipientRole'
+      });
+    }
+    
+    // Verificăm dacă avem destinatari
+    if (userIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No recipients found'
+      });
+    }
+    
+    // Trimitem notificările către toți destinatarii
+    const notificationPromises = userIds.map(userId => {
+      return Notification.create({
+        title,
+        message,
+        type: type || 'info',
+        recipient: userId,
+        sender: req.user._id,
+        priority: priority || 'Medium',
+        actionLink,
+        expiresAt: expiresAt ? new Date(expiresAt) : undefined
+      });
+    });
+    
+    await Promise.all(notificationPromises);
+    
+    // Trimitem răspunsul
+    res.status(201).json({
+      success: true,
+      message: `Sent notifications to ${userIds.length} users`,
+      count: userIds.length
+    });
+  } catch (error) {
+    logger.error(`Error creating system notifications: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc    Generate a temporary token for mobile app push notifications
+// @route   POST /api/admin/notifications/push-token
+// @access  Private (Admin)
+exports.generatePushToken = async (req, res, next) => {
+  try {
+    // Generăm un token special pentru integrarea cu sistemul de notificări push
+    // Acest token va fi folosit de serverul de notificări push pentru autentificare
+    
+    const token = jwt.sign(
+      { 
+        id: req.user._id,
+        role: req.user.role,
+        purpose: 'push-notifications' 
+      },
+      process.env.JWT_SECRET,
+      { 
+        expiresIn: '30d' // Token valabil 30 de zile
+      }
+    );
+    
+    // Returnăm token-ul
+    res.status(200).json({
+      success: true,
+      token,
+      expiresIn: '30 days'
+    });
+  } catch (error) {
+    logger.error(`Error generating push token: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc    Get notification statistics
+// @route   GET /api/admin/notifications/stats
+// @access  Private (Admin)
+exports.getNotificationStats = async (req, res, next) => {
+  try {
+    // Total notificări
+    const totalCount = await Notification.countDocuments();
+    
+    // Notificări grupate după tip
+    const typeStats = await Notification.aggregate([
+      { $group: { _id: '$type', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]);
+    
+    // Notificări active (necitite)
+    const unreadCount = await Notification.countDocuments({ read: false });
+    
+    // Notificări trimise astăzi
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayCount = await Notification.countDocuments({ createdAt: { $gte: today } });
+    
+    // Notificări grupate după prioritate
+    const priorityStats = await Notification.aggregate([
+      { $group: { _id: '$priority', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]);
+    
+    // Top 5 utilizatori care primesc cele mai multe notificări
+    const topRecipients = await Notification.aggregate([
+      { $group: { _id: '$recipient', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 },
+      { 
+        $lookup: {
+          from: 'users',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'user'
+        }
+      },
+      { 
+        $project: {
+          _id: 1,
+          count: 1,
+          user: { $arrayElemAt: ['$user', 0] }
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          count: 1,
+          'user.name': 1,
+          'user.email': 1
+        }
+      }
+    ]);
+    
+    // Returnăm statisticile
+    res.status(200).json({
+      success: true,
+      data: {
+        totalCount,
+        unreadCount,
+        todayCount,
+        typeStats,
+        priorityStats,
+        topRecipients
+      }
+    });
+  } catch (error) {
+    logger.error(`Error getting notification stats: ${error.message}`);
     next(error);
   }
 };

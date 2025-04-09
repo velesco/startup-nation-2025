@@ -1,6 +1,8 @@
 const Notification = require('../models/Notification');
 const User = require('../models/User');
+const DeviceToken = require('../models/DeviceToken');
 const logger = require('../utils/logger');
+const fs = require('fs');
 
 // @desc    Get all notifications for user
 // @route   GET /api/notifications
@@ -353,6 +355,110 @@ exports.getNotificationCount = async (req, res, next) => {
       unreadCount
     });
   } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Register device for push notifications
+// @route   POST /api/notifications/register-device
+// @access  Private
+exports.registerDevice = async (req, res, next) => {
+  try {
+    const { pushToken, deviceType, deviceName, deviceModel, osVersion, appVersion } = req.body;
+    
+    // Validate push token
+    if (!pushToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Push token is required'
+      });
+    }
+    
+    // Check if device token already exists for this user
+    let deviceToken = await DeviceToken.findOne({
+      userId: req.user.id,
+      token: pushToken
+    });
+    
+    if (deviceToken) {
+      // Update existing device token
+      deviceToken.deviceType = deviceType || deviceToken.deviceType;
+      deviceToken.deviceName = deviceName || deviceToken.deviceName;
+      deviceToken.deviceModel = deviceModel || deviceToken.deviceModel;
+      deviceToken.osVersion = osVersion || deviceToken.osVersion;
+      deviceToken.appVersion = appVersion || deviceToken.appVersion;
+      deviceToken.isActive = true;
+      deviceToken.lastUsed = new Date();
+      
+      await deviceToken.save();
+    } else {
+      // Create new device token
+      deviceToken = await DeviceToken.create({
+        userId: req.user.id,
+        token: pushToken,
+        deviceType: deviceType || 'Unknown',
+        deviceName,
+        deviceModel,
+        osVersion,
+        appVersion,
+        isActive: true,
+        lastUsed: new Date()
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Device registered for push notifications',
+      data: {
+        id: deviceToken._id
+      }
+    });
+  } catch (error) {
+    logger.error(`Error registering device: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc    Unregister device for push notifications
+// @route   DELETE /api/notifications/unregister-device
+// @access  Private
+exports.unregisterDevice = async (req, res, next) => {
+  try {
+    const { pushToken } = req.body;
+    
+    // Validate push token
+    if (!pushToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Push token is required'
+      });
+    }
+    
+    // Find and update device token
+    const deviceToken = await DeviceToken.findOneAndUpdate(
+      {
+        userId: req.user.id,
+        token: pushToken
+      },
+      {
+        isActive: false
+      },
+      { new: true }
+    );
+    
+    if (!deviceToken) {
+      return res.status(404).json({
+        success: false,
+        message: 'Device token not found'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Device unregistered for push notifications'
+    });
+  } catch (error) {
+    logger.error(`Error unregistering device: ${error.message}`);
     next(error);
   }
 };

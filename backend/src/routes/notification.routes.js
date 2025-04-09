@@ -10,7 +10,9 @@ const {
   deleteNotification,
   createBatchNotifications,
   createRoleNotifications,
-  getNotificationCount
+  getNotificationCount,
+  registerDevice,
+  unregisterDevice
 } = require('../controllers/notification.controller');
 
 // Routes
@@ -20,6 +22,12 @@ router.route('/')
 
 router.route('/count')
   .get(protect, getNotificationCount);
+
+router.route('/register-device')
+  .post(protect, registerDevice);
+
+router.route('/unregister-device')
+  .delete(protect, unregisterDevice);
 
 router.route('/read-all')
   .put(protect, markAllAsRead);

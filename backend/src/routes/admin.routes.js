@@ -23,7 +23,13 @@ const {
   uploadUserDocument,
   downloadDocument,
   deleteDocument,
-  generateUserToken
+  generateUserToken,
+  // Notification controllers
+  getNotifications,
+  deleteNotification,
+  createSystemNotification,
+  generatePushToken,
+  getNotificationStats
 } = require('../controllers/admin.controller');
 
 // Apply protection middleware to all routes
@@ -75,5 +81,14 @@ router.route('/users/:id/documents')
 
 // User Token Generation for Contract Download
 router.post('/generate-user-token', authorize('admin', 'partner', 'super-admin'), generateUserToken);
+
+// Notification routes
+router.route('/notifications')
+  .get(authorize('admin', 'super-admin'), getNotifications)
+  .post(authorize('admin', 'super-admin'), createSystemNotification);
+
+router.get('/notifications/stats', authorize('admin', 'super-admin'), getNotificationStats);
+router.post('/notifications/push-token', authorize('admin', 'super-admin'), generatePushToken);
+router.delete('/notifications/:id', authorize('admin', 'super-admin'), deleteNotification);
 
 module.exports = router;
