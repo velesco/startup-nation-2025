@@ -15,7 +15,8 @@ import {
   Building, 
   Clock,
   User,
-  Send
+  Send,
+  ExternalLink
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import DashboardLayout from '../../components/layouts/DashboardLayout';
@@ -34,6 +35,15 @@ const UserDetailPage = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [isSendingData, setIsSendingData] = useState(false);
+  const [dataSentSuccess, setDataSentSuccess] = useState(false);
+
+  // Format date for display
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
+    return new Date(dateString).toLocaleDateString('ro-RO', options);
+  };
 
   // Fetch user data
   useEffect(() => {
@@ -92,11 +102,44 @@ const UserDetailPage = () => {
     }
   };
 
-  // Format date for display
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
-    return new Date(dateString).toLocaleDateString('ro-RO', options);
+  // Trimite datele utilizatorului către API-ul extern (Google Sheet)
+  const sendUserDataToSheet = async () => {
+    if (!user || !user._id) return;
+    
+    try {
+      setIsSendingData(true);
+      setError(null);
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      
+      const response = await axios.post(`${API_URL}/admin/users/${user._id}/send-data`, {}, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.data && response.data.success) {
+        // Actualizăm utilizatorul în stare
+        setUser(prevUser => ({
+          ...prevUser,
+          dataSentToSheet: true,
+          dataSentToSheetAt: new Date()
+        }));
+        
+        setDataSentSuccess(true);
+        
+        // Resetare dupa 3 secunde
+        setTimeout(() => {
+          setDataSentSuccess(false);
+        }, 3000);
+      } else {
+        throw new Error(response.data?.message || 'Failed to send user data');
+      }
+    } catch (err) {
+      console.error('Error sending user data:', err);
+      setError(err.response?.data?.message || err.message || 'Nu s-au putut trimite datele utilizatorului');
+    } finally {
+      setIsSendingData(false);
+    }
   };
 
   if (loading && !user) {
@@ -135,6 +178,22 @@ const UserDetailPage = () => {
               </div>
               <div className="ml-3">
                 <p className="text-sm text-red-700">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Succes message pentru trimiterea datelor */}
+        {dataSentSuccess && (
+          <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-6">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-green-700">Datele utilizatorului au fost trimise cu succes către Google Sheets!</p>
               </div>
             </div>
           </div>
@@ -183,22 +242,37 @@ const UserDetailPage = () => {
                       <h2 className="text-xl font-semibold text-gray-800">Detalii profil</h2>
                       <div className="flex space-x-2">
                         {currentUser && (currentUser.role === 'admin' || currentUser.role === 'super-admin') && (
-                          <button
-                            onClick={() => setIsEmailModalOpen(true)}
-                            className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-lg hover:opacity-90 transition-colors flex items-center"
-                          >
-                            <Send className="h-4 w-4 mr-2" />
-                            Trimite email
-                          </button>
-                        )}
-                        {currentUser && (currentUser.role === 'admin' || currentUser.role === 'super-admin') && (
-                          <button
-                            onClick={() => setIsEditing(true)}
-                            className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:opacity-90 transition-colors flex items-center"
-                          >
-                            <Save className="h-4 w-4 mr-2" />
-                            Editează
-                          </button>
+                          <>
+                            <button
+                              onClick={sendUserDataToSheet}
+                              disabled={isSendingData || user.dataSentToSheet}
+                              className={`${
+                                user.dataSentToSheet
+                                  ? 'bg-gray-300 cursor-not-allowed'
+                                  : 'bg-gradient-to-r from-indigo-500 to-blue-600 hover:opacity-90'
+                              } text-white px-4 py-2 rounded-lg transition-colors flex items-center`}
+                              title={user.dataSentToSheet ? 'Datele au fost deja trimise' : 'Trimite datele utilizatorului către Google Sheets'}
+                            >
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              {isSendingData ? 'Se trimite...' : (user.dataSentToSheet ? 'Date trimise' : 'Trimite la Sheet')}
+                            </button>
+                            
+                            <button
+                              onClick={() => setIsEmailModalOpen(true)}
+                              className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-lg hover:opacity-90 transition-colors flex items-center"
+                            >
+                              <Send className="h-4 w-4 mr-2" />
+                              Trimite email
+                            </button>
+                            
+                            <button
+                              onClick={() => setIsEditing(true)}
+                              className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:opacity-90 transition-colors flex items-center"
+                            >
+                              <Save className="h-4 w-4 mr-2" />
+                              Editează
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -248,6 +322,20 @@ const UserDetailPage = () => {
                             </span>
                           </div>
                         </div>
+
+                        {user.dataSentToSheet && (
+                          <div>
+                            <h3 className="text-sm font-medium text-gray-500">Date trimise la Google Sheets</h3>
+                            <div className="mt-1 flex items-center">
+                              <div className="flex items-center text-green-600">
+                                <svg className="h-5 w-5 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                                <span>Da, la {formatDate(user.dataSentToSheetAt)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <div className="space-y-4">

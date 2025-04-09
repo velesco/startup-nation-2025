@@ -10,9 +10,11 @@ import {
   Shield,
   UserCircle2,
   Menu,
-  X
+  X,
+  Bell
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import NotificationsDropdown from '../notifications/NotificationsDropdown';
 
 const DashboardLayout = ({ children }) => {
   const { currentUser, logout } = useAuth();
@@ -72,6 +74,9 @@ const DashboardLayout = ({ children }) => {
             
             {/* User Menu - Desktop */}
             <div className="hidden md:flex items-center space-x-4">
+              {/* Notification bell */}
+              <NotificationsDropdown />
+              
               {/* User Profile Menu */}
               <div className="relative">
                 <button 
@@ -183,6 +188,17 @@ const DashboardLayout = ({ children }) => {
               <BarChart2 className="h-5 w-5 mr-2" />
               Rapoarte
             </Link>
+            
+            {/* Notification menu - only for admin/super-admin */}
+            {currentUser && (currentUser.role === 'admin' || currentUser.role === 'super-admin') && (
+              <Link
+                to="/admin/notifications"
+                className={`flex items-center px-2 py-4 ${isActive('/admin/notifications') ? 'text-blue-600 border-b-2 border-blue-600 font-medium' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                <Bell className="h-5 w-5 mr-2" />
+                Notificări
+              </Link>
+            )}
           </div>
         </div>
       </nav>
@@ -239,6 +255,18 @@ const DashboardLayout = ({ children }) => {
                 <BarChart2 className="h-5 w-5 mr-3" />
                 Rapoarte
               </Link>
+              
+              {/* Mobile Notifications Link - only for admin */}
+              {currentUser && (currentUser.role === 'admin' || currentUser.role === 'super-admin') && (
+                <Link
+                  to="/admin/notifications"
+                  className={`flex items-center py-3 px-4 ${isActive('/admin/notifications') ? 'bg-blue-50 text-blue-600 font-medium rounded-lg' : 'text-gray-600'}`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Bell className="h-5 w-5 mr-3" />
+                  Notificări
+                </Link>
+              )}
               
               {/* Mobile User Info and Logout */}
               <div className="border-t border-gray-100 my-2 pt-2">

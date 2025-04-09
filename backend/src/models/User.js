@@ -138,6 +138,13 @@ const UserSchema = new mongoose.Schema(
         type: Boolean,
         default: false
       }
+    },
+    dataSentToSheet: {
+      type: Boolean,
+      default: false
+    },
+    dataSentToSheetAt: {
+      type: Date
     }
   },
   {

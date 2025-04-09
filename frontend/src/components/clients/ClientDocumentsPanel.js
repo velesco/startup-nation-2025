@@ -114,32 +114,16 @@ const ClientDocumentsPanel = ({ clientId }) => {
       setError(null); // Reset error state
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
       
-      // Generate token for this specific user to download contract
-      const tokenResponse = await axios.post(`${API_URL}/admin/generate-user-token`, 
-        { userId: client.userId },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
-      
-      if (!tokenResponse.data || !tokenResponse.data.success) {
-        throw new Error(tokenResponse.data?.message || 'Nu s-a putut genera token-ul pentru descărcare');
-      }
-      
-      const userToken = tokenResponse.data.token;
-      
-      // Use the token to download the contract
-      const response = await axios.get(`${API_URL}/contracts/download`, {
+      // Direct API call to admin endpoint for downloading the contract
+      const response = await axios.get(`${API_URL}/admin/users/${client.userId}/download-contract`, {
         headers: {
-          Authorization: `Bearer ${userToken}`
+          Authorization: `Bearer ${localStorage.getItem('token')}`
         },
         responseType: 'blob'
       });
       
       // Verify if response has content
-      if (response.data.size === 0) {
+      if (!response.data || response.data.size === 0) {
         throw new Error('Contractul descărcat este gol sau invalid');
       }
       
@@ -160,7 +144,7 @@ const ClientDocumentsPanel = ({ clientId }) => {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Error downloading contract:', err);
-      setError(err.response?.data?.message || err.message || 'Descărcarea contractului a eșuat');
+      setError(err.response?.data?.message || err.message || 'Descărcarea contractului a eșuat. Verificați dacă utilizatorul are un contract generat.');
     }
   };
 

@@ -51,9 +51,7 @@ const Footer = () => {
         </div>
         
         <div className="official-links">
-          <a href="https://mfe.gov.ro/" target="_blank" rel="noopener noreferrer">Ministerul Investițiilor și Proiectelor Europene</a>
-          <a href="https://www.fonduri-ue.ro/" target="_blank" rel="noopener noreferrer">Fonduri Europene</a>
-          <a href="https://www.fonduri-structurale.ro/" target="_blank" rel="noopener noreferrer">Fonduri Structurale</a>
+          <a href="https://www.imm.gov.ro/start-up-nation-2024/" target="_blank" rel="noopener noreferrer">Ministerul Economiei, Digitalizării, Antreprenoriatului Și Turismului</a>
         </div>
       </div>
     </footer>

@@ -1226,11 +1226,232 @@ exports.getClientStatistics = async (req, res, next) => {
   }
 };
 
-// NOTIFICATIONS MANAGEMENT CONTROLLERS
-
-// @desc    Get all notifications (admin view)
-// @route   GET /api/admin/notifications
-// @access  Private (Admin)
+// @desc    Send user data to external API (Google Sheet)
+// @route   POST /api/admin/users/:id/send-data
+// @access  Private (Admin, super-admin)
+exports.sendUserDataToExternalAPI = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+    
+    // Găsim utilizatorul
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilizator negăsit'
+      });
+    }
+    
+    // Pregătim datele pentru API-ul extern
+    const spreadsheetId = '1FaANFeivKVUB6LGp_4EN9OD8-6i1SGTM4w9yaDupXGg';
+    const range = "'Startup Nation 2025'!A2";
+    const values = [
+      'aplica-startup.ro',
+      user.name, // nume_prenume
+      user.email,
+      user.phone || '' // telefon (dacă este disponibil)
+    ];
+    
+    // Facem cererea către API-ul extern
+    const axios = require('axios');
+    const response = await axios.post('https://aipro.ro/api/trimite_sheet', {
+      spreadsheetId,
+      range,
+      values
+    });
+    
+    // Actualizăm utilizatorul pentru a marca faptul că datele au fost trimise
+    user.dataSentToSheet = true;
+    user.dataSentToSheetAt = new Date();
+    await user.save();
+    
+    // Returnam raspunsul
+    res.status(200).json({
+      success: true,
+      message: 'Datele utilizatorului au fost trimise cu succes',
+      data: {
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          dataSentToSheet: user.dataSentToSheet,
+          dataSentToSheetAt: user.dataSentToSheetAt
+        },
+        apiResponse: response.data
+      }
+    });
+  } catch (error) {
+    logger.error(`Error sending user data to external API: ${error.message}`);
+    console.error('Error details:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Eroare la trimiterea datelor utilizatorului către API-ul extern',
+      error: error.message
+    });
+  }
+};
+// @desc    Download user contract
+// @route   GET /api/admin/users/:id/download-contract
+// @access  Private (Admin, super-admin)
+exports.downloadUserContract = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+    
+    // Găsim utilizatorul
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilizator negăsit'
+      });
+    }
+    
+    if (!user.documents) {
+      user.documents = {};
+    }
+    
+    console.log(`Download contract requested for user: ${userId}`);
+    console.log(`User document state: ${JSON.stringify(user.documents)}`);
+    
+    let contractFullPath = null;
+    
+    if (user.documents.contractPath) {
+      const contractRelativePath = user.documents.contractPath;
+      console.log(`Contract relative path from user document: ${contractRelativePath}`);
+      
+      contractFullPath = path.join(__dirname, `../../../${contractRelativePath.substring(1)}`);
+      console.log(`Constructed full path: ${contractFullPath}`);
+      
+      if (!fs.existsSync(contractFullPath)) {
+        logger.error(`Contract file not found at path: ${contractFullPath}`);
+        console.error(`Contract file does not exist at path: ${contractFullPath}`);
+        
+        const alternativeFilename = `contract_${userId}.pdf`;
+        const alternativePath = path.join(__dirname, `../../../uploads/contracts/${alternativeFilename}`);
+        console.log(`Checking alternative path: ${alternativePath}`);
+        
+        if (fs.existsSync(alternativePath)) {
+          console.log(`Found contract at alternative path: ${alternativePath}`);
+          contractFullPath = alternativePath;
+          
+          user.documents.contractPath = `/uploads/contracts/${alternativeFilename}`;
+          await user.save();
+        } else {
+          // Check for DOCX as well
+          const docxAlternativeFilename = `contract_${userId}.docx`;
+          const docxAlternativePath = path.join(__dirname, `../../../uploads/contracts/${docxAlternativeFilename}`);
+          console.log(`Checking DOCX alternative path: ${docxAlternativePath}`);
+          
+          if (fs.existsSync(docxAlternativePath)) {
+            console.log(`Found DOCX contract at alternative path: ${docxAlternativePath}`);
+            contractFullPath = docxAlternativePath;
+            
+            user.documents.contractPath = `/uploads/contracts/${docxAlternativeFilename}`;
+            user.documents.contractFormat = 'docx';
+            await user.save();
+          } else {
+            console.error(`No contract file found for user at any path`);
+            contractFullPath = null;
+          }
+        }
+      } else {
+        console.log(`Contract file exists at path: ${contractFullPath}`);
+      }
+    } else {
+      console.log(`No contract path set for user: ${userId}`);
+      
+      // Try both PDF and DOCX
+      const defaultPdfFilename = `contract_${userId}.pdf`;
+      const defaultPdfPath = path.join(__dirname, `../../../uploads/contracts/${defaultPdfFilename}`);
+      console.log(`Checking default PDF path: ${defaultPdfPath}`);
+      
+      if (fs.existsSync(defaultPdfPath)) {
+        console.log(`Found contract at default PDF path: ${defaultPdfPath}`);
+        contractFullPath = defaultPdfPath;
+        
+        user.documents.contractPath = `/uploads/contracts/${defaultPdfFilename}`;
+        user.documents.contractFormat = 'pdf';
+        await user.save();
+      } else {
+        // Check for DOCX
+        const defaultDocxFilename = `contract_${userId}.docx`;
+        const defaultDocxPath = path.join(__dirname, `../../../uploads/contracts/${defaultDocxFilename}`);
+        console.log(`Checking default DOCX path: ${defaultDocxPath}`);
+        
+        if (fs.existsSync(defaultDocxPath)) {
+          console.log(`Found contract at default DOCX path: ${defaultDocxPath}`);
+          contractFullPath = defaultDocxPath;
+          
+          user.documents.contractPath = `/uploads/contracts/${defaultDocxFilename}`;
+          user.documents.contractFormat = 'docx';
+          await user.save();
+        }
+      }
+    }
+    
+    if (!contractFullPath) {
+      console.error(`Contract not found. User state: contractGenerated=${user.documents.contractGenerated}, contractPath=${user.documents.contractPath}`);
+      return res.status(404).json({
+        success: false,
+        message: 'Contractul nu a fost găsit. Te rugăm să generezi mai întâi contractul.',
+        error: 'contract_not_found',
+        shouldGenerate: true
+      });
+    }
+    
+    try {
+      console.log(`Reading contract file from: ${contractFullPath}`);
+      const fileBuffer = fs.readFileSync(contractFullPath);
+      console.log(`Successfully read contract file, size: ${fileBuffer.length} bytes`);
+      
+      const isDocx = user.documents.contractFormat === 'docx' || contractFullPath.toLowerCase().endsWith('.docx');
+      
+      let displayName = user.idCard?.fullName;
+      if (!displayName || displayName === 'test') {
+        displayName = user.name || userId;
+      }
+      displayName = displayName.replace(/[ăâîșțĂÂÎȘȚ]/g, c => {
+        const diacritics = {'ă':'a', 'â':'a', 'î':'i', 'ș':'s', 'ț':'t', 'Ă':'A', 'Â':'A', 'Î':'I', 'Ș':'S', 'Ț':'T'};
+        return diacritics[c] || c;
+      }).replace(/\s+/g, '_');
+      
+      const fileName = `contract_${displayName}${isDocx ? '.docx' : '.pdf'}`;
+      
+      console.log(`Using display name for contract: ${displayName}`);
+      
+      if (isDocx) {
+        console.log(`Sending a DOCX file: ${fileName}`);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      } else {
+        console.log(`Sending a PDF file: ${fileName}`);
+        res.setHeader('Content-Type', 'application/pdf');
+      }
+      
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      console.log(`Set headers for download, filename: ${fileName}`);
+      
+      if (req.files) {
+        delete req.files;
+      }
+      
+      console.log(`Sending file to client...`);
+      return res.send(fileBuffer);
+    } catch (readError) {
+      logger.error(`Error reading contract file: ${readError.message}`);
+      console.error(`Failed to read contract file: ${readError.message}`);
+      return res.status(500).json({
+        success: false,
+        message: 'Eroare la citirea fișierului contract. Te rugăm să încerci din nou.',
+        error: readError.message
+      });
+    }
+  } catch (error) {
+    logger.error(`Contract download error: ${error.message}`);
+    next(error);
+  }
+};
 exports.getNotifications = async (req, res, next) => {
   try {
     // Pregătim opțiunile de filtrare

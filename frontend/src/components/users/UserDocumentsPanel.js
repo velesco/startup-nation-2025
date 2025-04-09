@@ -239,7 +239,8 @@ const UserDocumentsPanel = ({ userId }) => {
       setError(null); // Reset error state
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
       
-      const response = await axios.get(`${API_URL}/contracts/download`, {
+      // Make a direct request to download the contract for this specific user
+      const response = await axios.get(`${API_URL}/admin/users/${userId}/download-contract`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         },
@@ -247,7 +248,7 @@ const UserDocumentsPanel = ({ userId }) => {
       });
       
       // Verify if response has content
-      if (response.data.size === 0) {
+      if (!response.data || response.data.size === 0) {
         throw new Error('Contractul descărcat este gol sau invalid');
       }
       

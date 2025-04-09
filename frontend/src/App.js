@@ -32,6 +32,8 @@ import ReportsPage from './pages/admin/ReportsPage';
 import AdminGroupsPage from './pages/admin/AdminGroupsPage';
 import AdminClientsPage from './pages/admin/AdminClientsPage';
 import MaterialsLibraryPage from './pages/admin/MaterialsLibraryPage';
+import AdminNotificationsPage from './pages/admin/AdminNotificationsPage';
+import NotificationsPage from './pages/NotificationsPage';
 
 // Componenta pentru redirecționare de la /clients/:id la /admin/clients/:id
 const ClientIdRedirect = () => {
@@ -198,6 +200,24 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['admin', 'partner', 'super-admin']}>
               <MaterialsLibraryPage />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/admin/notifications"
+          element={
+            <ProtectedRoute allowedRoles={['admin', 'super-admin']}>
+              <AdminNotificationsPage />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute>
+              <NotificationsPage />
             </ProtectedRoute>
           }
         />
