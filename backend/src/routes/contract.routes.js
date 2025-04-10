@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middlewares/auth');
+const { protect, authorize } = require('../middlewares/auth');
 const { createRateLimiter } = require('../utils/security');
 const contractController = require('../controllers/contract.controller');
+const consultingController = require('../controllers/contract.controller.consulting');
 
 // Crează un rate limiter special pentru contracte - mai permisiv
 const contractRateLimiter = createRateLimiter(
@@ -21,8 +22,11 @@ router.post('/reset', protect, contractRateLimiter, contractController.resetCont
 router.post('/validate-id-card', protect, contractRateLimiter, contractController.validateIdCard);
 
 // Consulting Contract routes
-router.post('/generate-consulting', protect, contractRateLimiter, contractController.generateConsultingContract);
-router.get('/download-consulting', protect, contractRateLimiter, contractController.downloadConsultingContract);
-router.post('/reset-consulting', protect, contractRateLimiter, contractController.resetConsultingContract);
+router.post('/generate-consulting', protect, contractRateLimiter, consultingController.generateConsultingContract);
+router.get('/download-consulting', protect, contractRateLimiter, consultingController.downloadConsultingContract);
+router.post('/reset-consulting', protect, contractRateLimiter, consultingController.resetConsultingContract);
+
+// Admin routes - for generating contracts for specific users
+router.post('/admin/generate-consulting/:userId', protect, authorize('admin', 'super-admin'), consultingController.generateConsultingContractForUser);
 
 module.exports = router;

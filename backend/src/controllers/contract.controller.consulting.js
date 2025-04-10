@@ -1,4 +1,236 @@
-const fs = require('fs');
+// @desc    Generate a consulting contract for a specific user (admin function)
+// @route   POST /api/contracts/admin/generate-consulting/:userId
+// @access  Private (Admin, super-admin)
+const generateConsultingContractForUser = async (req, res, next) => {
+  try {
+    console.log('Generating consulting contract for user - admin function');
+    const userId = req.params.userId;
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      console.log('User not found:', userId);
+      return res.status(404).json({ success: false, message: 'Utilizator negăsit' });
+    }
+    
+    console.log('User found:', userId);
+
+    // Extract data from request
+    console.log('Request body:', req.body);
+
+    if (!user.documents) user.documents = {};
+    user.documents.consultingContractGenerated = true;
+    user.documents.consultingContractSigned = true; // Automatically signed
+    user.documents.contractSigned = true; // Mark the participation contract as signed as well
+    user.documents.contractGenerated = true; // Mark participation contract as generated too
+    await user.save();
+    
+    console.log(`Contract Consultanta generat pentru user ${userId}`);
+    console.log(`Contract Participare marcat ca semnat pentru user ${userId}`);
+    console.log('User document state after update:', user.documents);
+    logger.info(`Contract Consultanta generat pentru user ${userId} si contract participare marcat ca semnat`);
+
+    // Prepare data to send to the API
+    const formData = new FormData();
+    
+    // Add user data
+    formData.append('userId', userId);
+    formData.append('fullName', user.idCard?.fullName || user.name || 'Utilizator');
+    formData.append('email', user.email || 'email@example.com');
+    formData.append('phone', user.phone || '');
+    formData.append('CNP', user.idCard?.CNP || '');
+    
+    
+    // Add signature if available
+    if (user.signature) {
+      const cleanSignature = user.signature.replace(/\s+/g, '');
+      formData.append('signature', cleanSignature);
+    }
+    
+    logger.info('Sending data to external API for consulting contract...');
+    
+    let apiResponse;
+    let useBackupTemplate = false;
+    
+    try {
+      // Try to call the primary API first
+      logger.info('Trying primary API endpoint for consulting contract...');
+      apiResponse = await axios.post('https://pnrr.digitalizarefirme.com/api/startup/consultanta', formData, {
+        headers: {
+          ...formData.getHeaders(), 
+          'Accept': 'application/json'
+        },
+        responseType: 'arraybuffer',  // Important for receiving binary file
+        timeout: 5000  // Add a timeout to fail fast if the endpoint is down
+      });
+      
+      if (apiResponse.status !== 200) {
+        logger.warn(`Primary API responded with non-200 status: ${apiResponse.status}`);
+        useBackupTemplate = true;
+      }
+    } catch (apiError) {
+      // Try the original endpoint as fallback
+      logger.warn(`Primary API call failed: ${apiError.message}. Trying fallback endpoint...`);
+      try {
+        apiResponse = await axios.post('https://pnrr.digitalizarefirme.com/api/startup/consultanta', formData, {
+          headers: {
+            ...formData.getHeaders(), 
+            'Accept': 'application/json'
+          },
+          responseType: 'arraybuffer',
+          timeout: 5000
+        });
+        
+        if (apiResponse.status !== 200) {
+          logger.warn(`Fallback API responded with non-200 status: ${apiResponse.status}`);
+          useBackupTemplate = true;
+        }
+      } catch (fallbackError) {
+        logger.error(`Both API endpoints failed. Using backup template. Error: ${fallbackError.message}`);
+        useBackupTemplate = true;
+      }
+    }
+    
+    // If both API calls failed, use a local backup template
+    if (useBackupTemplate) {
+      logger.info('Using local backup template for consulting contract');
+      
+      // Path to backup template file
+      const backupTemplatePath = path.join(__dirname, '../../templates/consulting_contract_template.docx');
+      
+      if (!fs.existsSync(backupTemplatePath)) {
+        throw new Error('Backup consulting contract template not found');
+      }
+      
+      // Read the backup template
+      apiResponse = { 
+        data: await fs.promises.readFile(backupTemplatePath),
+        status: 200
+      };
+      logger.info('Successfully loaded backup consulting contract template');
+    }
+    
+    logger.info('Received DOCX document from external API for consulting contract');
+    
+    // Save the received DOCX document
+    const uploadsDir = path.join(__dirname, '../../../uploads/contracts');
+    await fs.promises.mkdir(uploadsDir, { recursive: true });
+    
+    const docxFilename = `contract_consultanta_${userId}.docx`;
+    const docxPath = path.join(uploadsDir, docxFilename);
+    
+    // Save the DOCX document
+    fs.writeFileSync(docxPath, apiResponse.data);
+    logger.info(`Consulting contract DOCX saved at: ${docxPath}`);
+    
+    // Update database information
+    user.documents.consultingContractFormat = 'docx';
+    user.documents.consultingContractPath = `/uploads/contracts/${docxFilename}`;
+    await user.save();
+    
+    // Convert DOCX to PDF
+    let pdfBuffer;
+    let conversionSuccessful = false;
+    try {
+      pdfBuffer = await convertToPdf(apiResponse.data);
+      logger.info('Conversion to PDF successful for consulting contract');
+      
+      // Save the PDF
+      const pdfFilename = `contract_consultanta_${userId}.pdf`;
+      const pdfPath = path.join(uploadsDir, pdfFilename);
+      fs.writeFileSync(pdfPath, pdfBuffer);
+      
+      // Update database path
+      user.documents.consultingContractFormat = 'pdf';
+      user.documents.consultingContractPath = `/uploads/contracts/${pdfFilename}`;
+      user.documents.contractSigned = true; // Mark the participation contract as signed as well
+      user.documents.contractGenerated = true; // Mark the participation contract as generated
+      await user.save();
+      
+      // Trimitem un email cu contractul PDF (doar dacă este cerut)
+      if (req.body.sendEmail) {
+        try {
+          const emailResult = await sendContractEmail(
+            user, 
+            pdfPath, 
+            `contract_consultanta_${user.name || userId}.pdf`, 
+            false, // not DOCX
+            true // is consulting contract
+          );
+          
+          if (emailResult.success) {
+            logger.info(`Email sent successfully: ${emailResult.messageId}`);
+          } else {
+            logger.warn(`Email sending failed: ${emailResult.error}`);
+          }
+        } catch (emailError) {
+          // Nu blocăm procesul dacă trimiterea email-ului eșuează
+          logger.error(`Eroare la trimiterea email-ului cu contractul de consultanță: ${emailError.message}`);
+        }
+      }
+      
+      // Return success JSON response
+      return res.status(200).json({
+        success: true,
+        message: 'Contractul de consultanță a fost generat cu succes',
+        documentPath: user.documents.consultingContractPath,
+        format: 'pdf'
+      });
+    } catch (conversionError) {
+      logger.error(`PDF conversion error for consulting contract: ${conversionError.message}`);
+      conversionSuccessful = false;
+    }
+    
+    // If we got here, conversion to PDF failed, so send DOCX path in JSON
+    
+    // Trimitere email cu contractul în format DOCX (dacă este specificat)
+    if (req.body.sendEmail) {
+      try {
+        const emailResult = await sendContractEmail(
+          user, 
+          docxPath, 
+          `contract_consultanta_${user.name || userId}.docx`, 
+          true, // is DOCX
+          true // is consulting contract
+        );
+        
+        if (emailResult.success) {
+          logger.info(`Email with DOCX attachment sent successfully: ${emailResult.messageId}`);
+        } else {
+          logger.warn(`Email with DOCX attachment sending failed: ${emailResult.error}`);
+        }
+      } catch (emailError) {
+        // Nu blocăm procesul dacă trimiterea email-ului eșuează
+        logger.error(`Eroare la trimiterea email-ului cu contractul de consultanță în format DOCX: ${emailError.message}`);
+      }
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Contractul de consultanță a fost generat cu succes (format docx)',
+      documentPath: user.documents.consultingContractPath,
+      format: 'docx'
+    });
+    
+  } catch (error) {
+    logger.error(`Admin consulting contract generation error: ${error.message}`);
+    logger.error(`Request URL: ${error.config?.url || req.originalUrl}`);
+    logger.error(`Request Method: ${error.config?.method?.toUpperCase() || req.method}`);
+    
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      logger.error(`Response status: ${error.response.status}`);
+      logger.error(`Response headers: ${JSON.stringify(error.response.headers)}`);
+      logger.error(`Response data: ${JSON.stringify(error.response.data)}`);
+    }
+    
+    return res.status(500).json({
+      success: false,
+      message: 'A apărut o eroare la generarea contractului de consultanță. Vă rugăm să încercați din nou.',
+      error: error.message
+    });
+  }
+};const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const FormData = require('form-data');
@@ -119,6 +351,7 @@ const generateConsultingContract = async (req, res, next) => {
     
     console.log(`Contract Consultanta generat pentru user ${userId}`);
     console.log(`Contract Participare marcat ca semnat pentru user ${userId}`);
+    console.log('User document state after update:', user.documents);
     logger.info(`Contract Consultanta generat pentru user ${userId} si contract participare marcat ca semnat`);
 
     // Prepare data to send to the API
@@ -634,9 +867,244 @@ const resetConsultingContract = async (req, res, next) => {
   }
 };
 
+// @desc    Generate a consulting contract for a specific user (admin function)
+// @route   POST /api/contracts/admin/generate-consulting/:userId
+// @access  Private (Admin, super-admin)
+const generateConsultingContractForUser = async (req, res, next) => {
+  try {
+    console.log('Generating consulting contract for user - admin function');
+    const userId = req.params.userId;
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      console.log('User not found:', userId);
+      return res.status(404).json({ success: false, message: 'Utilizator negăsit' });
+    }
+    
+    console.log('User found:', userId);
+
+    // Extract data from request
+    console.log('Request body:', req.body);
+
+    if (!user.documents) user.documents = {};
+    user.documents.consultingContractGenerated = true;
+    user.documents.consultingContractSigned = true; // Automatically signed
+    user.documents.contractSigned = true; // Mark the participation contract as signed as well
+    user.documents.contractGenerated = true; // Mark participation contract as generated too
+    await user.save();
+    
+    console.log(`Contract Consultanta generat pentru user ${userId}`);
+    console.log(`Contract Participare marcat ca semnat pentru user ${userId}`);
+    console.log('User document state after update:', user.documents);
+    logger.info(`Contract Consultanta generat pentru user ${userId} si contract participare marcat ca semnat`);
+
+    // Prepare data to send to the API
+    const formData = new FormData();
+    
+    // Add user data
+    formData.append('userId', userId);
+    formData.append('fullName', user.idCard?.fullName || user.name || 'Utilizator');
+    formData.append('email', user.email || 'email@example.com');
+    formData.append('phone', user.phone || '');
+    formData.append('CNP', user.idCard?.CNP || '');
+    
+    
+    // Add signature if available
+    if (user.signature) {
+      const cleanSignature = user.signature.replace(/\s+/g, '');
+      formData.append('signature', cleanSignature);
+    }
+    
+    logger.info('Sending data to external API for consulting contract...');
+    
+    let apiResponse;
+    let useBackupTemplate = false;
+    
+    try {
+      // Try to call the primary API first
+      logger.info('Trying primary API endpoint for consulting contract...');
+      apiResponse = await axios.post('https://pnrr.digitalizarefirme.com/api/startup/consultanta', formData, {
+        headers: {
+          ...formData.getHeaders(), 
+          'Accept': 'application/json'
+        },
+        responseType: 'arraybuffer',  // Important for receiving binary file
+        timeout: 5000  // Add a timeout to fail fast if the endpoint is down
+      });
+      
+      if (apiResponse.status !== 200) {
+        logger.warn(`Primary API responded with non-200 status: ${apiResponse.status}`);
+        useBackupTemplate = true;
+      }
+    } catch (apiError) {
+      // Try the original endpoint as fallback
+      logger.warn(`Primary API call failed: ${apiError.message}. Trying fallback endpoint...`);
+      try {
+        apiResponse = await axios.post('https://pnrr.digitalizarefirme.com/api/startup/consultanta', formData, {
+          headers: {
+            ...formData.getHeaders(), 
+            'Accept': 'application/json'
+          },
+          responseType: 'arraybuffer',
+          timeout: 5000
+        });
+        
+        if (apiResponse.status !== 200) {
+          logger.warn(`Fallback API responded with non-200 status: ${apiResponse.status}`);
+          useBackupTemplate = true;
+        }
+      } catch (fallbackError) {
+        logger.error(`Both API endpoints failed. Using backup template. Error: ${fallbackError.message}`);
+        useBackupTemplate = true;
+      }
+    }
+    
+    // If both API calls failed, use a local backup template
+    if (useBackupTemplate) {
+      logger.info('Using local backup template for consulting contract');
+      
+      // Path to backup template file
+      const backupTemplatePath = path.join(__dirname, '../../templates/consulting_contract_template.docx');
+      
+      if (!fs.existsSync(backupTemplatePath)) {
+        throw new Error('Backup consulting contract template not found');
+      }
+      
+      // Read the backup template
+      apiResponse = { 
+        data: await fs.promises.readFile(backupTemplatePath),
+        status: 200
+      };
+      logger.info('Successfully loaded backup consulting contract template');
+    }
+    
+    logger.info('Received DOCX document from external API for consulting contract');
+    
+    // Save the received DOCX document
+    const uploadsDir = path.join(__dirname, '../../../uploads/contracts');
+    await fs.promises.mkdir(uploadsDir, { recursive: true });
+    
+    const docxFilename = `contract_consultanta_${userId}.docx`;
+    const docxPath = path.join(uploadsDir, docxFilename);
+    
+    // Save the DOCX document
+    fs.writeFileSync(docxPath, apiResponse.data);
+    logger.info(`Consulting contract DOCX saved at: ${docxPath}`);
+    
+    // Update database information
+    user.documents.consultingContractFormat = 'docx';
+    user.documents.consultingContractPath = `/uploads/contracts/${docxFilename}`;
+    await user.save();
+    
+    // Convert DOCX to PDF
+    let pdfBuffer;
+    let conversionSuccessful = false;
+    try {
+      pdfBuffer = await convertToPdf(apiResponse.data);
+      logger.info('Conversion to PDF successful for consulting contract');
+      
+      // Save the PDF
+      const pdfFilename = `contract_consultanta_${userId}.pdf`;
+      const pdfPath = path.join(uploadsDir, pdfFilename);
+      fs.writeFileSync(pdfPath, pdfBuffer);
+      
+      // Update database path
+      user.documents.consultingContractFormat = 'pdf';
+      user.documents.consultingContractPath = `/uploads/contracts/${pdfFilename}`;
+      user.documents.contractSigned = true; // Mark the participation contract as signed as well
+      user.documents.contractGenerated = true; // Mark the participation contract as generated
+      await user.save();
+      
+      // Trimitem un email cu contractul PDF (doar dacă este cerut)
+      if (req.body.sendEmail) {
+        try {
+          const emailResult = await sendContractEmail(
+            user, 
+            pdfPath, 
+            `contract_consultanta_${user.name || userId}.pdf`, 
+            false, // not DOCX
+            true // is consulting contract
+          );
+          
+          if (emailResult.success) {
+            logger.info(`Email sent successfully: ${emailResult.messageId}`);
+          } else {
+            logger.warn(`Email sending failed: ${emailResult.error}`);
+          }
+        } catch (emailError) {
+          // Nu blocăm procesul dacă trimiterea email-ului eșuează
+          logger.error(`Eroare la trimiterea email-ului cu contractul de consultanță: ${emailError.message}`);
+        }
+      }
+      
+      // Return success JSON response
+      return res.status(200).json({
+        success: true,
+        message: 'Contractul de consultanță a fost generat cu succes',
+        documentPath: user.documents.consultingContractPath,
+        format: 'pdf'
+      });
+    } catch (conversionError) {
+      logger.error(`PDF conversion error for consulting contract: ${conversionError.message}`);
+      conversionSuccessful = false;
+    }
+    
+    // If we got here, conversion to PDF failed, so send DOCX path in JSON
+    
+    // Trimitere email cu contractul în format DOCX (dacă este specificat)
+    if (req.body.sendEmail) {
+      try {
+        const emailResult = await sendContractEmail(
+          user, 
+          docxPath, 
+          `contract_consultanta_${user.name || userId}.docx`, 
+          true, // is DOCX
+          true // is consulting contract
+        );
+        
+        if (emailResult.success) {
+          logger.info(`Email with DOCX attachment sent successfully: ${emailResult.messageId}`);
+        } else {
+          logger.warn(`Email with DOCX attachment sending failed: ${emailResult.error}`);
+        }
+      } catch (emailError) {
+        // Nu blocăm procesul dacă trimiterea email-ului eșuează
+        logger.error(`Eroare la trimiterea email-ului cu contractul de consultanță în format DOCX: ${emailError.message}`);
+      }
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Contractul de consultanță a fost generat cu succes (format docx)',
+      documentPath: user.documents.consultingContractPath,
+      format: 'docx'
+    });
+    
+  } catch (error) {
+    logger.error(`Admin consulting contract generation error: ${error.message}`);
+    logger.error(`Request URL: ${error.config?.url || req.originalUrl}`);
+    logger.error(`Request Method: ${error.config?.method?.toUpperCase() || req.method}`);
+    
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      logger.error(`Response status: ${error.response.status}`);
+      logger.error(`Response headers: ${JSON.stringify(error.response.headers)}`);
+      logger.error(`Response data: ${JSON.stringify(error.response.data)}`);
+    }
+    
+    return res.status(500).json({
+      success: false,
+      message: 'A apărut o eroare la generarea contractului de consultanță. Vă rugăm să încercați din nou.',
+      error: error.message
+    });
+  }
+};
+
 // Exportăm funcțiile modulului pentru a putea fi folosite în alte module
 module.exports = {
   generateConsultingContract,
   downloadConsultingContract,
-  resetConsultingContract
+  resetConsultingContract,
+  generateConsultingContractForUser
 };

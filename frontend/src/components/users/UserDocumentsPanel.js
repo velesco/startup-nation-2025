@@ -314,6 +314,45 @@ const UserDocumentsPanel = ({ userId }) => {
       showNotification('error', err.response?.data?.message || err.message || 'Descărcarea contractului de consultanță a eșuat');
     }
   };
+  
+  // Generate consulting contract
+  const handleGenerateConsultingContract = async () => {
+    try {
+      setError(null);
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      
+      // Generate consulting contract via admin API
+      const response = await axios.post(
+        `${API_URL}/contracts/admin/generate-consulting/${userId}`, 
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+      
+      if (response.data && response.data.success) {
+        showNotification('success', 'Contractul de consultanță a fost generat cu succes');
+        // Force reload of user data to update contract status
+        const userResponse = await axios.get(`${API_URL}/admin/users/${userId}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        if (userResponse.data && userResponse.data.success) {
+          const user = userResponse.data.data;
+          setHasConsultingContract(user.documents?.consultingContractGenerated || false);
+        }
+      } else {
+        throw new Error(response.data?.message || 'Generarea contractului de consultanță a eșuat');
+      }
+    } catch (err) {
+      console.error('Error generating consulting contract:', err);
+      showNotification('error', err.response?.data?.message || err.message || 'Generarea contractului de consultanță a eșuat');
+    }
+  };
 
   // Check if user has a contract and consulting contract
   const [hasContract, setHasContract] = useState(false);
@@ -333,6 +372,7 @@ const UserDocumentsPanel = ({ userId }) => {
 
         if (response.data && response.data.success) {
           const user = response.data.data;
+          console.log('User contract data:', user.documents);
           setHasContract(user.documents?.contractGenerated || false);
           setHasConsultingContract(user.documents?.consultingContractGenerated || false);
         }
@@ -343,6 +383,12 @@ const UserDocumentsPanel = ({ userId }) => {
 
     if (userId) {
       checkContract();
+      
+      // Set up an interval to check for contract status changes every 5 seconds
+      const intervalId = setInterval(checkContract, 5000);
+      
+      // Clean up the interval when component unmounts
+      return () => clearInterval(intervalId);
     }
   }, [userId]);
 
@@ -452,7 +498,7 @@ const UserDocumentsPanel = ({ userId }) => {
         )}
         
         {/* Consulting Contract Section */}
-        {hasConsultingContract && (
+        {hasConsultingContract ? (
           <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
@@ -470,6 +516,27 @@ const UserDocumentsPanel = ({ userId }) => {
               >
                 <Download className="h-4 w-4 mr-2" />
                 <span>Descarcă</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="h-10 w-10 rounded-md bg-gray-100 flex items-center justify-center text-gray-600 mr-3">
+                  <FileText className="h-6 w-6" />
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-800">Contract Consultanță</h4>
+                  <p className="text-sm text-gray-500">Acest contract nu a fost generat încă</p>
+                </div>
+              </div>
+              <button
+                onClick={handleGenerateConsultingContract}
+                className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+              >
+                <FilePlus className="h-4 w-4 mr-2" />
+                <span>Generează</span>
               </button>
             </div>
           </div>
