@@ -237,7 +237,7 @@ const ClientConsultingContractStep = ({ onStepComplete, userDocuments }) => {
     // chiar înainte de a genera contractul de consultanță
     if (onStepComplete && typeof onStepComplete === 'function') {
       // Actualizăm mai întâi contractul de participare ca fiind semnat
-      console.log('Actualizare status contract participare: semnat');
+      console.log('Actualizare status Contract Curs Antreprenoriat: semnat');
       onStepComplete('contract_sign', {
         ...userDocuments,
         contractGenerated: true,

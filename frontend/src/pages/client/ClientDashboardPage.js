@@ -462,7 +462,7 @@ const ClientDashboardPage = () => {
   // Progress steps
   const steps = user ? [
     { id: 1, name: "Încărcare Buletin", icon: "document", completed: user.documents?.id_cardUploaded },
-    { id: 2, name: "Contract Participare", icon: "document", completed: user.documents?.contractSigned },
+    { id: 2, name: "Contract Curs Antreprenoriat", icon: "document", completed: user.documents?.contractSigned },
     { id: 3, name: "Contract Consultanță", icon: "document", completed: user.documents?.consultingContractSigned },
     // { id: 4, name: "Instalare Aplicație", icon: "check", completed: user.documents?.appDownloaded }
   ] : [];

@@ -111,14 +111,14 @@ const ClientStepContent = ({ step, updateUserData, userDocuments }) => {
 
     // Dacă suntem pe pasul Contract Consultanță dar Contract Participare nu e marcat ca finalizat
     if (step === 3 && userDocuments && !userDocuments.contractSigned) {
-      console.log('Corecție automată: Suntem pe pasul Contract Consultanță dar Contract Participare nu e marcat ca semnat');
+      console.log('Corecție automată: Suntem pe pasul Contract Consultanță dar Contract Curs Antreprenoriat nu e marcat ca semnat');
       // Marcăm automat contractul de participare ca fiind semnat
       handleStepComplete('contract_sign', {
         ...userDocuments,
         contractGenerated: true,
         contractSigned: true
       });
-      console.log('Corecție aplicată: Contract Participare marcat ca semnat');
+      console.log('Corecție aplicată: Contract Curs Antreprenoriat marcat ca semnat');
     }
   }, [step, userDocuments, updateUserData]);
 
