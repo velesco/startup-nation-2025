@@ -168,6 +168,70 @@ UserSchema.pre('save', async function(next) {
   }
 });
 
+// Ensure document flag consistency before saving
+UserSchema.pre('save', function(next) {
+  // If we have documents object
+  if (this.documents) {
+    // If consultingContractSigned is true, then contractSigned should also be true
+    if (this.documents.consultingContractSigned && !this.documents.contractSigned) {
+      console.log(`Correcting inconsistency for user ${this._id}: consultingContractSigned=true but contractSigned=false`);
+      this.documents.contractSigned = true;
+      this.documents.contractGenerated = true;
+    }
+    
+    // If contractSigned is true, ensure id_cardUploaded is also true
+    if (this.documents.contractSigned && !this.documents.id_cardUploaded) {
+      console.log(`Correcting inconsistency for user ${this._id}: contractSigned=true but id_cardUploaded=false`);
+      this.documents.id_cardUploaded = true;
+    }
+    
+    // Log the updated document flags
+    console.log(`Document flags for user ${this._id} after consistency check:`, this.documents);
+  }
+  
+  // Also ensure main contractSigned flag matches documents.contractSigned
+  if (this.documents && this.documents.contractSigned && !this.contractSigned) {
+    console.log(`Updating main contractSigned flag for user ${this._id}`);
+    this.contractSigned = true;
+    this.contractSignedAt = this.contractSignedAt || new Date();
+  }
+  
+  next();
+});
+
+// Also add a pre-update hook for findOneAndUpdate operations
+UserSchema.pre('findOneAndUpdate', function(next) {
+  const update = this.getUpdate();
+  
+  // If we're updating documents
+  if (update.documents) {
+    // If consultingContractSigned is true, then contractSigned should also be true
+    if (update.documents.consultingContractSigned && !update.documents.contractSigned) {
+      console.log('Correcting inconsistency in update: consultingContractSigned=true but contractSigned=false');
+      update.documents.contractSigned = true;
+      update.documents.contractGenerated = true;
+    }
+    
+    // If contractSigned is true, ensure id_cardUploaded is also true
+    if (update.documents.contractSigned && !update.documents.id_cardUploaded) {
+      console.log('Correcting inconsistency in update: contractSigned=true but id_cardUploaded=false');
+      update.documents.id_cardUploaded = true;
+    }
+    
+    // Log the updated document flags
+    console.log('Document flags after consistency check:', update.documents);
+  }
+  
+  // Also ensure main contractSigned flag matches documents.contractSigned
+  if (update.documents && update.documents.contractSigned && !update.contractSigned) {
+    console.log('Updating main contractSigned flag in update');
+    update.contractSigned = true;
+    update.contractSignedAt = new Date();
+  }
+  
+  next();
+});
+
 // Sign JWT and return
 UserSchema.methods.getSignedJwtToken = function() {
   return jwt.sign(

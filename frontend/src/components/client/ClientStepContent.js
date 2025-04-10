@@ -24,23 +24,45 @@ const ClientStepContent = ({ step, updateUserData, userDocuments }) => {
           // Dacă nu avem documente actualizate, construim în funcție de tipul pasului
           switch (stepType) {
             case 'id_card':
-              docsToUpdate = { ...userDocuments, id_cardUploaded: true };
+              docsToUpdate = { 
+                ...userDocuments, 
+                id_cardUploaded: true 
+              };
               forceNextStep = 2;
               break;
             case 'course_select':
-              docsToUpdate = { ...userDocuments, courseSelected: true };
+              docsToUpdate = { 
+                ...userDocuments, 
+                courseSelected: true 
+              };
               break;
             case 'app_download':
-              docsToUpdate = { ...userDocuments, appDownloaded: true };
+              docsToUpdate = { 
+                ...userDocuments, 
+                appDownloaded: true 
+              };
               break;
             case 'contract_generate':
-              docsToUpdate = { ...userDocuments, contractGenerated: true };
+              docsToUpdate = { 
+                ...userDocuments, 
+                contractGenerated: true 
+              };
               break;
             case 'contract_sign':
-              docsToUpdate = { ...userDocuments, contractGenerated: true, contractSigned: true };
+              docsToUpdate = { 
+                ...userDocuments, 
+                contractGenerated: true, 
+                contractSigned: true 
+              };
+              forceNextStep = 3;
               break;
             case 'contract_complete':
-              docsToUpdate = { ...userDocuments, contractComplete: true };
+              docsToUpdate = { 
+                ...userDocuments, 
+                contractComplete: true,
+                contractGenerated: true, 
+                contractSigned: true
+              };
               forceNextStep = 3; // Forțăm trecerea la pasul de contract consultanță
               break;
             case 'consulting_contract_generate':
@@ -59,6 +81,7 @@ const ClientStepContent = ({ step, updateUserData, userDocuments }) => {
                 contractSigned: true, // Marcăm automat și contractul de participare ca semnat
                 contractGenerated: true 
               };
+              forceNextStep = 4;
               break;
             case 'consulting_contract_complete':
               docsToUpdate = { 
@@ -82,12 +105,28 @@ const ClientStepContent = ({ step, updateUserData, userDocuments }) => {
         }
         
         console.log('Documente actualizate:', docsToUpdate);
+        
+        // Asigură-te că toate flag-urile necesare sunt setate pentru pașii anteriori
+        if (step >= 2 && !docsToUpdate.id_cardUploaded) {
+          console.log('Se forțează setarea flag-ului id_cardUploaded pentru a asigura integritatea datelor');
+          docsToUpdate.id_cardUploaded = true;
+        }
+        
+        if (step >= 3 && !docsToUpdate.contractSigned) {
+          console.log('Se forțează setarea flag-urilor contractGenerated și contractSigned pentru a asigura integritatea datelor');
+          docsToUpdate.contractGenerated = true;
+          docsToUpdate.contractSigned = true;
+        }
+        
         // Dacă avem un pas forțat, îl includem în actualizare
         if (forceNextStep !== null) {
           console.log(`Forțăm trecerea la pasul: ${forceNextStep}`);
           console.log('Datele trimise pentru actualizare:', { documents: docsToUpdate, nextStep: forceNextStep });
           const result = await updateUserData({ documents: docsToUpdate, nextStep: forceNextStep });
           console.log('Rezultat actualizare cu pas forțat:', result);
+          
+          // Notificăm că pasul a fost actualizat cu succes
+          console.log(`Pas actualizat cu succes la: ${forceNextStep}`);
         } else {
           console.log('Datele trimise pentru actualizare (fără pas forțat):', { documents: docsToUpdate });
           const result = await updateUserData({ documents: docsToUpdate });

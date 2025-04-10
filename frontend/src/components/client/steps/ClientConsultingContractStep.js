@@ -191,7 +191,6 @@ const ClientConsultingContractStep = ({ onStepComplete, userDocuments }) => {
           onStepComplete('consulting_contract_complete', updatedDocs);
         }
         
-        // Descărcăm contractul generat
         await handleDownloadContract();
       } else {
         throw new Error(response.data?.message || 'Eroare la generarea contractului de consultanță.');

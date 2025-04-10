@@ -116,6 +116,18 @@ const ClientDashboardPage = () => {
             documents.contractSigned = true;
           }
           
+          // Verificăm dacă avem un pas salvat în localStorage
+          const savedStep = localStorage.getItem('currentStep');
+          if (savedStep) {
+            const stepNumber = parseInt(savedStep, 10);
+            // Folosim pasul din localStorage doar dacă este mai mare decât cel calculat
+            // pentru a evita regresul la pași anteriori
+            if (!isNaN(stepNumber) && stepNumber >= currentStepValue) {
+              console.log(`Folosim pasul ${stepNumber} din localStorage în loc de ${currentStepValue} calculat`);
+              currentStepValue = stepNumber;
+            }
+          }
+          
           setCurrentStep(currentStepValue);
           
           // Încercăm să obținem notificările utilizatorului din API
@@ -207,8 +219,40 @@ const ClientDashboardPage = () => {
       console.log('Token disponibil:', !!token);
       console.log('Request endpoint:', `${API_URL}/auth/update-details`);
       
+      // Asigurăm consistența datelor
+      let dataToUpdate = {...newData};
+      
+      // Dacă actualizăm documentele, ne asigurăm că toate flag-urile sunt corecte și coerente
+      if (newData.documents) {
+        // Dacă consultingContractSigned este true, atunci și contractSigned trebuie să fie true
+        if (newData.documents.consultingContractSigned && !newData.documents.contractSigned) {
+          console.log('Corectăm inconsistența: consultingContractSigned=true dar contractSigned=false');
+          dataToUpdate.documents.contractSigned = true;
+          dataToUpdate.documents.contractGenerated = true;
+        }
+        
+        // Dacă suntem la pasul 3 sau mai mare, ne asigurăm că id_cardUploaded și contractSigned sunt true
+        if (currentStep >= 3) {
+          if (!dataToUpdate.documents.id_cardUploaded) {
+            console.log('Forțăm id_cardUploaded=true pentru pasul curent >= 3');
+            dataToUpdate.documents.id_cardUploaded = true;
+          }
+          if (!dataToUpdate.documents.contractSigned) {
+            console.log('Forțăm contractSigned=true pentru pasul curent >= 3');
+            dataToUpdate.documents.contractSigned = true;
+            dataToUpdate.documents.contractGenerated = true;
+          }
+        }
+        
+        // Persistăm datele în localStorage ca backup
+        localStorage.setItem('userDocuments', JSON.stringify(dataToUpdate.documents));
+        if (newData.nextStep) {
+          localStorage.setItem('currentStep', newData.nextStep.toString());
+        }
+      }
+      
       // Actualizăm datele utilizatorului prin API
-      const response = await axios.put(`${API_URL}/auth/update-details`, newData, {
+      const response = await axios.put(`${API_URL}/auth/update-details`, dataToUpdate, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -223,56 +267,65 @@ const ClientDashboardPage = () => {
           console.log('Utilizator actual înainte de actualizare:', user);
           const updatedUser = {
             ...user,
-            ...newData
+            ...dataToUpdate
           };
           
           // Actualizăm progresul dacă s-au modificat documentele
-          if (newData.documents) {
-            console.log('Documente noi:', newData.documents);
+          if (dataToUpdate.documents) {
+            console.log('Documente noi după corecții:', dataToUpdate.documents);
             const completedSteps = [
-              newData.documents.id_cardUploaded,
-              newData.documents.contractSigned,
-              newData.documents.consultingContractSigned,
-              newData.documents.appDownloaded
+              dataToUpdate.documents.id_cardUploaded,
+              dataToUpdate.documents.contractSigned,
+              dataToUpdate.documents.consultingContractSigned,
+              dataToUpdate.documents.appDownloaded
             ].filter(Boolean).length;
             
             updatedUser.progress = Math.round((completedSteps / 4) * 100);
+            updatedUser.documents = {
+              ...user.documents,
+              ...dataToUpdate.documents
+            };
             console.log('Progres nou calculat:', updatedUser.progress);
             
             // Verificăm dacă avem un pas forțat transmis explicit
-            if (newData.nextStep !== undefined) {
-              console.log(`Utilizăm pasul forțat: ${newData.nextStep}`);
-              // Forțăm setarea pasului curent cu un timer pentru a evita problemele de sincronizare
-              setCurrentStep(newData.nextStep);
+            if (dataToUpdate.nextStep !== undefined) {
+              console.log(`Utilizăm pasul forțat: ${dataToUpdate.nextStep}`);
+              // Forțăm setarea pasului curent
+              setCurrentStep(dataToUpdate.nextStep);
+              
+              // Salvăm în localStorage pentru persistență - atât ca 'currentStep' cât și ca 'forceNextStep'
+              localStorage.setItem('currentStep', dataToUpdate.nextStep.toString());
+              localStorage.setItem('forceNextStep', dataToUpdate.nextStep.toString());
               
               // Forțăm din nou după un scurt delay pentru a ne asigura că se aplică
               setTimeout(() => {
-                console.log(`Re-forțăm setarea pasului la: ${newData.nextStep}`);
-                setCurrentStep(newData.nextStep);
+                console.log(`Re-forțăm setarea pasului la: ${dataToUpdate.nextStep}`);
+                setCurrentStep(dataToUpdate.nextStep);
               }, 300);
             } else {
               // Determinăm pasul curent în funcție de progres
               let nextStep = 1;
-              if (newData.documents.id_cardUploaded) {
+              if (dataToUpdate.documents.id_cardUploaded) {
                 nextStep = 2;
-                if (newData.documents.contractSigned) {
+                if (dataToUpdate.documents.contractSigned) {
                   nextStep = 3;
-                  if (newData.documents.consultingContractSigned) {
+                  if (dataToUpdate.documents.consultingContractSigned) {
                     nextStep = 4;
                   }
-                } else if (newData.documents.consultingContractSigned) {
+                } else if (dataToUpdate.documents.consultingContractSigned) {
                   // Dacă avem consultingContractSigned dar nu avem contractSigned (caz special), 
                   // marcăm contractSigned = true și setăm pasul la 3
                   console.log('Am detectat consultingContractSigned=true dar contractSigned=false în actualizare. Corectăm...');
-                  newData.documents.contractSigned = true;
+                  dataToUpdate.documents.contractSigned = true;
                   nextStep = 3;
                 }
               }
               
               console.log('Pas nou calculat:', nextStep);
               
-              // Actualizăm pasul curent
+              // Actualizăm pasul curent și-l salvăm în localStorage
               setCurrentStep(nextStep);
+              localStorage.setItem('currentStep', nextStep.toString());
             }
           }
           
@@ -280,7 +333,7 @@ const ClientDashboardPage = () => {
           setUser(updatedUser);
           
           // Reîncărcăm documentele în cazul actualizării documentelor
-          if (newData.documents) {
+          if (dataToUpdate.documents) {
             try {
               const documentsResponse = await axios.get(`${API_URL}/user/documents`, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -289,6 +342,9 @@ const ClientDashboardPage = () => {
             } catch (documentsError) {
               console.warn('Nu s-au putut reîncărca documentele după actualizare:', documentsError);
             }
+            
+            // Evităm setarea flag-urilor care pot cauza reîncărcări multiple
+            console.log('Actualizare finalizată cu succes');
           }
         } else {
           console.warn('Nu există un utilizator în stare pentru actualizare!');
@@ -309,7 +365,7 @@ const ClientDashboardPage = () => {
       console.log('=== END updateUserData (eroare) ===');
       return false;
     }
-  }, [user, setCurrentStep]);
+  }, [user, currentStep, setCurrentStep]);
 
   // Funcție de refresh pentru butonul din header
   const handleRefresh = useCallback(() => {
@@ -352,14 +408,23 @@ const ClientDashboardPage = () => {
         console.log(`Setăm pasul forțat: ${stepNumber}`);
         setCurrentStep(stepNumber);
         
-        // Setăm un timer pentru a ne asigura că se aplică după ce datele sunt încărcate
-        setTimeout(() => {
-          console.log(`Re-aplicare pas forțat: ${stepNumber}`);
-          setCurrentStep(stepNumber);
-          
-          // Șterge valoarea din localStorage
-          localStorage.removeItem('forceNextStep');
-        }, 500);
+        // Șterge valoarea din localStorage pentru a preveni bucle infinite
+        localStorage.removeItem('forceNextStep');
+      }
+    }
+    
+    // Restaurăm starea din localStorage și o prioritizăm
+    const savedStep = localStorage.getItem('currentStep');
+    if (savedStep) {
+      const stepNumber = parseInt(savedStep, 10);
+      if (!isNaN(stepNumber)) {
+        console.log(`Restaurăm pasul salvat din localStorage: ${stepNumber}`);
+        // Setăm pasul direct în state pentru a fi disponibil imediat
+        setCurrentStep(stepNumber);
+        // Setăm și flag-ul de forțare pentru a ne asigura că pasul este respectat
+        if (!forceNextStep) {
+          localStorage.setItem('forceNextStep', stepNumber.toString());
+        }
       }
     }
     
@@ -386,7 +451,7 @@ const ClientDashboardPage = () => {
     }, 100);
     
     return () => clearTimeout(timer);
-  }, [fetchUserData]);
+  }, [fetchUserData, setCurrentStep]);
 
   // Funcție pentru scroll la conținutul pașilor
   const scrollToStepsContent = useCallback(() => {
@@ -423,8 +488,10 @@ const ClientDashboardPage = () => {
       }
     }
     
-    // Setăm pasul current
+    // Setăm pasul current și îl salvăm în localStorage pentru persistență între refreshuri
     setCurrentStep(step);
+    localStorage.setItem('currentStep', step.toString());
+    console.log(`Pasul ${step} a fost salvat în localStorage`);
     
     // Dacă suntem pe mobil și tab-ul nu este 'steps', mai întâi schimbăm la tab-ul steps
     if (isMobile && activeTab !== 'steps') {

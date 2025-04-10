@@ -193,6 +193,7 @@ exports.getMe = async (req, res, next) => {
 // @access  Private
 exports.updateDetails = async (req, res, next) => {
   try {
+    // Basic user fields
     const fieldsToUpdate = {
       name: req.body.name,
       email: req.body.email,
@@ -201,21 +202,40 @@ exports.updateDetails = async (req, res, next) => {
       position: req.body.position
     };
 
+    // Handle document flags if provided
+    if (req.body.documents) {
+      fieldsToUpdate.documents = req.body.documents;
+      
+      // If client documents include contractSigned flag, update the main contract flag too
+      if (req.body.documents.contractSigned) {
+        fieldsToUpdate.contractSigned = true;
+        fieldsToUpdate.contractSignedAt = new Date();
+      }
+
+      // Log the document update for debugging
+      console.log(`Updating document flags for user ${req.user.id}:`, fieldsToUpdate.documents);
+    }
+
     // Remove undefined fields
     Object.keys(fieldsToUpdate).forEach(
       key => fieldsToUpdate[key] === undefined && delete fieldsToUpdate[key]
     );
 
+    // Update the user with the new fields
     const user = await User.findByIdAndUpdate(req.user.id, fieldsToUpdate, {
       new: true,
       runValidators: true
     });
+
+    // Additional logging for debugging
+    console.log(`User ${req.user.id} updated successfully with documents:`, user.documents);
 
     res.status(200).json({
       success: true,
       data: user
     });
   } catch (error) {
+    console.error(`Error updating user details:`, error);
     next(error);
   }
 };

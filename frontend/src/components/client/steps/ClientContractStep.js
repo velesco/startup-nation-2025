@@ -442,7 +442,7 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
   return (
     <div className="bg-white/70 backdrop-blur-md rounded-3xl p-6 mb-8 shadow-lg border border-white/50">
       <h2 className="text-xl font-bold mb-6 bg-gradient-to-r from-gray-700 to-gray-900 bg-clip-text text-transparent">
-        Contract de Participare
+      Contract Curs Antreprenoriat
       </h2>
       
       {/* Afișare erori */}
@@ -532,20 +532,12 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
             <button
               onClick={() => {
                 console.log('Buton "Continuă la Contract Consultanță" apăsat');
-                
-                // Adaugăm un timeout pentru a ne asigura că butonul are timp să își modifice starea vizuală
-                setTimeout(() => {
-                  console.log('Executăm onStepComplete pentru contract_complete');
-                  onStepComplete('contract_complete');
-                  console.log('onStepComplete executat, ar trebui să avanseze la pasul 3');
-                  
-                  // Forțăm un refresh al paginii dacă nu s-a trecut la pasul următor
-                  setTimeout(() => {
-                    // Salvare stare în localStorage pentru a forța pasul 3 la încărcare
-                    localStorage.setItem('forceNextStep', '3');
-                    window.location.reload();
-                  }, 1000);
-                }, 100);
+                // Salvăm explicit pasul 3 în localStorage pentru a asigura persistența
+                localStorage.setItem('currentStep', '3');
+                // Actualizare stare documente pentru a marca contractul ca fiind completat
+                onStepComplete('contract_complete');
+                // Forțăm setarea pasului 3 direct în localStorage
+                localStorage.setItem('forceNextStep', '3');
               }}
               className="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 rounded-full font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center"
             >
