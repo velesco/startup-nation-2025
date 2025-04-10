@@ -4,16 +4,9 @@ import ClientIDUploadStep from './steps/ClientIDUploadStep';
 import ClientCourseSelectStep from './steps/ClientCourseSelectStep';
 import ClientAppDownloadStep from './steps/ClientAppDownloadStep';
 import ClientContractStep from './steps/ClientContractStep';
+import ClientConsultingContractStep from './steps/ClientConsultingContractStep';
 
 const ClientStepContent = ({ step, updateUserData, userDocuments }) => {
-  // Log pentru debugging
-  useEffect(() => {
-    console.log('=== ClientStepContent ===');
-    console.log('Step curent:', step);
-    console.log('User Documents:', userDocuments);
-    console.log('UpdateUserData func:', !!updateUserData);
-  }, [step, userDocuments, updateUserData]);
-
   // Funcție pentru gestionarea completării unui pas
   const handleStepComplete = async (stepType, updatedDocs) => {
     console.log(`Pas completat: ${stepType}`);
@@ -25,12 +18,14 @@ const ClientStepContent = ({ step, updateUserData, userDocuments }) => {
         console.log('Date utilizator înainte de actualizare:', userDocuments);
         
         let docsToUpdate = updatedDocs || {};
+        let forceNextStep = null;
         
         if (!updatedDocs) {
           // Dacă nu avem documente actualizate, construim în funcție de tipul pasului
           switch (stepType) {
             case 'id_card':
               docsToUpdate = { ...userDocuments, id_cardUploaded: true };
+              forceNextStep = 2;
               break;
             case 'course_select':
               docsToUpdate = { ...userDocuments, courseSelected: true };
@@ -46,6 +41,39 @@ const ClientStepContent = ({ step, updateUserData, userDocuments }) => {
               break;
             case 'contract_complete':
               docsToUpdate = { ...userDocuments, contractComplete: true };
+              forceNextStep = 3; // Forțăm trecerea la pasul de contract consultanță
+              break;
+            case 'consulting_contract_generate':
+              docsToUpdate = { 
+                ...userDocuments, 
+                consultingContractGenerated: true,
+                contractSigned: true, // Marcăm automat și contractul de participare ca semnat
+                contractGenerated: true
+              };
+              break;
+            case 'consulting_contract_sign':
+              docsToUpdate = { 
+                ...userDocuments, 
+                consultingContractGenerated: true, 
+                consultingContractSigned: true,
+                contractSigned: true, // Marcăm automat și contractul de participare ca semnat
+                contractGenerated: true 
+              };
+              break;
+            case 'consulting_contract_complete':
+              docsToUpdate = { 
+                ...userDocuments, 
+                consultingContractComplete: true,
+                consultingContractGenerated: true,
+                consultingContractSigned: true,
+                contractSigned: true, // Marcăm automat și contractul de participare ca semnat
+                contractGenerated: true,
+                contractComplete: true
+              };
+              forceNextStep = 4; // Forțăm trecerea la pasul următor după consultanță
+              break;
+            case 'consulting_contract_reset':
+              docsToUpdate = { ...userDocuments, consultingContractGenerated: false, consultingContractSigned: false };
               break;
             default:
               console.warn(`Tip de pas necunoscut: ${stepType}`);
@@ -54,7 +82,17 @@ const ClientStepContent = ({ step, updateUserData, userDocuments }) => {
         }
         
         console.log('Documente actualizate:', docsToUpdate);
-        await updateUserData({ documents: docsToUpdate });
+        // Dacă avem un pas forțat, îl includem în actualizare
+        if (forceNextStep !== null) {
+          console.log(`Forțăm trecerea la pasul: ${forceNextStep}`);
+          console.log('Datele trimise pentru actualizare:', { documents: docsToUpdate, nextStep: forceNextStep });
+          const result = await updateUserData({ documents: docsToUpdate, nextStep: forceNextStep });
+          console.log('Rezultat actualizare cu pas forțat:', result);
+        } else {
+          console.log('Datele trimise pentru actualizare (fără pas forțat):', { documents: docsToUpdate });
+          const result = await updateUserData({ documents: docsToUpdate });
+          console.log('Rezultat actualizare normală:', result);
+        }
         console.log('Actualizare date utilizator reușită!');
       } catch (error) {
         console.error('Eroare la actualizarea datelor utilizatorului:', error);
@@ -64,13 +102,36 @@ const ClientStepContent = ({ step, updateUserData, userDocuments }) => {
     }
   };
 
+  // Log pentru debugging
+  useEffect(() => {
+    console.log('=== ClientStepContent ===');
+    console.log('Step curent:', step);
+    console.log('User Documents:', userDocuments);
+    console.log('UpdateUserData func:', !!updateUserData);
+
+    // Dacă suntem pe pasul Contract Consultanță dar Contract Participare nu e marcat ca finalizat
+    if (step === 3 && userDocuments && !userDocuments.contractSigned) {
+      console.log('Corecție automată: Suntem pe pasul Contract Consultanță dar Contract Participare nu e marcat ca semnat');
+      // Marcăm automat contractul de participare ca fiind semnat
+      handleStepComplete('contract_sign', {
+        ...userDocuments,
+        contractGenerated: true,
+        contractSigned: true
+      });
+      console.log('Corecție aplicată: Contract Participare marcat ca semnat');
+    }
+  }, [step, userDocuments, updateUserData]);
+
   switch (step) {
     case 1:
       return <ClientIDUploadStep onStepComplete={handleStepComplete} userDocuments={userDocuments} />;
     case 2:
       return <ClientContractStep onStepComplete={handleStepComplete} userDocuments={userDocuments} />;
     case 3:
-      return <ClientAppDownloadStep onStepComplete={handleStepComplete} userDocuments={userDocuments} />;
+      return <ClientConsultingContractStep onStepComplete={handleStepComplete} userDocuments={userDocuments} />;
+    case 4:
+      return <ClientConsultingContractStep onStepComplete={handleStepComplete} userDocuments={userDocuments} />;
+      // return <ClientAppDownloadStep onStepComplete={handleStepComplete} userDocuments={userDocuments} />;
     default:
       return <ClientIDUploadStep onStepComplete={handleStepComplete} userDocuments={userDocuments} />;
   }

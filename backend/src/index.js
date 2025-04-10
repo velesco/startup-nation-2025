@@ -39,6 +39,11 @@ app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 // Configurație pentru express-fileupload cu limite rezonabile
 app.use((req, res, next) => {
+  // Debug pentru rute de contract
+  if (req.originalUrl.includes('/api/contracts/') || req.originalUrl.includes('/contracts/')) {
+    console.log(`Processing contract route: ${req.originalUrl}, method: ${req.method}`);
+  }
+  
   // Excludem rutele pentru contracte de la middleware-ul fileUpload pentru a evita probleme cu body parser-ul
   if (req.originalUrl.includes('/api/contracts/') || req.originalUrl.includes('/contracts/')) {
     console.log(`Bypassing fileUpload middleware for contract route: ${req.originalUrl}`);

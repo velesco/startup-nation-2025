@@ -528,13 +528,36 @@ const ClientContractStep = ({ onStepComplete, userDocuments }) => {
                 </>
               )}
             </button>
+
+            <button
+              onClick={() => {
+                console.log('Buton "Continuă la Contract Consultanță" apăsat');
+                
+                // Adaugăm un timeout pentru a ne asigura că butonul are timp să își modifice starea vizuală
+                setTimeout(() => {
+                  console.log('Executăm onStepComplete pentru contract_complete');
+                  onStepComplete('contract_complete');
+                  console.log('onStepComplete executat, ar trebui să avanseze la pasul 3');
+                  
+                  // Forțăm un refresh al paginii dacă nu s-a trecut la pasul următor
+                  setTimeout(() => {
+                    // Salvare stare în localStorage pentru a forța pasul 3 la încărcare
+                    localStorage.setItem('forceNextStep', '3');
+                    window.location.reload();
+                  }, 1000);
+                }, 100);
+              }}
+              className="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 rounded-full font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center"
+            >
+              <span>Continuă la Contract Consultanță</span>
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </button>
           </div>
 
           <p className="text-center text-gray-600 mb-6">
             Felicitări pentru înscriere! <br/>
-            Procesul de înscriere pe aplicația ministerului va fi realizat de consultanți mai departe.  <br/>
-            Va vom contacta când vor începe cursurile.  <br/>
-            Zi frumoasă. <br/>
+            În următorul pas, vă rugăm să generați și contractul de consultanță.<br/>
+            Procesul de înscriere pe aplicația ministerului va fi realizat de consultanți mai departe. <br/>
           </p>
         </div>
       ) : (

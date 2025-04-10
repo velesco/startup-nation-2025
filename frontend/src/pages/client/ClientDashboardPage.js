@@ -89,20 +89,31 @@ const ClientDashboardPage = () => {
           const completedSteps = [
             documents.id_cardUploaded,
             documents.contractSigned,
+            documents.consultingContractSigned,
             documents.appDownloaded
           ].filter(Boolean).length;
           
-          const progress = Math.round((completedSteps / 3) * 100);
+          const progress = Math.round((completedSteps / 4) * 100);
           
           // Determinăm pasul curent în funcție de progres
           let currentStepValue = 1;
           
           if (documents.id_cardUploaded) {
-            currentStepValue = 2; // Pas contract
+            currentStepValue = 2; // Pas contract participare
             
             if (documents.contractSigned) {
-              currentStepValue = 3; // Pas instalare aplicație
+              currentStepValue = 3; // Pas contract consultanță
+              
+              if (documents.consultingContractSigned) {
+                currentStepValue = 4; // Pas instalare aplicație
+              }
             }
+          }
+          
+          // Dacă avem consultingContractSigned dar nu avem contractSigned (caz special), marcăm și contractSigned = true
+          if (documents.consultingContractSigned && !documents.contractSigned) {
+            console.log('Am detectat consultingContractSigned=true dar contractSigned=false. Corectăm...');
+            documents.contractSigned = true;
           }
           
           setCurrentStep(currentStepValue);
@@ -220,22 +231,49 @@ const ClientDashboardPage = () => {
             console.log('Documente noi:', newData.documents);
             const completedSteps = [
               newData.documents.id_cardUploaded,
+              newData.documents.contractSigned,
+              newData.documents.consultingContractSigned,
               newData.documents.appDownloaded
             ].filter(Boolean).length;
             
-            updatedUser.progress = Math.round((completedSteps / 3) * 100);
+            updatedUser.progress = Math.round((completedSteps / 4) * 100);
             console.log('Progres nou calculat:', updatedUser.progress);
             
-            // Determinăm pasul curent în funcție de progres
-            let nextStep = 1;
-            if (newData.documents.id_cardUploaded) {
-              nextStep = 2;
+            // Verificăm dacă avem un pas forțat transmis explicit
+            if (newData.nextStep !== undefined) {
+              console.log(`Utilizăm pasul forțat: ${newData.nextStep}`);
+              // Forțăm setarea pasului curent cu un timer pentru a evita problemele de sincronizare
+              setCurrentStep(newData.nextStep);
+              
+              // Forțăm din nou după un scurt delay pentru a ne asigura că se aplică
+              setTimeout(() => {
+                console.log(`Re-forțăm setarea pasului la: ${newData.nextStep}`);
+                setCurrentStep(newData.nextStep);
+              }, 300);
+            } else {
+              // Determinăm pasul curent în funcție de progres
+              let nextStep = 1;
+              if (newData.documents.id_cardUploaded) {
+                nextStep = 2;
+                if (newData.documents.contractSigned) {
+                  nextStep = 3;
+                  if (newData.documents.consultingContractSigned) {
+                    nextStep = 4;
+                  }
+                } else if (newData.documents.consultingContractSigned) {
+                  // Dacă avem consultingContractSigned dar nu avem contractSigned (caz special), 
+                  // marcăm contractSigned = true și setăm pasul la 3
+                  console.log('Am detectat consultingContractSigned=true dar contractSigned=false în actualizare. Corectăm...');
+                  newData.documents.contractSigned = true;
+                  nextStep = 3;
+                }
+              }
+              
+              console.log('Pas nou calculat:', nextStep);
+              
+              // Actualizăm pasul curent
+              setCurrentStep(nextStep);
             }
-            
-            console.log('Pas nou calculat:', nextStep);
-            
-            // Actualizăm pasul curent
-            setCurrentStep(nextStep);
           }
           
           console.log('Utilizator actualizat:', updatedUser);
@@ -305,6 +343,26 @@ const ClientDashboardPage = () => {
     const needsRefresh = localStorage.getItem('dashboardNeedsRefresh') === 'true';
     const forceRefresh = new URLSearchParams(window.location.search).get('refresh');
     
+    // Verificăm dacă trebuie să forțăm un anumit pas
+    const forceNextStep = localStorage.getItem('forceNextStep');
+    if (forceNextStep) {
+      console.log(`Avem pas forțat din localStorage: ${forceNextStep}`);
+      const stepNumber = parseInt(forceNextStep, 10);
+      if (!isNaN(stepNumber)) {
+        console.log(`Setăm pasul forțat: ${stepNumber}`);
+        setCurrentStep(stepNumber);
+        
+        // Setăm un timer pentru a ne asigura că se aplică după ce datele sunt încărcate
+        setTimeout(() => {
+          console.log(`Re-aplicare pas forțat: ${stepNumber}`);
+          setCurrentStep(stepNumber);
+          
+          // Șterge valoarea din localStorage
+          localStorage.removeItem('forceNextStep');
+        }, 500);
+      }
+    }
+    
     if (needsRefresh && !forceRefresh) {
       // Setăm flag-ul în localStorage
       localStorage.removeItem('dashboardNeedsRefresh');
@@ -342,6 +400,30 @@ const ClientDashboardPage = () => {
 
   // Funcție pentru a gestiona click-ul pe pași și a face scroll
   const handleStepClick = useCallback((step) => {
+    console.log(`Click pe pasul ${step}`);
+    
+    // Dacă utilizatorul încearcă să meargă la un pas avansat, verificăm dacă pașii anteriori sunt completați
+    if (step > 1 && user?.documents) {
+      if (step > 1 && !user.documents.id_cardUploaded) {
+        console.warn('Nu poți merge la pasul următor înainte de a finaliza buletinul');
+        setCurrentStep(1); // Rămânem la pasul 1
+        return;
+      }
+      
+      if (step > 2 && !user.documents.contractSigned) {
+        // Dacă mergem la Contract Consultanță dar contractul de participare nu e semnat,
+        // marcăm manual contractul de participare ca semnat
+        console.log('Marcăm contractul de participare ca semnat pentru a permite navigarea');
+        const updatedDocs = { 
+          ...user.documents,
+          contractSigned: true,
+          contractGenerated: true
+        };
+        updateUserData({ documents: updatedDocs });
+      }
+    }
+    
+    // Setăm pasul current
     setCurrentStep(step);
     
     // Dacă suntem pe mobil și tab-ul nu este 'steps', mai întâi schimbăm la tab-ul steps
@@ -355,7 +437,7 @@ const ClientDashboardPage = () => {
       // Altfel, doar facem scroll
       scrollToStepsContent();
     }
-  }, [isMobile, activeTab, scrollToStepsContent]);
+  }, [isMobile, activeTab, scrollToStepsContent, user, updateUserData]);
   
   // Funcție pentru obținerea iconiței în funcție de tipul notificării
   const getNotificationIcon = (type) => {
@@ -381,7 +463,8 @@ const ClientDashboardPage = () => {
   const steps = user ? [
     { id: 1, name: "Încărcare Buletin", icon: "document", completed: user.documents?.id_cardUploaded },
     { id: 2, name: "Contract Participare", icon: "document", completed: user.documents?.contractSigned },
-    // { id: 3, name: "Instalare Aplicație", icon: "check", completed: user.documents?.appDownloaded }
+    { id: 3, name: "Contract Consultanță", icon: "document", completed: user.documents?.consultingContractSigned },
+    // { id: 4, name: "Instalare Aplicație", icon: "check", completed: user.documents?.appDownloaded }
   ] : [];
 
   const handleLogout = async () => {

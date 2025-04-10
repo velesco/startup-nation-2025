@@ -7,6 +7,14 @@ const User = require('../models/User');
 const logger = require('../utils/logger');
 const nodemailer = require('nodemailer');
 
+// Import consulting controller functions directly
+const consulting = require('./contract.controller.consulting');
+
+// Export consulting contract functions directly
+exports.generateConsultingContract = consulting.generateConsultingContract;
+exports.downloadConsultingContract = consulting.downloadConsultingContract;
+exports.resetConsultingContract = consulting.resetConsultingContract;
+
 // Funcție pentru înlocuirea diacriticelor cu caracterele fără diacritice
 const removeDiacritics = (str) => {
   if (!str) return str;
@@ -266,7 +274,23 @@ exports.generateContract = async (req, res, next) => {
   } catch (error) {
     console.error('Eroare la generarea contractului:', error);
     logger.error(`Contract generation error: ${error.message}`);
-    next(error);
+    logger.error(`Request URL: ${error.config?.url || req.originalUrl}`);
+    logger.error(`Request Method: ${error.config?.method?.toUpperCase() || req.method}`);
+    logger.error(`Request IP: ${req.ip || req.connection.remoteAddress}`);
+    
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      logger.error(`Response status: ${error.response.status}`);
+      logger.error(`Response headers: ${JSON.stringify(error.response.headers)}`);
+      logger.error(`Response data: ${JSON.stringify(error.response.data)}`);
+    }
+    
+    return res.status(500).json({
+      success: false,
+      message: 'A apărut o eroare la generarea contractului. Vă rugăm să încercați din nou.',
+      error: error.message
+    });
   }
 };
 
