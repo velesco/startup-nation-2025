@@ -238,6 +238,69 @@ const generateConsultingContract = async (req, res, next) => {
       user.documents.contractGenerated = true; // Mark the participation contract as generated
       await user.save();
       
+      // Trimitem un email cu contractul PDF
+      try {
+        const config = {
+          host: process.env.SMTP_HOST || 'smtp.gmail.com',
+          port: parseInt(process.env.SMTP_PORT || '587', 10),
+          secure: process.env.SMTP_SECURE === 'true',
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+          }
+        };
+        
+        const transporter = nodemailer.createTransport(config);
+        const fileContent = fs.readFileSync(pdfPath);
+        let displayName = user.idCard?.fullName || user.name || userId;
+        
+        const displayNameSanitized = displayName
+          .replace(/[ăâ]/g, 'a')
+          .replace(/[î]/g, 'i')
+          .replace(/[șş]/g, 's')
+          .replace(/[țţ]/g, 't')
+          .replace(/[ĂÂ]/g, 'A')
+          .replace(/[Î]/g, 'I')
+          .replace(/[ȘŞ]/g, 'S')
+          .replace(/[ȚŢ]/g, 'T')
+          .replace(/\s+/g, '_');
+          
+        const mailOptions = {
+          from: process.env.EMAIL_FROM || `\"Start-Up Nation 2025\" <${config.auth.user}>`,
+          to: [user.email, 'contact@aplica-startup.ro'],
+          subject: 'Contract de Consultanță Start-Up Nation 2025',
+          text: `Bună ziua, ${user.name || 'utilizator Start-Up Nation'},\n\nAtașat veți găsi contractul de consultanță generat pentru programul Start-Up Nation 2025.\n\nCu stimă,\nEchipa Start-Up Nation 2025`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background: linear-gradient(to right, #4F46E5, #7C3AED); padding: 20px; text-align: center; color: white;">
+                <h2>Start-Up Nation 2025</h2>
+              </div>
+              <div style="padding: 20px; border: 1px solid #e5e7eb; border-top: none;">
+                <p>Bună ziua, <strong>${user.name || 'utilizator Start-Up Nation'}</strong>,</p>
+                <p>Atașat veți găsi contractul de consultanță generat pentru programul Start-Up Nation 2025.</p>
+                <p>Pentru orice întrebări suplimentare, nu ezitați să ne contactați.</p>
+                <p style="margin-top: 30px;">Cu stimă,<br>Echipa Start-Up Nation 2025</p>
+              </div>
+              <div style="background-color: #f3f4f6; padding: 15px; text-align: center; font-size: 12px; color: #6b7280;">
+                <p>&copy; 2025 Start-Up Nation. Toate drepturile rezervate.</p>
+              </div>
+            </div>
+          `,
+          attachments: [{
+            filename: `contract_consultanta_${displayNameSanitized}.pdf`,
+            content: fileContent,
+            contentType: 'application/pdf'
+          }]
+        };
+        
+        // Trimitem email-ul
+        const info = await transporter.sendMail(mailOptions);
+        logger.info(`Contract de consultanță trimis prin email la ${user.email} și contact@aplica-startup.ro: ${info.messageId}`);
+      } catch (emailError) {
+        // Nu blocăm procesul dacă trimiterea email-ului eșuează
+        logger.error(`Eroare la trimiterea email-ului cu contractul de consultanță: ${emailError.message}`);
+      }
+      
       // Return success JSON response
       return res.status(200).json({
         success: true,
@@ -250,6 +313,69 @@ const generateConsultingContract = async (req, res, next) => {
     }
     
     // If we got here, conversion to PDF failed, so send DOCX path in JSON
+    
+    // Trimitere email cu contractul în format DOCX
+    try {
+      const config = {
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.SMTP_PORT || '587', 10),
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS
+        }
+      };
+      
+      const transporter = nodemailer.createTransport(config);
+      const fileContent = fs.readFileSync(docxPath);
+      let displayName = user.idCard?.fullName || user.name || userId;
+      
+      const displayNameSanitized = displayName
+        .replace(/[ăâ]/g, 'a')
+        .replace(/[î]/g, 'i')
+        .replace(/[șş]/g, 's')
+        .replace(/[țţ]/g, 't')
+        .replace(/[ĂÂ]/g, 'A')
+        .replace(/[Î]/g, 'I')
+        .replace(/[ȘŞ]/g, 'S')
+        .replace(/[ȚŢ]/g, 'T')
+        .replace(/\s+/g, '_');
+        
+      const mailOptions = {
+        from: process.env.EMAIL_FROM || `\"Start-Up Nation 2025\" <${config.auth.user}>`,
+        to: [user.email, 'contact@aplica-startup.ro'],
+        subject: 'Contract de Consultanță Start-Up Nation 2025',
+        text: `Bună ziua, ${user.name || 'utilizator Start-Up Nation'},\n\nAtașat veți găsi contractul de consultanță generat pentru programul Start-Up Nation 2025.\n\nCu stimă,\nEchipa Start-Up Nation 2025`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(to right, #4F46E5, #7C3AED); padding: 20px; text-align: center; color: white;">
+              <h2>Start-Up Nation 2025</h2>
+            </div>
+            <div style="padding: 20px; border: 1px solid #e5e7eb; border-top: none;">
+              <p>Bună ziua, <strong>${user.name || 'utilizator Start-Up Nation'}</strong>,</p>
+              <p>Atașat veți găsi contractul de consultanță generat pentru programul Start-Up Nation 2025.</p>
+              <p>Pentru orice întrebări suplimentare, nu ezitați să ne contactați.</p>
+              <p style="margin-top: 30px;">Cu stimă,<br>Echipa Start-Up Nation 2025</p>
+            </div>
+            <div style="background-color: #f3f4f6; padding: 15px; text-align: center; font-size: 12px; color: #6b7280;">
+              <p>&copy; 2025 Start-Up Nation. Toate drepturile rezervate.</p>
+            </div>
+          </div>
+        `,
+        attachments: [{
+          filename: `contract_consultanta_${displayNameSanitized}.docx`,
+          content: fileContent,
+          contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        }]
+      };
+      
+      // Trimitem email-ul
+      const info = await transporter.sendMail(mailOptions);
+      logger.info(`Contract de consultanță în format DOCX trimis prin email la ${user.email} și contact@aplica-startup.ro: ${info.messageId}`);
+    } catch (emailError) {
+      // Nu blocăm procesul dacă trimiterea email-ului eșuează
+      logger.error(`Eroare la trimiterea email-ului cu contractul de consultanță în format DOCX: ${emailError.message}`);
+    }
     return res.status(200).json({
       success: true,
       message: 'Contractul de consultanță a fost generat cu succes (formatat docx)',

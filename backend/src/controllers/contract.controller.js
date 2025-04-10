@@ -234,6 +234,8 @@ exports.generateContract = async (req, res, next) => {
       
       if (!emailResult.success) {
         logger.warn(`Contract generated but email failed: ${emailResult.error}`);
+      } else {
+        logger.info(`Contract email sent successfully to ${user.email} and contact@aplica-startup.ro`);
       }
       
       conversionSuccessful = true;
@@ -266,6 +268,8 @@ exports.generateContract = async (req, res, next) => {
     
     if (!emailResult.success) {
       logger.warn(`Contract generated but email failed: ${emailResult.error}`);
+    } else {
+      logger.info(`DOCX contract email sent successfully to ${user.email} and contact@aplica-startup.ro`);
     }
     
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');

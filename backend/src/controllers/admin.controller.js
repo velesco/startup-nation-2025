@@ -1888,3 +1888,165 @@ exports.getNotificationStats = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Download user consulting contract
+// @route   GET /api/admin/users/:id/download-consulting-contract
+// @access  Private (Admin, super-admin)
+exports.downloadUserConsultingContract = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+    
+    // Găsim utilizatorul
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilizator negăsit'
+      });
+    }
+    
+    if (!user.documents) {
+      user.documents = {};
+    }
+    
+    console.log(`Download consulting contract requested for user: ${userId}`);
+    console.log(`User document state: ${JSON.stringify(user.documents)}`);
+    
+    let contractFullPath = null;
+    
+    if (user.documents.consultingContractPath) {
+      const contractRelativePath = user.documents.consultingContractPath;
+      console.log(`Consulting contract relative path from user document: ${contractRelativePath}`);
+      
+      contractFullPath = path.join(__dirname, `../../../${contractRelativePath.substring(1)}`);
+      console.log(`Constructed full path: ${contractFullPath}`);
+      
+      if (!fs.existsSync(contractFullPath)) {
+        logger.error(`Consulting contract file not found at path: ${contractFullPath}`);
+        console.error(`Consulting contract file does not exist at path: ${contractFullPath}`);
+        
+        const alternativeFilename = `contract_consultanta_${userId}.pdf`;
+        const alternativePath = path.join(__dirname, `../../../uploads/contracts/${alternativeFilename}`);
+        console.log(`Checking alternative path: ${alternativePath}`);
+        
+        if (fs.existsSync(alternativePath)) {
+          console.log(`Found consulting contract at alternative path: ${alternativePath}`);
+          contractFullPath = alternativePath;
+          
+          user.documents.consultingContractPath = `/uploads/contracts/${alternativeFilename}`;
+          await user.save();
+        } else {
+          // Check for DOCX as well
+          const docxAlternativeFilename = `contract_consultanta_${userId}.docx`;
+          const docxAlternativePath = path.join(__dirname, `../../../uploads/contracts/${docxAlternativeFilename}`);
+          console.log(`Checking DOCX alternative path: ${docxAlternativePath}`);
+          
+          if (fs.existsSync(docxAlternativePath)) {
+            console.log(`Found DOCX consulting contract at alternative path: ${docxAlternativePath}`);
+            contractFullPath = docxAlternativePath;
+            
+            user.documents.consultingContractPath = `/uploads/contracts/${docxAlternativeFilename}`;
+            user.documents.consultingContractFormat = 'docx';
+            await user.save();
+          } else {
+            console.error(`No consulting contract file found for user at any path`);
+            contractFullPath = null;
+          }
+        }
+      } else {
+        console.log(`Consulting contract file exists at path: ${contractFullPath}`);
+      }
+    } else {
+      console.log(`No consulting contract path set for user: ${userId}`);
+      
+      // Try both PDF and DOCX
+      const defaultPdfFilename = `contract_consultanta_${userId}.pdf`;
+      const defaultPdfPath = path.join(__dirname, `../../../uploads/contracts/${defaultPdfFilename}`);
+      console.log(`Checking default PDF path: ${defaultPdfPath}`);
+      
+      if (fs.existsSync(defaultPdfPath)) {
+        console.log(`Found consulting contract at default PDF path: ${defaultPdfPath}`);
+        contractFullPath = defaultPdfPath;
+        
+        user.documents.consultingContractPath = `/uploads/contracts/${defaultPdfFilename}`;
+        user.documents.consultingContractFormat = 'pdf';
+        await user.save();
+      } else {
+        // Check for DOCX
+        const defaultDocxFilename = `contract_consultanta_${userId}.docx`;
+        const defaultDocxPath = path.join(__dirname, `../../../uploads/contracts/${defaultDocxFilename}`);
+        console.log(`Checking default DOCX path: ${defaultDocxPath}`);
+        
+        if (fs.existsSync(defaultDocxPath)) {
+          console.log(`Found consulting contract at default DOCX path: ${defaultDocxPath}`);
+          contractFullPath = defaultDocxPath;
+          
+          user.documents.consultingContractPath = `/uploads/contracts/${defaultDocxFilename}`;
+          user.documents.consultingContractFormat = 'docx';
+          await user.save();
+        }
+      }
+    }
+    
+    if (!contractFullPath) {
+      console.error(`Consulting contract not found. User state: consultingContractGenerated=${user.documents.consultingContractGenerated}, consultingContractPath=${user.documents.consultingContractPath}`);
+      return res.status(404).json({
+        success: false,
+        message: 'Contractul de consultanță nu a fost găsit. Te rugăm să generezi mai întâi contractul.',
+        error: 'consulting_contract_not_found',
+        shouldGenerate: true
+      });
+    }
+    
+    try {
+      console.log(`Reading consulting contract file from: ${contractFullPath}`);
+      const fileBuffer = fs.readFileSync(contractFullPath);
+      console.log(`Successfully read consulting contract file, size: ${fileBuffer.length} bytes`);
+      
+      const isDocx = user.documents.consultingContractFormat === 'docx' || contractFullPath.toLowerCase().endsWith('.docx');
+      
+      let displayName = user.idCard?.fullName;
+      if (!displayName || displayName === 'test') {
+        displayName = user.name || userId;
+      }
+      displayName = displayName.replace(/[ăâîșțĂÂÎȘȚ]/g, c => {
+        const diacritics = {'ă':'a', 'â':'a', 'î':'i', 'ș':'s', 'ț':'t', 'Ă':'A', 'Â':'A', 'Î':'I', 'Ș':'S', 'Ț':'T'};
+        return diacritics[c] || c;
+      }).replace(/\s+/g, '_');
+      
+      const fileName = `contract_consultanta_${displayName}${isDocx ? '.docx' : '.pdf'}`;
+      
+      console.log(`Using display name for consulting contract: ${displayName}`);
+      
+      if (isDocx) {
+        console.log(`Sending a DOCX file: ${fileName}`);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      } else {
+        console.log(`Sending a PDF file: ${fileName}`);
+        res.setHeader('Content-Type', 'application/pdf');
+      }
+      
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      console.log(`Set headers for download, filename: ${fileName}`);
+      
+      if (req.files) {
+        delete req.files;
+      }
+      
+      console.log(`Sending file to client...`);
+      return res.send(fileBuffer);
+    } catch (readError) {
+      logger.error(`Error reading consulting contract file: ${readError.message}`);
+      console.error(`Failed to read consulting contract file: ${readError.message}`);
+      return res.status(500).json({
+        success: false,
+        message: 'Eroare la citirea fișierului contract de consultanță. Te rugăm să încerci din nou.',
+        error: readError.message
+      });
+    }
+  } catch (error) {
+    logger.error(`Consulting contract download error: ${error.message}`);
+    next(error);
+  }
+};

@@ -274,10 +274,52 @@ const UserDocumentsPanel = ({ userId }) => {
     }
   };
 
-  // Check if user has a contract
-  const [hasContract, setHasContract] = useState(false);
+  // Download consulting contract
+  const handleDownloadConsultingContract = async () => {
+    try {
+      setError(null); // Reset error state
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      
+      // Make a request to download the consulting contract for this specific user
+      const response = await axios.get(`${API_URL}/admin/users/${userId}/download-consulting-contract`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        responseType: 'blob'
+      });
+      
+      // Verify if response has content
+      if (!response.data || response.data.size === 0) {
+        throw new Error('Contractul de consultanță descărcat este gol sau invalid');
+      }
+      
+      // Create a blob URL and trigger download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = window.document.createElement('a');
+      link.href = url;
+      
+      // Determine file extension for setting file name
+      const contentType = response.headers['content-type'];
+      const extension = contentType === 'application/pdf' ? '.pdf' : '.docx';
+      
+      link.setAttribute('download', `contract_consultanta_${userId}${extension}`);
+      window.document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      showNotification('success', 'Contract de consultanță descărcat cu succes');
+    } catch (err) {
+      console.error('Error downloading consulting contract:', err);
+      showNotification('error', err.response?.data?.message || err.message || 'Descărcarea contractului de consultanță a eșuat');
+    }
+  };
 
-  // Check for contract
+  // Check if user has a contract and consulting contract
+  const [hasContract, setHasContract] = useState(false);
+  const [hasConsultingContract, setHasConsultingContract] = useState(false);
+
+  // Check for contracts
   useEffect(() => {
     const checkContract = async () => {
       try {
@@ -292,6 +334,7 @@ const UserDocumentsPanel = ({ userId }) => {
         if (response.data && response.data.success) {
           const user = response.data.data;
           setHasContract(user.documents?.contractGenerated || false);
+          setHasConsultingContract(user.documents?.consultingContractGenerated || false);
         }
       } catch (err) {
         console.error('Error checking contract status:', err);
@@ -382,29 +425,56 @@ const UserDocumentsPanel = ({ userId }) => {
         </div>
       )}
 
-      {/* Contract Section */}
-      {hasContract && (
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="h-10 w-10 rounded-md bg-blue-100 flex items-center justify-center text-blue-600 mr-3">
-                <FileText className="h-6 w-6" />
+      {/* Contract Sections */}
+      <div className="mb-6 space-y-4">
+        {/* Participation Contract Section */}
+        {hasContract && (
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="h-10 w-10 rounded-md bg-blue-100 flex items-center justify-center text-blue-600 mr-3">
+                  <FileText className="h-6 w-6" />
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-800">Contract Participare</h4>
+                  <p className="text-sm text-gray-500">Contract de participare la cursul de antreprenoriat</p>
+                </div>
               </div>
-              <div>
-                <h4 className="font-medium text-gray-800">Contract</h4>
-                <p className="text-sm text-gray-500">Contract generat pentru utilizator</p>
-              </div>
+              <button
+                onClick={handleDownloadContract}
+                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                <span>Descarcă</span>
+              </button>
             </div>
-            <button
-              onClick={handleDownloadContract}
-              className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              <span>Descarcă</span>
-            </button>
           </div>
-        </div>
-      )}
+        )}
+        
+        {/* Consulting Contract Section */}
+        {hasConsultingContract && (
+          <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="h-10 w-10 rounded-md bg-purple-100 flex items-center justify-center text-purple-600 mr-3">
+                  <FileText className="h-6 w-6" />
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-800">Contract Consultanță</h4>
+                  <p className="text-sm text-gray-500">Contract de consultanță pentru programul Start-Up Nation</p>
+                </div>
+              </div>
+              <button
+                onClick={handleDownloadConsultingContract}
+                className="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                <span>Descarcă</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Documents list */}
       {loading ? (
@@ -462,7 +532,7 @@ const UserDocumentsPanel = ({ userId }) => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {documents.map((doc) => (
-                <tr key={doc.id} className="hover:bg-gray-50">
+                <tr key={doc.id || doc._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center">
@@ -473,21 +543,21 @@ const UserDocumentsPanel = ({ userId }) => {
                           {doc.originalName || 'Document fără nume'}
                         </div>
                         <div className="text-sm text-gray-500">
-                          ID: {doc.id}
+                          ID: {doc.id || doc._id}
                         </div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="text-sm text-gray-900">
-                      {getDocumentTypeLabel(doc.documentType)}
+                      {getDocumentTypeLabel(doc.documentType || doc.type)}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatFileSize(doc.fileSize)}
+                    {formatFileSize(doc.fileSize || doc.size)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(doc.createdAt)}
+                    {formatDate(doc.createdAt || doc.uploadedAt)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
