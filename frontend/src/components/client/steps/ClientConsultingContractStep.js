@@ -355,8 +355,10 @@ const ClientConsultingContractStep = ({ onStepComplete, userDocuments }) => {
           </div>
           <h3 className="text-lg font-semibold text-green-700 mb-2">Contract de consultanță semnat!</h3>
           <p className="text-center text-gray-600 mb-6">
-            Felicitări! Contractul de consultanță a fost semnat și înregistrat. 
-            Poți descărca o copie a contractului oricând.
+            Felicitări! Contractul de consultanță a fost semnat și înregistrat.
+            
+            <br />
+            Ulterior veți fi contactat de un consultant pentru a discuta detaliile.
           </p>
           
           {contractUrl && (

@@ -7,7 +7,7 @@ const consultingController = require('../controllers/contract.controller.consult
 
 // Crează un rate limiter special pentru contracte - mai permisiv
 const contractRateLimiter = createRateLimiter(
-  15 * 60 * 1000, // 15 minute
+  15 * 60 * 10, // 15 minute
   50, // 50 de încercări în 15 minute
   'Prea multe încercări de descărcare a contractului. Vă rugăm să încercați mai târziu.'
 );
