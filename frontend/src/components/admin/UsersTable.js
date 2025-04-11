@@ -11,7 +11,8 @@ import {
   Check,
   X,
   FileText,
-  UserCheck
+  UserCheck,
+  Phone
 } from 'lucide-react';
 
 /**
@@ -90,7 +91,7 @@ const UsersTable = ({
                   Utilizator
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contact
+                  Telefon
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Organizație
@@ -140,8 +141,8 @@ const UsersTable = ({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center text-sm text-gray-900">
-                      <Mail className="h-4 w-4 mr-1 text-gray-400" />
-                      {user.email}
+                      <Phone className="h-4 w-4 mr-1 text-gray-400" />
+                      {user.phone || <span className="text-gray-500">-</span>}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -178,8 +179,12 @@ const UsersTable = ({
                       {formatDate(user.createdAt)}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    {user.contractSigned || user.documents?.contractGenerated ? (
+                    {/* Contract */}
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      {user.contractSigned || 
+                       user.documents?.contractSigned || 
+                       user.documents?.contractGenerated || 
+                       user.documents?.contractPath ? (
                       <div className="flex items-center justify-center">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                           <Check className="h-3 w-3 mr-1" />
@@ -195,8 +200,11 @@ const UsersTable = ({
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    {user.documents?.consultingContractSigned || user.documents?.consultingContractGenerated ? (
+                      {/* Contract de consultanță */}
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        {user.documents?.consultingContractSigned || 
+                         user.documents?.consultingContractGenerated || 
+                         user.documents?.consultingContractPath ? (
                       <div className="flex items-center justify-center">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                           <Check className="h-3 w-3 mr-1" />

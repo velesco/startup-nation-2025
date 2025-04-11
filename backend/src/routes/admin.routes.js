@@ -2,33 +2,34 @@ const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middlewares/auth');
 const upload = require('../middlewares/upload');
+
+// Importăm controllere separate 
+const { getDashboardStats, getUsersStatistics, getClientStatistics } = require('../controllers/stats.controller');
+const { getUsers, getUserById, updateUser, addUser, generateUserToken, sendUserDataToExternalAPI } = require('../controllers/users.controller');
+const { 
+  getClientDocuments, uploadClientDocument, 
+  getUserDocuments, uploadUserDocument,
+  downloadDocument, deleteDocument, 
+  downloadUserContract, downloadUserConsultingContract,
+  updateDocumentFlags
+} = require('../controllers/documents.controller');
+const { 
+  updateAllContracts,
+  getContractInfo
+} = require('../controllers/contracts.controller');
 const {
-  getDashboardStats,
   getClients,
   getGroups,
-  getUsers,
-  getUserById,
-  updateUser,
-  addUser,
   addClient,
   addGroup,
   getClientById,
   updateClient,
   addClientNote,
-  assignClientToGroup,
-  getClientStatistics,
-  getClientDocuments,
-  uploadClientDocument,
-  getUserDocuments,
-  uploadUserDocument,
-  downloadDocument,
-  deleteDocument,
-  generateUserToken,
-  downloadUserContract,
-  downloadUserConsultingContract,
-  sendUserDataToExternalAPI,
-  updateDocumentFlags,
-  // Notification controllers
+  assignClientToGroup
+} = require('../controllers/admin.controller');
+
+// Notification controllers
+const {
   getNotifications,
   deleteNotification,
   createSystemNotification,
@@ -41,6 +42,9 @@ router.use(protect);
 
 // Dashboard routes
 router.get('/dashboard', authorize('admin', 'partner'), getDashboardStats);
+
+// User statistics route
+router.get('/users/statistics', authorize('admin', 'super-admin'), getUsersStatistics);
 
 // Client routes
 router.route('/clients')
@@ -89,6 +93,12 @@ router.post('/users/:id/send-data', authorize('admin', 'super-admin'), sendUserD
 
 // Update document flags for all users and clients
 router.post('/update-document-flags', authorize('admin', 'super-admin'), updateDocumentFlags);
+
+// Update contract status for all users
+router.post('/update-contracts', authorize('admin', 'super-admin'), updateAllContracts);
+
+// Get contract info for a user
+router.get('/users/:id/contract-info', authorize('admin', 'super-admin'), getContractInfo);
 
 // User Document routes
 router.route('/users/:id/documents')

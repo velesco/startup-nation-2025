@@ -4,6 +4,9 @@ const DeviceToken = require('../models/DeviceToken');
 const logger = require('../utils/logger');
 const fs = require('fs');
 
+// Import serviciul de push notifications
+const pushNotificationService = require('../services/pushNotification.service');
+
 // @desc    Get all notifications for user
 // @route   GET /api/notifications
 // @access  Private
@@ -138,6 +141,34 @@ exports.createNotification = async (req, res, next) => {
       actionLink,
       expiresAt
     });
+    
+    // Trimite push notification către dispozitivele utilizatorului (async)
+    try {
+      // Crearea unei notificări push nu trebuie să blocheze răspunsul API-ului
+      // așa că nu folosim await aici pentru a nu întârzia răspunsul
+      pushNotificationService.sendPushToUser(
+        recipient,
+        title,
+        message,
+        {
+          notificationId: notification._id.toString(),
+          type: type || 'info',
+          actionLink,
+          relatedTo
+        }
+      ).then(result => {
+        if (result.success) {
+          logger.info(`Push notification sent to user ${recipient} for notification ${notification._id}`);
+        } else {
+          logger.warn(`Failed to send push notification to user ${recipient}: ${result.error || 'Unknown error'}`);
+        }
+      }).catch(err => {
+        logger.error(`Error in push notification: ${err.message}`);
+      });
+    } catch (pushError) {
+      // Logăm erorile de push notification, dar nu întrerupem fluxul
+      logger.error(`Failed to send push notification: ${pushError.message}`);
+    }
     
     res.status(201).json({
       success: true,
@@ -277,6 +308,34 @@ exports.createBatchNotifications = async (req, res, next) => {
       })
     );
     
+    // Trimite push notifications pentru toți destinatarii (async)
+    try {
+      // Pentru fiecare destinatar, trimitem un push notification
+      recipients.forEach((recipient, index) => {
+        const notification = notifications[index];
+        
+        pushNotificationService.sendPushToUser(
+          recipient,
+          title,
+          message,
+          {
+            notificationId: notification._id.toString(),
+            type: type || 'info',
+            actionLink,
+            relatedTo
+          }
+        ).then(result => {
+          if (!result.success) {
+            logger.warn(`Failed to send push notification to user ${recipient}: ${result.error || 'Unknown error'}`);
+          }
+        }).catch(err => {
+          logger.error(`Error in push notification to ${recipient}: ${err.message}`);
+        });
+      });
+    } catch (pushError) {
+      logger.error(`Failed to send batch push notifications: ${pushError.message}`);
+    }
+    
     res.status(201).json({
       success: true,
       count: notifications.length,
@@ -328,6 +387,30 @@ exports.createRoleNotifications = async (req, res, next) => {
     });
     
     const notifications = await Promise.all(notificationPromises);
+    
+    // Trimite push notification către toți utilizatorii cu rolul specificat (async)
+    try {
+      pushNotificationService.sendPushToRole(
+        role,
+        title,
+        message,
+        {
+          type: type || 'info',
+          actionLink,
+          relatedTo
+        }
+      ).then(result => {
+        if (result.success) {
+          logger.info(`Push notifications sent to users with role ${role}, stats: ${JSON.stringify(result.stats)}`);
+        } else {
+          logger.warn(`Failed to send push notifications to role ${role}: ${result.error || 'Unknown error'}`);
+        }
+      }).catch(err => {
+        logger.error(`Error in push notification to role ${role}: ${err.message}`);
+      });
+    } catch (pushError) {
+      logger.error(`Failed to send role-based push notifications: ${pushError.message}`);
+    }
     
     res.status(201).json({
       success: true,
@@ -415,6 +498,61 @@ exports.registerDevice = async (req, res, next) => {
     });
   } catch (error) {
     logger.error(`Error registering device: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc    Test push notification
+// @route   POST /api/notifications/test-push
+// @access  Private
+exports.testPushNotification = async (req, res, next) => {
+  try {
+    const { title, message, data } = req.body;
+    
+    // Check if required fields are provided
+    if (!title || !message) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide title and message for test notification'
+      });
+    }
+    
+    // Get user's push tokens
+    const devices = await DeviceToken.find({
+      userId: req.user.id,
+      isActive: true
+    });
+    
+    if (!devices || devices.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No active devices found for testing. Please register your device first.'
+      });
+    }
+    
+    // Send test notification to user's devices
+    const result = await pushNotificationService.sendPushToUser(
+      req.user.id,
+      title || 'Test Notification',
+      message || 'This is a test notification from Startup Nation 2025',
+      data || { type: 'test' }
+    );
+    
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send test push notification',
+        error: result.error
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Test push notification sent successfully',
+      stats: result.stats
+    });
+  } catch (error) {
+    logger.error(`Error sending test push notification: ${error.message}`);
     next(error);
   }
 };

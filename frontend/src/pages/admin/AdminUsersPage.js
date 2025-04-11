@@ -10,7 +10,10 @@ import UsersTable from '../../components/admin/UsersTable';
 import UsersFilter from '../../components/admin/UsersFilter';
 import UsersFilterModal from '../../components/admin/UsersFilterModal';
 import UpdateDocumentFlagsButton from '../../components/admin/UpdateDocumentFlagsButton';
+import UpdateContractsButton from '../../components/admin/UpdateContractsButton';
+import UserStatistics from '../../components/admin/UserStatistics';
 import useUsersData from '../../hooks/useUsersData';
+import useUserStatistics from '../../hooks/useUserStatistics';
 
 const AdminUsersPage = () => {
   const { currentUser, isAuthenticated } = useAuth();
@@ -22,11 +25,11 @@ const AdminUsersPage = () => {
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
-  // Utilizăm hook-ul pentru date
+  // Utilizăm hook-ul pentru date utilizatori
   const {
-    loading,
+    loading: loadingUsers,
     users,
-    error,
+    error: usersError,
     page, 
     setPage,
     limit,
@@ -43,6 +46,14 @@ const AdminUsersPage = () => {
     fetchUsers,
     resetFilters
   } = useUsersData();
+
+  // Utilizăm hook-ul pentru statistici utilizatori
+  const {
+    loading: loadingStats,
+    stats,
+    error: statsError,
+    refreshStatistics
+  } = useUserStatistics();
 
   // Verificăm dacă utilizatorul este autentificat și are rolul potrivit
   useEffect(() => {
@@ -67,8 +78,9 @@ const AdminUsersPage = () => {
   };
 
   const handleAddUser = (userData) => {
-    // După adăugarea utilizatorului, reîmprospătăm lista
+    // După adăugarea utilizatorului, reîmprospătăm lista și statisticile
     fetchUsers();
+    refreshStatistics();
     setIsAddModalOpen(false);
   };
 
@@ -77,7 +89,8 @@ const AdminUsersPage = () => {
     setIsEmailModalOpen(true);
   };
 
-  if (loading && users.length === 0) {
+  // Afișăm ecranul de încărcare doar dacă ambele date sunt în curs de încărcare și nu avem date
+  if ((loadingUsers && users.length === 0) || (loadingStats && !stats)) {
     return <LoadingScreen />;
   }
 
@@ -97,7 +110,11 @@ const AdminUsersPage = () => {
           )}
         </div>
 
-        {error && (
+        {/* Afișează statisticile utilizatorilor */}
+        {stats && <UserStatistics stats={stats} />}
+
+        {/* Afișăm erori dacă există */}
+        {(usersError || statsError) && (
           <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
             <div className="flex">
               <div className="flex-shrink-0">
@@ -106,7 +123,7 @@ const AdminUsersPage = () => {
                 </svg>
               </div>
               <div className="ml-3">
-                <p className="text-sm text-red-700">{error}</p>
+                <p className="text-sm text-red-700">{usersError || statsError}</p>
               </div>
             </div>
           </div>
@@ -127,10 +144,11 @@ const AdminUsersPage = () => {
           onOpenFilterModal={() => setIsFilterModalOpen(true)}
         />
         
-        {/* Buton pentru actualizarea flag-urilor de documente */}
+        {/* Butoane pentru actualizare documente și contracte */}
         {currentUser && (currentUser.role === 'super-admin' || currentUser.role === 'admin') && (
-          <div className="flex justify-end mb-4">
-            <UpdateDocumentFlagsButton />
+          <div className="flex justify-end mb-4 space-x-4">
+            <UpdateDocumentFlagsButton onSuccess={refreshStatistics} />
+            <UpdateContractsButton onSuccess={refreshStatistics} />
           </div>
         )}
 

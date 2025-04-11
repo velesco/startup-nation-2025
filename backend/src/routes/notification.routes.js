@@ -12,7 +12,8 @@ const {
   createRoleNotifications,
   getNotificationCount,
   registerDevice,
-  unregisterDevice
+  unregisterDevice,
+  testPushNotification
 } = require('../controllers/notification.controller');
 
 // Routes
@@ -28,6 +29,9 @@ router.route('/register-device')
 
 router.route('/unregister-device')
   .delete(protect, unregisterDevice);
+
+router.route('/test-push')
+  .post(protect, testPushNotification);
 
 router.route('/read-all')
   .put(protect, markAllAsRead);

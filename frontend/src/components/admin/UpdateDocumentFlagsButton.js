@@ -48,18 +48,6 @@ const UpdateDocumentFlagsButton = () => {
 
   return (
     <div className="mt-4">
-      <button
-        onClick={handleUpdateFlags}
-        disabled={isUpdating}
-        className={`${
-          isUpdating
-            ? 'bg-gray-400 cursor-not-allowed'
-            : 'bg-gradient-to-r from-purple-500 to-indigo-600 hover:opacity-90'
-        } text-white px-4 py-2 rounded-lg transition-all flex items-center`}
-      >
-        <RotateCw className={`h-5 w-5 mr-2 ${isUpdating ? 'animate-spin' : ''}`} />
-        {isUpdating ? 'Se actualizează...' : 'Actualizează flag-uri documente'}
-      </button>
 
       {/* Modal de rezultate */}
       {showResults && (
