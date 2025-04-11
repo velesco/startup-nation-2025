@@ -231,24 +231,33 @@ const ClientConsultingContractStep = ({ onStepComplete, userDocuments }) => {
   // Handler pentru butonul 'Doresc consultanta completa: Click genereaza Contract consultanta'
   const handleConsultingContractClick = async () => {
     console.log('Buton "Doresc consultanta completa" apăsat');
+    setError('');
     
     // Marcăm automat și contractul de participare ca fiind semnat
     // chiar înainte de a genera contractul de consultanță
     if (onStepComplete && typeof onStepComplete === 'function') {
-      // Actualizăm mai întâi contractul de participare ca fiind semnat
-      console.log('Actualizare status Contract Curs Antreprenoriat: semnat');
-      onStepComplete('contract_sign', {
-        ...userDocuments,
-        contractGenerated: true,
-        contractSigned: true
-      });
-      
-      // Așteptăm puțin pentru a se aplica actualizarea
-      setTimeout(() => {
-        // Apoi generăm contractul de consultanță
-        console.log('Generare contract consultanță...');
-        handleGenerateContract();
-      }, 500);
+      try {
+        // Actualizăm mai întâi contractul de participare ca fiind semnat
+        console.log('Actualizare status Contract Curs Antreprenoriat: semnat');
+        await onStepComplete('contract_sign', {
+          ...userDocuments,
+          contractGenerated: true,
+          contractSigned: true
+        });
+        
+        // Așteptăm puțin pentru a se aplica actualizarea
+        setTimeout(() => {
+          // Apoi generăm contractul de consultanță
+          console.log('Generare contract consultanță...');
+          handleGenerateContract();
+        }, 500);
+      } catch (error) {
+        console.error('Eroare la actualizarea statusului contractului de participare:', error);
+        setError('Eroare la actualizarea statusului contractului de participare. Încercăm să generăm contractul de consultanță oricum...');
+        
+        // Totuși, încertăm să generăm contractul de consultanță
+        setTimeout(() => handleGenerateContract(), 500);
+      }
     } else {
       // Dacă nu avem funcția onStepComplete, continuăm doar cu generarea
       await handleGenerateContract();

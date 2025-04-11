@@ -51,7 +51,9 @@ const ClientProgressSteps = ({ steps, currentStep, setCurrentStep }) => {
                 'text-gray-800'
               }`}>{step.name}</h3>
               <p className="text-sm text-gray-500">
-                {step.completed ? 'Completat' : idx === 0 ? 'În așteptare' : 'Blocat'}
+                {step.completed ? 'Completat' : 
+                 currentStep === step.id ? 'În așteptare' : 
+                 (idx === 0 || steps[idx-1]?.completed) ? 'Disponibil' : 'Blocat'}
               </p>
             </div>
             <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${

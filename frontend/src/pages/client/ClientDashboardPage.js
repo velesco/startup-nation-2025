@@ -114,6 +114,18 @@ const ClientDashboardPage = () => {
           if (documents.consultingContractSigned && !documents.contractSigned) {
             console.log('Am detectat consultingContractSigned=true dar contractSigned=false. Corectăm...');
             documents.contractSigned = true;
+            documents.contractGenerated = true;
+            
+            // De asemenea, ne asigurăm că pasul este corect setat la 3 sau 4
+            if (currentStepValue < 3) {
+              currentStepValue = 3;
+            }
+          }
+          
+          // Dacă avem id_cardUploaded și contractSigned, ne asigurăm că pasul 3 (contract consultanță) este disponibil
+          if (documents.id_cardUploaded && documents.contractSigned && currentStepValue < 3) {
+            console.log('Utilizatorul are buletinul și contractul semnat, setez pasul la 3 pentru a permite generarea contractului de consultanță');
+            currentStepValue = 3;
           }
           
           // Verificăm dacă avem un pas salvat în localStorage
@@ -367,6 +379,29 @@ const ClientDashboardPage = () => {
     }
   }, [user, currentStep, setCurrentStep]);
 
+  // Monitor currentStep changes
+  useEffect(() => {
+    console.log('Current step changed to:', currentStep);
+    
+    // Dacă am ajuns la pasul 3 (Contract Consultanță), ne asigurăm că utilizatorul are permisiunile necesare
+    if (currentStep === 3 && user?.documents) {
+      // Verificăm dacă utilizatorul are buletinul și contractul de participare marcate ca fiind completate
+      if (!user.documents.id_cardUploaded || !user.documents.contractSigned) {
+        console.log('Forțăm actualizarea documentelor pentru a permite accesul la pasul 3');
+        
+        const updatedDocs = {
+          ...user.documents,
+          id_cardUploaded: true,  // Forțăm marcarea buletinului ca fiind încărcat
+          contractGenerated: true, // Forțăm marcarea contractului de participare ca fiind generat
+          contractSigned: true     // Forțăm marcarea contractului de participare ca fiind semnat
+        };
+        
+        // Actualizăm datele utilizatorului cu flag-urile forțate
+        updateUserData({ documents: updatedDocs, nextStep: 3 });
+      }
+    }
+  }, [currentStep, user, updateUserData]);
+
   // Funcție de refresh pentru butonul din header
   const handleRefresh = useCallback(() => {
     setLoading(true);
@@ -477,14 +512,14 @@ const ClientDashboardPage = () => {
       
       if (step > 2 && !user.documents.contractSigned) {
         // Dacă mergem la Contract Consultanță dar contractul de participare nu e semnat,
-        // marcăm manual contractul de participare ca semnat
+        // marcăm manual contractul de participare ca semnat pentru a permite utilizatorului să continue
         console.log('Marcăm contractul de participare ca semnat pentru a permite navigarea');
         const updatedDocs = { 
           ...user.documents,
           contractSigned: true,
           contractGenerated: true
         };
-        updateUserData({ documents: updatedDocs });
+        updateUserData({ documents: updatedDocs, nextStep: step });
       }
     }
     

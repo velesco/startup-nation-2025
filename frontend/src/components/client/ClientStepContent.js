@@ -159,6 +159,11 @@ const ClientStepContent = ({ step, updateUserData, userDocuments }) => {
       });
       console.log('Corecție aplicată: Contract Curs Antreprenoriat marcat ca semnat');
     }
+    
+    // Verificăm dacă utilizatorul ajunge la pasul 3 (contract consultanță) și nu are contractul de consultanță marcat ca generat
+    if (step === 3 && userDocuments && !userDocuments.consultingContractGenerated && userDocuments.contractSigned) {
+      console.log('Pasul 3 (Contract Consultanță) este activ și utilizatorul are dreptul să genereze contractul de consultanță');
+    }
   }, [step, userDocuments, updateUserData]);
 
   switch (step) {
