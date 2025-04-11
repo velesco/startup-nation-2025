@@ -91,6 +91,9 @@ const UsersTable = ({
                   Utilizator
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Email
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Telefon
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -137,6 +140,18 @@ const UsersTable = ({
                         <div className="text-sm font-medium text-gray-900">{user.name}</div>
                         <div className="text-sm text-gray-500">ID: {user._id.substr(-5)}</div>
                       </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center text-sm text-gray-900">
+                      <Mail className="h-4 w-4 mr-1 text-gray-400" />
+                      <a 
+                        href={`mailto:${user.email}`} 
+                        className="text-blue-600 hover:text-blue-800"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {user.email}
+                      </a>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

@@ -137,12 +137,40 @@ exports.getUsersStatistics = async (req, res, next) => {
     });
     
     // Utilizatori care au generat contractele de consultanță
-    const consultingContractsGenerated = await User.countDocuments({
+    let consultingContractsQuery = {
       $or: [
         { 'documents.consultingContractGenerated': true },
         { 'documents.consultingContractPath': { $exists: true } }
       ]
-    });
+    };
+    
+    // Număr consultingContractsGenerated
+    let consultingContractsGenerated = await User.countDocuments(consultingContractsQuery);
+    
+    // Dacă rezultatul este 0, verificăm manual în directorul de contracte
+    if (consultingContractsGenerated === 0) {
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const contractsDir = path.join(__dirname, '../../../uploads/contracts');
+        
+        if (fs.existsSync(contractsDir)) {
+          const files = fs.readdirSync(contractsDir);
+          const consultingContractFiles = files.filter(file => 
+            file.toLowerCase().includes('consultanta') || 
+            file.toLowerCase().includes('consultant') ||
+            file.toLowerCase().includes('consult')
+          );
+          
+          console.log(`Găsite ${consultingContractFiles.length} fișiere de contract de consultanță:`);
+          consultingContractFiles.forEach(file => console.log(` - ${file}`));
+          
+          consultingContractsGenerated = consultingContractFiles.length;
+        }
+      } catch (err) {
+        console.error(`Eroare la verificarea manuală a contractelor: ${err.message}`);
+      }
+    }
     
     // Număr total de utilizatori
     const totalUsers = await User.countDocuments();

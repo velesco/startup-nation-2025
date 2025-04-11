@@ -374,6 +374,16 @@ exports.getClients = async (req, res, next) => {
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
+      
+    // Importăm funcția updateUserDocumentStatus pentru a verifica contractele de consultanță
+    const { updateUserDocumentStatus } = require('./contracts.controller');
+    
+    // Verificăm contractele pentru utilizatorii asociați clienților
+    for (const client of clients) {
+      if (client.userId) {
+        await updateUserDocumentStatus(client.userId);
+      }
+    }
     
     // Count total documents for pagination
     const total = await Client.countDocuments(query);
@@ -515,6 +525,14 @@ exports.getUsers = async (req, res, next) => {
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
+      
+    // Importăm funcția updateUserDocumentStatus pentru a verifica contractele de consultanță
+    const { updateUserDocumentStatus } = require('./contracts.controller');
+    
+    // Verificăm contractele pentru toți utilizatorii din rezultate
+    for (const user of users) {
+      await updateUserDocumentStatus(user);
+    }
     
     // Count total documents for pagination
     const total = await User.countDocuments(query);
@@ -554,7 +572,13 @@ exports.getUserById = async (req, res, next) => {
       });
     }
     
-    // Return user details
+    // Importăm funcția updateUserDocumentStatus pentru a verifica contractele
+    const { updateUserDocumentStatus } = require('./contracts.controller');
+    
+    // Actualizăm informațiile despre contracte pentru utilizator
+    await updateUserDocumentStatus(user);
+    
+    // Return user details with ID card data
     res.status(200).json({
       success: true,
       data: user
@@ -600,6 +624,28 @@ exports.updateUser = async (req, res, next) => {
     if (updateData.password) {
       const salt = await bcrypt.genSalt(10);
       updateData.password = await bcrypt.hash(updateData.password, salt);
+    }
+    
+    // Manage ID card data update if provided
+    if (updateData.idCard) {
+      console.log('Updating ID card data for user:', userId);
+      // Make sure we handle nested updates correctly
+      if (!updateData.$set) {
+        updateData.$set = {};
+      }
+      
+      // Add each field from the idCard object to the $set
+      for (const [key, value] of Object.entries(updateData.idCard)) {
+        updateData.$set[`idCard.${key}`] = value;
+      }
+      
+      // Set idCard.verified flag if we have enough data
+      if (updateData.idCard.CNP && updateData.idCard.fullName) {
+        updateData.$set['idCard.verified'] = true;
+      }
+      
+      // Remove the original idCard object to avoid conflicts
+      delete updateData.idCard;
     }
     
     // Find and update user
@@ -927,7 +973,8 @@ exports.getClientById = async (req, res, next) => {
     const client = await Client.findById(clientId)
       .populate('group', 'name startDate endDate')
       .populate('assignedTo', 'name email')
-      .populate('notes.createdBy', 'name');
+      .populate('notes.createdBy', 'name')
+      .populate('userId', 'documents contractSigned idCard');
     
     // Check if client exists
     if (!client) {
@@ -935,6 +982,15 @@ exports.getClientById = async (req, res, next) => {
         success: false,
         message: 'Client not found'
       });
+    }
+    
+    // Verificăm dacă clientul are un utilizator asociat
+    if (client.userId) {
+      // Importăm funcția updateUserDocumentStatus pentru a verifica contractele
+      const { updateUserDocumentStatus } = require('./contracts.controller');
+      
+      // Actualizăm informațiile despre contracte pentru utilizatorul asociat
+      await updateUserDocumentStatus(client.userId);
     }
     
     // Return client details

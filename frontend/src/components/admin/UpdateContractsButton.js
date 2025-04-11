@@ -92,7 +92,7 @@ const UpdateContractsButton = ({ onSuccess }) => {
           <div className="flex items-start">
             <div className="ml-3">
               <p className="text-sm font-medium">{result.message}</p>
-              <p className="text-xs mt-1">Utilizatori actualizați: {result.data.updatedCount}</p>
+              <p className="text-xs mt-1">Utilizatori actualizați: {result.updatedCount || 0}</p>
             </div>
           </div>
         </div>

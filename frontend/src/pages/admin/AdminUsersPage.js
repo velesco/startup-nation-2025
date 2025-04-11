@@ -112,6 +112,8 @@ const AdminUsersPage = () => {
 
         {/* Afișează statisticile utilizatorilor */}
         {stats && <UserStatistics stats={stats} />}
+        
+        {/* Afișează statisticile contractelor */}
 
         {/* Afișăm erori dacă există */}
         {(usersError || statsError) && (

@@ -144,6 +144,85 @@ exports.updateUser = async (req, res, next) => {
       updateData.password = await bcrypt.hash(updateData.password, salt);
     }
     
+    // Process ID card data if provided
+    if (updateData.idCardSeries || updateData.idCardNumber || updateData.cnp || updateData.idCardIssuedBy || 
+        updateData.idCardIssueDate || updateData.idCardExpiryDate || updateData.idCardAddress || updateData.idCardFullName) {
+      logger.info(`Updating ID card data for user: ${userId}`);
+      
+      // Get current user to check existing data
+      const currentUser = await User.findById(userId);
+      if (!currentUser) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+      
+      // Create or update idCard field
+      if (!updateData.idCard) {
+        updateData.idCard = currentUser.idCard || {};
+      }
+      
+      // Map frontend field names to backend model fields
+      if (updateData.idCardFullName) {
+        updateData.idCard.fullName = updateData.idCardFullName;
+        delete updateData.idCardFullName;
+      }
+      
+      if (updateData.idCardSeries) {
+        updateData.idCard.series = updateData.idCardSeries;
+        delete updateData.idCardSeries;
+      }
+      
+      if (updateData.idCardNumber) {
+        updateData.idCard.number = updateData.idCardNumber;
+        delete updateData.idCardNumber;
+      }
+      
+      if (updateData.cnp) {
+        updateData.idCard.CNP = updateData.cnp;
+        delete updateData.cnp;
+      }
+      
+      if (updateData.idCardIssuedBy) {
+        updateData.idCard.issuedBy = updateData.idCardIssuedBy;
+        delete updateData.idCardIssuedBy;
+      }
+      
+      if (updateData.idCardIssueDate) {
+        updateData.idCard.issueDate = new Date(updateData.idCardIssueDate);
+        delete updateData.idCardIssueDate;
+      }
+      
+      if (updateData.idCardExpiryDate) {
+        updateData.idCard.expiryDate = new Date(updateData.idCardExpiryDate);
+        delete updateData.idCardExpiryDate;
+      }
+      
+      if (updateData.idCardAddress) {
+        updateData.idCard.address = updateData.idCardAddress;
+        delete updateData.idCardAddress;
+      }
+      
+      // Set idCard.verified flag if we have enough data
+      if (updateData.idCard.CNP && updateData.idCard.series && updateData.idCard.number) {
+        updateData.idCard.verified = true;
+        
+        // If we don't have a fullName set, use the user's name
+        if (!updateData.idCard.fullName && currentUser.name) {
+          updateData.idCard.fullName = currentUser.name;
+        }
+      }
+      
+      // If ID card data is verified, also set the documents.id_cardUploaded flag
+      if (updateData.idCard.verified) {
+        if (!updateData.documents) {
+          updateData.documents = currentUser.documents || {};
+        }
+        updateData.documents.id_cardUploaded = true;
+      }
+    }
+    
     // Find and update user
     const user = await User.findByIdAndUpdate(
       userId,

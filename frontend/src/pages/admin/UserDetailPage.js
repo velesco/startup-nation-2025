@@ -305,6 +305,60 @@ const UserDetailPage = () => {
                         </div>
                         
                         <div>
+                          <h3 className="text-sm font-medium text-gray-500">Date Buletin</h3>
+                          <div className="mt-1 space-y-2">
+                            <div className="flex items-center">
+                              <span className="text-gray-500 w-24">Nume complet:</span>
+                              <p className="text-gray-900">
+                                {user.idCard?.fullName || user.name || 'Nespecificat'}
+                              </p>
+                            </div>
+                            <div className="flex items-center">
+                              <span className="text-gray-500 w-24">Serie:</span>
+                              <p className="text-gray-900">
+                                {user.idCard?.series || 'Nespecificat'}
+                              </p>
+                            </div>
+                            <div className="flex items-center">
+                              <span className="text-gray-500 w-24">Număr:</span>
+                              <p className="text-gray-900">
+                                {user.idCard?.number || 'Nespecificat'}
+                              </p>
+                            </div>
+                            <div className="flex items-center">
+                              <span className="text-gray-500 w-24">CNP:</span>
+                              <p className="text-gray-900">
+                                {user.idCard?.CNP || 'Nespecificat'}
+                              </p>
+                            </div>
+                            <div className="flex items-center">
+                              <span className="text-gray-500 w-24">Emisă de:</span>
+                              <p className="text-gray-900">
+                                {user.idCard?.issuedBy || 'Nespecificat'}
+                              </p>
+                            </div>
+                            <div className="flex items-center">
+                              <span className="text-gray-500 w-24">Data emiterii:</span>
+                              <p className="text-gray-900">
+                                {user.idCard?.issueDate ? formatDate(user.idCard.issueDate) : 'Nespecificat'}
+                              </p>
+                            </div>
+                            <div className="flex items-center">
+                              <span className="text-gray-500 w-24">Data expirării:</span>
+                              <p className="text-gray-900">
+                                {user.idCard?.expiryDate ? formatDate(user.idCard.expiryDate) : 'Nespecificat'}
+                              </p>
+                            </div>
+                            <div className="flex items-center">
+                              <span className="text-gray-500 w-24">Adresă:</span>
+                              <p className="text-gray-900">
+                                {user.idCard?.address || 'Nespecificat'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div>
                           <h3 className="text-sm font-medium text-gray-500">Rol</h3>
                           <div className="mt-1 flex items-center">
                             <Shield className="h-5 w-5 text-gray-400 mr-2" />

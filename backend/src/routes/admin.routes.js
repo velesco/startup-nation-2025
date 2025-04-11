@@ -15,7 +15,8 @@ const {
 } = require('../controllers/documents.controller');
 const { 
   updateAllContracts,
-  getContractInfo
+  getContractInfo,
+  getContractsCounts
 } = require('../controllers/contracts.controller');
 const {
   getClients,
@@ -99,6 +100,9 @@ router.post('/update-contracts', authorize('admin', 'super-admin'), updateAllCon
 
 // Get contract info for a user
 router.get('/users/:id/contract-info', authorize('admin', 'super-admin'), getContractInfo);
+
+// Get counts of contracts
+router.get('/contracts/counts', authorize('admin', 'super-admin'), getContractsCounts);
 
 // User Document routes
 router.route('/users/:id/documents')

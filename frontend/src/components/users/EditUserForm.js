@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Save, X, User, Mail, Phone, Building, Shield } from 'lucide-react';
+import { Save, X, User, Mail, Phone, Building, Shield, CreditCard } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const EditUserForm = ({ user, onSubmit, onCancel }) => {
@@ -11,7 +11,16 @@ const EditUserForm = ({ user, onSubmit, onCancel }) => {
     organization: user.organization || '',
     position: user.position || '',
     role: user.role || 'user',
-    isActive: user.isActive !== undefined ? user.isActive : true
+    isActive: user.isActive !== undefined ? user.isActive : true,
+    // Date buletin
+    idCardFullName: user.idCard?.fullName || user.name || '',
+    idCardSeries: user.idCard?.series || '',
+    idCardNumber: user.idCard?.number || '',
+    cnp: user.idCard?.CNP || '',
+    idCardIssuedBy: user.idCard?.issuedBy || '',
+    idCardIssueDate: user.idCard?.issueDate ? new Date(user.idCard.issueDate).toISOString().split('T')[0] : '',
+    idCardExpiryDate: user.idCard?.expiryDate ? new Date(user.idCard.expiryDate).toISOString().split('T')[0] : '',
+    idCardAddress: user.idCard?.address || ''
   });
   
   const [loading, setLoading] = useState(false);
@@ -127,6 +136,112 @@ const EditUserForm = ({ user, onSubmit, onCancel }) => {
               />
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Phone className="h-5 w-5 text-gray-400" />
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Date Buletin</label>
+            <div className="relative space-y-3 p-3 border border-gray-200 rounded-lg">
+              <div className="absolute top-0 left-3 transform -translate-y-1/2 bg-white px-2">
+                <CreditCard className="h-5 w-5 text-gray-400 inline-block mr-1" />
+                <span className="text-xs font-medium text-gray-500">Informații CI/BI</span>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Nume complet pe buletin</label>
+                <input
+                  type="text"
+                  name="idCardFullName"
+                  value={formData.idCardFullName}
+                  onChange={handleChange}
+                  className="px-3 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  placeholder="Numele complet din buletin"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Serie</label>
+                  <input
+                    type="text"
+                    name="idCardSeries"
+                    value={formData.idCardSeries}
+                    onChange={handleChange}
+                    className="px-3 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    placeholder="XX"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Număr</label>
+                  <input
+                    type="text"
+                    name="idCardNumber"
+                    value={formData.idCardNumber}
+                    onChange={handleChange}
+                    className="px-3 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    placeholder="123456"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">CNP</label>
+                <input
+                  type="text"
+                  name="cnp"
+                  value={formData.cnp}
+                  onChange={handleChange}
+                  className="px-3 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  placeholder="1234567890123"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Emisă de</label>
+                <input
+                  type="text"
+                  name="idCardIssuedBy"
+                  value={formData.idCardIssuedBy}
+                  onChange={handleChange}
+                  className="px-3 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  placeholder="SPCLEP Sector X"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Data emiterii</label>
+                <input
+                  type="date"
+                  name="idCardIssueDate"
+                  value={formData.idCardIssueDate}
+                  onChange={handleChange}
+                  className="px-3 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Data expirării</label>
+                <input
+                  type="date"
+                  name="idCardExpiryDate"
+                  value={formData.idCardExpiryDate}
+                  onChange={handleChange}
+                  className="px-3 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Adresă</label>
+                <input
+                  type="text"
+                  name="idCardAddress"
+                  value={formData.idCardAddress}
+                  onChange={handleChange}
+                  className="px-3 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  placeholder="Adresa din buletin"
+                />
               </div>
             </div>
           </div>

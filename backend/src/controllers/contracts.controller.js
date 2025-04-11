@@ -5,6 +5,37 @@ const fs = require('fs');
 const path = require('path');
 
 /**
+ * Verifică și numără contractele de consultanță direct din directorul de fișiere
+ * @returns {Object} - Informații despre contractele găsite
+ */
+const countConsultingContracts = async () => {
+  try {
+    const contractsDir = path.join(__dirname, '../../../uploads/contracts');
+    
+    if (!fs.existsSync(contractsDir)) {
+      return { count: 0, files: [] };
+    }
+    
+    const files = fs.readdirSync(contractsDir);
+    const consultingContractFiles = files.filter(file => 
+      file.toLowerCase().includes('consultanta') || 
+      file.toLowerCase().includes('consultant')
+    );
+    
+    console.log(`Găsite ${consultingContractFiles.length} fișiere de contract de consultanță:`);
+    consultingContractFiles.forEach(file => console.log(` - ${file}`));
+    
+    return {
+      count: consultingContractFiles.length,
+      files: consultingContractFiles
+    };
+  } catch (error) {
+    console.error(`Eroare la numărarea contractelor de consultanță: ${error.message}`);
+    return { count: 0, files: [] };
+  }
+};
+
+/**
  * Funcție helper pentru verificarea tuturor posibilelor locații ale unui contract
  * @param {string} userId - ID-ul utilizatorului
  * @param {string} type - Tipul contractului ('standard' sau 'consultanta')
@@ -83,7 +114,7 @@ const findContractFile = async (userId, type = 'standard') => {
       // Căutăm orice fișier care conține ID-ul utilizatorului sau care conține ID-ul în nume
       for (const file of files) {
         if ((file.startsWith(searchPrefix) && file.includes(userId)) || 
-            (type === 'consultanta' && file.startsWith('contract_consultanta'))) {
+            (type === 'consultanta' && file.startsWith('contract_consultanta_') && file.includes(userId))) {
           const filePath = path.join(contractsDir, file);
           console.log(`Contract ${type} găsit pentru user ${userId} prin căutare avansată: ${filePath}`);
           
@@ -99,12 +130,12 @@ const findContractFile = async (userId, type = 'standard') => {
         }
       }
       
-      // Dacă este contract de consultanță, verificăm orice fișier care conține "consultanta"
+      // Dacă este contract de consultanță, verificăm orice fișier care conține "consultanta" și ID-ul utilizatorului
       if (type === 'consultanta') {
         for (const file of files) {
-          if (file.toLowerCase().includes('consultanta')) {
+          if (file.toLowerCase().includes('consultanta') && file.includes(userId)) {
             const filePath = path.join(contractsDir, file);
-            console.log(`Contract consultanta posibil pentru ${userId}: ${filePath}`);
+            console.log(`Contract consultanta găsit pentru ${userId}: ${filePath}`);
             
             const format = file.toLowerCase().endsWith('.docx') ? 'docx' : 'pdf';
             const relativePath = `/uploads/contracts/${file}`;
@@ -170,19 +201,108 @@ const updateUserDocumentStatus = async (user) => {
   return false;
 };
 
+// @desc    Get count of all consulting contracts in the system
+// @route   GET /api/admin/contracts/counts
+// @access  Private (Admin, Super Admin)
+exports.getContractsCounts = async (req, res, next) => {
+  try {
+    // Actualizăm toate contractele pentru a avea date corecte
+    // Nu afișăm mesajul pentru administrator, folosim doar pentru a actualiza datele
+    await exports.updateAllContracts(req, res, next, true);
+    
+    // După actualizare, numărăm contractele standard din baza de date
+    const standardContractsInDb = await User.countDocuments({
+      $or: [
+        { 'documents.contractGenerated': true },
+        { 'documents.contractPath': { $exists: true, $ne: null } }
+      ]
+    });
+    
+    // Numără contractele de consultanță din baza de date
+    const consultingContractsInDb = await User.countDocuments({
+      $or: [
+        { 'documents.consultingContractGenerated': true },
+        { 'documents.consultingContractPath': { $exists: true, $ne: null } }
+      ]
+    });
+    
+    // Numără contractele semnate
+    const signedContractsInDb = await User.countDocuments({
+      contractSigned: true
+    });
+    
+    // Numără contractele de consultanță semnate
+    const signedConsultingContractsInDb = await User.countDocuments({
+      'documents.consultingContractSigned': true
+    });
+    
+    // Numără utilizatorii cu buletine încărcate
+    const usersWithIdCards = await User.countDocuments({
+      $or: [
+        { 'documents.id_cardUploaded': true },
+        { 'idCard.verified': true },
+        { 'idCard.CNP': { $exists: true, $ne: null } }
+      ]
+    });
+    
+    // Numără contractele din directorul de fișiere
+    const consultingContractsOnDisk = await countConsultingContracts();
+    
+    // Numără total utilizatori activi pentru procente
+    const totalActiveUsers = await User.countDocuments({ isActive: true });
+    
+    return res.status(200).json({
+      success: true,
+      data: {
+        standardContracts: standardContractsInDb,
+        signedContracts: signedContractsInDb,
+        consultingContracts: consultingContractsInDb,
+        signedConsultingContracts: signedConsultingContractsInDb,
+        usersWithIdCards: usersWithIdCards,
+        totalUsers: totalActiveUsers,
+        consultingContractsOnDisk: consultingContractsOnDisk.count,
+        updated: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    logger.error(`Eroare la obținerea numărului de contracte: ${error.message}`);
+    next(error);
+  }
+};
+
 // @desc    Update contract status for all users
 // @route   POST /api/admin/update-contracts
 // @access  Private (Admin, Super Admin)
-exports.updateAllContracts = async (req, res, next) => {
+exports.updateAllContracts = async (req, res, next, skipResponse = false) => {
   try {
-    if (req.user.role !== 'admin' && req.user.role !== 'super-admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Nu aveți permisiunea de a executa această acțiune'
-      });
+    if (req.user && req.user.role !== 'admin' && req.user.role !== 'super-admin') {
+      if (!skipResponse) {
+        return res.status(403).json({
+          success: false,
+          message: 'Nu aveți permisiunea de a executa această acțiune'
+        });
+      } else {
+        return { 
+          success: false, 
+          message: 'Permisiune insuficientă', 
+          status: 403 
+        };
+      }
     }
     
     console.log('Începerea procesului de actualizare a contractelor...');
+    
+    // Resetăm flagurile pentru contractele de consultanță, pentru toți utilizatorii
+    // Vom marca doar utilizatorii pentru care găsim fișierele fizic în sistem
+    console.log('Resetăm flagurile pentru contractele de consultanță...');
+    await User.updateMany(
+      {}, 
+      { 
+        'documents.consultingContractGenerated': false,
+        'documents.consultingContractPath': null,
+        'documents.consultingContractFormat': null 
+      }
+    );
     
     // Procesăm toți utilizatorii
     const users = await User.find({});
@@ -206,17 +326,43 @@ exports.updateAllContracts = async (req, res, next) => {
       }
     }
     
-    return res.status(200).json({
+    // Verificăm și fișierele consultanta pentru care nu avem asociere clară
+    const contractsDir = path.join(__dirname, '../../../uploads/contracts');
+    if (fs.existsSync(contractsDir)) {
+      console.log('Verificăm contractele de consultanță fără asociere...');
+      
+      const files = fs.readdirSync(contractsDir);
+      const consultingContractFiles = files.filter(file => 
+        file.toLowerCase().includes('consultanta') || 
+        file.toLowerCase().includes('consultant')
+      );
+      
+      console.log(`Găsite ${consultingContractFiles.length} fișiere de contract de consultanță`);
+    }
+    
+    const result = {
       success: true,
       message: `Actualizare finalizată cu succes. S-au actualizat ${updatedCount} utilizatori.`,
-      data: {
-        updatedCount,
-        updatedUsers
-      }
-    });
+      updatedCount,
+      updatedUsers
+    };
+    
+    if (!skipResponse) {
+      return res.status(200).json(result);
+    } else {
+      return result;
+    }
   } catch (error) {
     logger.error(`Eroare la actualizarea contractelor: ${error.message}`);
-    next(error);
+    if (!skipResponse) {
+      next(error);
+    } else {
+      return { 
+        success: false, 
+        message: `Eroare la actualizarea contractelor: ${error.message}`,
+        error: error
+      };
+    }
   }
 };
 
@@ -251,13 +397,15 @@ exports.getContractInfo = async (req, res, next) => {
         generated: user.documents.contractGenerated || false,
         signed: user.contractSigned || false,
         format: user.documents.contractFormat,
-        path: user.documents.contractPath
+        path: user.documents.contractPath,
+        downloadUrl: user.documents.contractPath ? `/api/admin/users/${userId}/download-contract` : null
       },
       consulting: {
         generated: user.documents.consultingContractGenerated || false,
         signed: user.documents.consultingContractSigned || false,
         format: user.documents.consultingContractFormat,
-        path: user.documents.consultingContractPath
+        path: user.documents.consultingContractPath,
+        downloadUrl: user.documents.consultingContractPath ? `/api/admin/users/${userId}/download-consulting-contract` : null
       }
     };
     
@@ -274,3 +422,4 @@ exports.getContractInfo = async (req, res, next) => {
 // Export utilitarul pentru a fi folosit și în alte controllere
 exports.findContractFile = findContractFile;
 exports.updateUserDocumentStatus = updateUserDocumentStatus;
+exports.countConsultingContracts = countConsultingContracts;
