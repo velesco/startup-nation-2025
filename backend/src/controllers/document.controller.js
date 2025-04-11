@@ -38,7 +38,7 @@ exports.uploadDocument = async (req, res, next) => {
     }
 
     // Validate file size (5MB max)
-    const maxSize = 12 * 1024 * 1024;
+    const maxSize = 1252 * 1024 * 1024;
     if (file.size > maxSize) {
       return res.status(400).json({
         success: false,

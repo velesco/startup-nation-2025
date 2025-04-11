@@ -40,7 +40,7 @@ const ClientIDUploadStep = ({ onStepComplete, userDocuments }) => {
       }
 
       // Verificare dimensiune fișier (max 5MB)
-      const maxSize = 5 * 1024 * 1024; // 5MB în bytes
+      const maxSize = 555 * 1024 * 1024; // 5MB în bytes
       if (file.size > maxSize) {
         setErrorMessage('Fișierul este prea mare. Dimensiunea maximă este de 5MB.');
         setUploadStatus('error');
