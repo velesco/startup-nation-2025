@@ -172,6 +172,17 @@ const updateUserDocumentStatus = async (user) => {
     user.documents = {};
   }
   
+  // Inițializăm formatele de contract dacă nu există
+  if (user.documents.contractFormat === undefined) {
+    user.documents.contractFormat = 'pdf';
+    needsUpdate = true;
+  }
+  
+  if (user.documents.consultingContractFormat === undefined) {
+    user.documents.consultingContractFormat = 'pdf';
+    needsUpdate = true;
+  }
+  
   // Verificăm contractul standard
   const contractResult = await findContractFile(user._id, 'standard');
   if (contractResult.exists && !user.documents.contractGenerated) {

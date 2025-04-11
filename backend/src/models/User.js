@@ -99,7 +99,7 @@ const UserSchema = new mongoose.Schema(
       },
       consultingContractFormat: {
         type: String,
-        enum: ['pdf', 'docx'],
+        enum: ['pdf', 'docx', null],
         default: 'pdf'
       },
       consultingContractSigned: {

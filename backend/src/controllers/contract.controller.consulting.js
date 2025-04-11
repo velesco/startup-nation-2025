@@ -118,6 +118,8 @@ const generateConsultingContract = async (req, res, next) => {
     user.documents.consultingContractSigned = true; // Automatically signed
     user.documents.contractSigned = true; // Mark the participation contract as signed as well
     user.documents.contractGenerated = true; // Mark participation contract as generated too
+    user.documents.consultingContractFormat = 'pdf'; // Set a default format
+    user.documents.contractFormat = 'pdf'; // Set a default format for main contract too
     await user.save();
     
     console.log(`Contract Consultanta generat pentru user ${userId}`);
@@ -581,6 +583,7 @@ const resetConsultingContract = async (req, res, next) => {
     user.documents.consultingContractGenerated = false;
     user.documents.consultingContractSigned = false;
     user.documents.consultingContractPath = null;
+    user.documents.consultingContractFormat = 'pdf'; // Resetăm la o valoare implicită, nu null
     
     await user.save();
     
@@ -662,6 +665,8 @@ const generateConsultingContractForUser = async (req, res, next) => {
     user.documents.consultingContractSigned = true; // Automatically signed
     user.documents.contractSigned = true; // Mark the participation contract as signed as well
     user.documents.contractGenerated = true; // Mark participation contract as generated too
+    user.documents.consultingContractFormat = 'pdf'; // Set a default format
+    user.documents.contractFormat = 'pdf'; // Set a default format for main contract too
     await user.save();
     
     console.log(`Contract Consultanta generat pentru user ${userId}`);

@@ -119,6 +119,22 @@ exports.saveSignature = async (req, res, next) => {
 
     // Curățăm semnătura de eventuale newline-uri și spații suplimentare
     user.signature = signatureData.replace(/\s+/g, '');
+    
+    // Asigurăm-ne că obiectul documents există
+    if (!user.documents) {
+      user.documents = {};
+    }
+    
+    // Inițializăm campurile de format dacă nu există
+    if (user.documents.contractFormat === undefined) {
+      user.documents.contractFormat = 'pdf';
+    }
+    
+    if (user.documents.consultingContractFormat === undefined) {
+      user.documents.consultingContractFormat = 'pdf';
+    }
+    
+    // Salvăm utilizatorul
     await user.save();
     return res.status(200).json({ success: true, message: 'Semnătura a fost salvată cu succes' });
   } catch (error) {
