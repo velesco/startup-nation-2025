@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { RotateCw } from 'lucide-react';
+import { RotateCw, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
 
 /**
@@ -8,6 +8,7 @@ import axios from 'axios';
 const UpdateContractsButton = ({ onSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showTip, setShowTip] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
@@ -51,19 +52,40 @@ const UpdateContractsButton = ({ onSuccess }) => {
   };
 
   return (
-    <div>
-      <button
-        onClick={handleUpdateContracts}
-        disabled={isLoading}
-        className="bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2 rounded-lg shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-      >
-        {isLoading ? (
-          <RotateCw className="h-4 w-4 mr-2 animate-spin" />
-        ) : (
-          <RotateCw className="h-4 w-4 mr-2" />
-        )}
-        <span>Actualizează stare contracte</span>
-      </button>
+    <div className="relative">
+      <div className="flex items-center">
+        <button
+          onClick={handleUpdateContracts}
+          disabled={isLoading}
+          className="bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2 rounded-lg shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+        >
+          {isLoading ? (
+            <RotateCw className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <RotateCw className="h-4 w-4 mr-2" />
+          )}
+          <span>Actualizează stare contracte</span>
+        </button>
+        
+        <button 
+          className="ml-2 text-amber-600 hover:text-amber-700 p-1 rounded-full"
+          onClick={() => setShowTip(!showTip)}
+          title="Informații"
+        >
+          <AlertTriangle size={16} />
+        </button>
+      </div>
+      
+      {showTip && (
+        <div className="absolute z-10 w-72 mt-2 right-0 bg-amber-50 border border-amber-200 p-3 rounded-lg shadow-lg text-xs">
+          <p className="font-semibold text-amber-800 mb-1">Recomandare:</p>
+          <p className="text-amber-700">
+            Dacă contractele nu apar după actualizare, verificați dacă fișierele există pe server și 
+            dacă numele lor respectă convenția corectă: <br />
+            <span className="font-mono bg-amber-100 px-1 rounded">contract_consultanta_[ID].pdf</span>
+          </p>
+        </div>
+      )}
       
       {showSuccess && result && (
         <div className="fixed bottom-4 right-4 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-lg z-50 max-w-md">

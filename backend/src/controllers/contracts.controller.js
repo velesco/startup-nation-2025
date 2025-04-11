@@ -11,48 +11,116 @@ const path = require('path');
  * @returns {Object} - Informații despre contract (exists, path, format)
  */
 const findContractFile = async (userId, type = 'standard') => {
-  const prefix = type === 'consultanta' ? 'contract_consultanta_' : 'contract_';
+  // Verificăm mai multe formate posibile pentru identificarea contractelor
+  let prefixOptions = [];
   
-  // Lista de posibile locații pentru contract
-  const possiblePaths = [
-    // Locații în directorul uploads/contracts
-    path.join(__dirname, `../../../uploads/contracts/${prefix}${userId}.pdf`),
-    path.join(__dirname, `../../../uploads/contracts/${prefix}${userId}.docx`),
-    
-    // Locații în directorul public/contracts
-    path.join(__dirname, `../../../public/contracts/${prefix}${userId}.pdf`),
-    path.join(__dirname, `../../../public/contracts/${prefix}${userId}.docx`),
-    
-    // Locații în directorul specific utilizatorului
-    path.join(__dirname, `../../../uploads/users/${userId}/${prefix}${userId}.pdf`),
-    path.join(__dirname, `../../../uploads/users/${userId}/${prefix}${userId}.docx`)
-  ];
+  if (type === 'consultanta') {
+    prefixOptions = [
+      'contract_consultanta_', // Formatul standard
+      `contract_consultanta_${userId}`, // Format cu ID
+      'contract_consultanta' // Format fără underscore
+    ];
+  } else { // 'standard'
+    prefixOptions = [
+      'contract_', // Formatul standard
+      `contract_${userId}`, // Format cu ID
+      'contract' // Format fără underscore
+    ];
+  }
+  
+  // Verificăm fiecare prefix în toate locațiile posibile
+  for (const prefix of prefixOptions) {
+    // Lista de posibile locații pentru contract
+    const possiblePaths = [
+      // Locații în directorul uploads/contracts
+      path.join(__dirname, `../../../uploads/contracts/${prefix}${prefix.endsWith('_') ? userId : ''}.pdf`),
+      path.join(__dirname, `../../../uploads/contracts/${prefix}${prefix.endsWith('_') ? userId : ''}.docx`),
+      
+      // Locații în directorul public/contracts
+      path.join(__dirname, `../../../public/contracts/${prefix}${prefix.endsWith('_') ? userId : ''}.pdf`),
+      path.join(__dirname, `../../../public/contracts/${prefix}${prefix.endsWith('_') ? userId : ''}.docx`),
+      
+      // Locații în directorul specific utilizatorului
+      path.join(__dirname, `../../../uploads/users/${userId}/${prefix}${prefix.endsWith('_') ? userId : ''}.pdf`),
+      path.join(__dirname, `../../../uploads/users/${userId}/${prefix}${prefix.endsWith('_') ? userId : ''}.docx`)
+    ];
 
-  // Verificăm fiecare locație
-  for (const filePath of possiblePaths) {
-    if (fs.existsSync(filePath)) {
-      console.log(`Contract ${type} găsit pentru user ${userId} la calea: ${filePath}`);
+    // Verificăm fiecare locație
+    for (const filePath of possiblePaths) {
+      if (fs.existsSync(filePath)) {
+        console.log(`Contract ${type} găsit pentru user ${userId} la calea: ${filePath}`);
+        
+        // Determinăm formatul
+        const format = filePath.toLowerCase().endsWith('.docx') ? 'docx' : 'pdf';
+        
+        // Construim calea relativă pentru a o stoca în baza de date
+        let relativePath;
+        if (filePath.includes('/uploads/contracts/')) {
+          relativePath = `/uploads/contracts/${path.basename(filePath)}`;
+        } else if (filePath.includes('/public/contracts/')) {
+          relativePath = `/public/contracts/${path.basename(filePath)}`;
+        } else {
+          relativePath = `/uploads/users/${userId}/${path.basename(filePath)}`;
+        }
+        
+        return {
+          exists: true,
+          path: filePath,
+          relativePath: relativePath,
+          format: format
+        };
+      }
+    }
+  }
+  
+  // Dacă nu am găsit nimic, căutăm toate fișierele care încep cu prefixul în directorul uploads/contracts
+  try {
+    const contractsDir = path.join(__dirname, '../../../uploads/contracts');
+    if (fs.existsSync(contractsDir)) {
+      const files = fs.readdirSync(contractsDir);
+      const searchPrefix = type === 'consultanta' ? 'contract_consultanta_' : 'contract_';
       
-      // Determinăm formatul
-      const format = filePath.toLowerCase().endsWith('.docx') ? 'docx' : 'pdf';
-      
-      // Construim calea relativă pentru a o stoca în baza de date
-      let relativePath;
-      if (filePath.includes('/uploads/contracts/')) {
-        relativePath = `/uploads/contracts/${prefix}${userId}.${format}`;
-      } else if (filePath.includes('/public/contracts/')) {
-        relativePath = `/public/contracts/${prefix}${userId}.${format}`;
-      } else {
-        relativePath = `/uploads/users/${userId}/${prefix}${userId}.${format}`;
+      // Căutăm orice fișier care conține ID-ul utilizatorului sau care conține ID-ul în nume
+      for (const file of files) {
+        if ((file.startsWith(searchPrefix) && file.includes(userId)) || 
+            (type === 'consultanta' && file.startsWith('contract_consultanta'))) {
+          const filePath = path.join(contractsDir, file);
+          console.log(`Contract ${type} găsit pentru user ${userId} prin căutare avansată: ${filePath}`);
+          
+          const format = file.toLowerCase().endsWith('.docx') ? 'docx' : 'pdf';
+          const relativePath = `/uploads/contracts/${file}`;
+          
+          return {
+            exists: true,
+            path: filePath,
+            relativePath: relativePath,
+            format: format
+          };
+        }
       }
       
-      return {
-        exists: true,
-        path: filePath,
-        relativePath: relativePath,
-        format: format
-      };
+      // Dacă este contract de consultanță, verificăm orice fișier care conține "consultanta"
+      if (type === 'consultanta') {
+        for (const file of files) {
+          if (file.toLowerCase().includes('consultanta')) {
+            const filePath = path.join(contractsDir, file);
+            console.log(`Contract consultanta posibil pentru ${userId}: ${filePath}`);
+            
+            const format = file.toLowerCase().endsWith('.docx') ? 'docx' : 'pdf';
+            const relativePath = `/uploads/contracts/${file}`;
+            
+            return {
+              exists: true,
+              path: filePath,
+              relativePath: relativePath,
+              format: format
+            };
+          }
+        }
+      }
     }
+  } catch (error) {
+    console.error(`Eroare la căutarea avansată a contractelor: ${error.message}`);
   }
 
   return { exists: false };
