@@ -48,6 +48,14 @@ const ClientStepContent = ({ step, updateUserData, userDocuments }) => {
                 contractGenerated: true 
               };
               break;
+            case 'contract_sign_only':
+              docsToUpdate = { 
+                ...userDocuments, 
+                contractGenerated: true, 
+                contractSigned: true 
+              };
+              // Nu forțăm trecerea la pasul următor, utilizatorul va decide manual când să avanseze
+              break;
             case 'contract_sign':
               docsToUpdate = { 
                 ...userDocuments, 
@@ -72,6 +80,16 @@ const ClientStepContent = ({ step, updateUserData, userDocuments }) => {
                 contractSigned: true, // Marcăm automat și contractul de participare ca semnat
                 contractGenerated: true
               };
+              break;
+            case 'consulting_contract_sign_only':
+              docsToUpdate = { 
+                ...userDocuments, 
+                consultingContractGenerated: true, 
+                consultingContractSigned: true,
+                contractSigned: true, // Marcăm automat și contractul de participare ca semnat
+                contractGenerated: true
+              };
+              // Nu forțăm trecerea la pasul următor, utilizatorul va decide manual când să avanseze
               break;
             case 'consulting_contract_sign':
               docsToUpdate = { 

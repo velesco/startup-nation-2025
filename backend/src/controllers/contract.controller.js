@@ -635,34 +635,38 @@ exports.signContract = async (req, res, next) => {
     
     const { signatureData } = req.body;
     
+    if (!signatureData) {
+      return res.status(400).json({
+        success: false,
+        message: 'Semnătura lipsește.'
+      });
+    }
+    
     user.contractSigned = true;
     user.contractSignedAt = new Date();
-    
-    if (signatureData) {
-      user.signature = signatureData.replace(/\s+/g, '');
-      console.log('Signature data saved for user:', userId);
-    }
+    user.signature = signatureData.replace(/\s+/g, '');
     
     if (!user.documents) {
       user.documents = {};
     }
     
+    // Verificăm dacă avem un contract existent
     if (!user.documents.contractPath) {
+      // Căutăm contractul în locațiile posibile
       const contractFilename = `contract_${userId}.pdf`;
       const contractPath = path.join(__dirname, `../../../uploads/contracts/${contractFilename}`);
       
       if (fs.existsSync(contractPath)) {
         user.documents.contractPath = `/uploads/contracts/${contractFilename}`;
-        console.log(`Am găsit și am setat calea contractului la: ${user.documents.contractPath}`);
+        user.documents.contractFormat = 'pdf';
       } else {
-        // Try DOCX as well
+        // Verificăm și formatul DOCX
         const docxFilename = `contract_${userId}.docx`;
         const docxPath = path.join(__dirname, `../../../uploads/contracts/${docxFilename}`);
         
         if (fs.existsSync(docxPath)) {
           user.documents.contractPath = `/uploads/contracts/${docxFilename}`;
           user.documents.contractFormat = 'docx';
-          console.log(`Am găsit și am setat calea contractului DOCX la: ${user.documents.contractPath}`);
         } else {
           logger.warn(`Nu am găsit un contract existent pentru utilizatorul ${userId} la semnare`);
           return res.status(400).json({
@@ -672,24 +676,110 @@ exports.signContract = async (req, res, next) => {
           });
         }
       }
-    } else {
-      const contractFullPath = path.join(__dirname, `../../../${user.documents.contractPath.substring(1)}`);
-      
-      if (!fs.existsSync(contractFullPath)) {
-        logger.error(`Contract file not found at path when signing: ${contractFullPath}`);
-        return res.status(400).json({
-          success: false,
-          message: 'Contractul nu a fost găsit la adresa indicată. Te rugăm să regenerezi contractul.',
-          error: 'contract_path_invalid'
-        });
-      }
     }
     
     await user.save();
     
+    // Acum vom regenera contractul cu semnătura inclusă
+    // ---------------------------------------------------------
+    // Pregătim datele pentru a le trimite la API
+    const formData = new FormData();
+    
+    // Adăugăm datele utilizatorului
+    formData.append('userId', userId);
+    formData.append('fullName', user.idCard.fullName);
+    formData.append('address', user.idCard.address || '');
+    formData.append('idSeries', user.idCard.series);
+    formData.append('idNumber', user.idCard.number);
+    formData.append('birthDate', user.idCard.birthDate ? new Date(user.idCard.birthDate).toLocaleDateString('ro-RO') : '');
+    formData.append('issueDate', user.idCard.issueDate ? new Date(user.idCard.issueDate).toLocaleDateString('ro-RO') : '');
+    
+    // Adăugăm IP-ul utilizatorului
+    const userIp = req.ip || req.connection.remoteAddress || "IP necunoscut";
+    formData.append('ipAddress', userIp);
+    
+    // Adăugăm semnătura
+    formData.append('signature', user.signature);
+    formData.append('signedContract', 'true');
+    
+    console.log('Trimitem datele la API extern pentru regenerarea contractului semnat...');
+    
+    // Apelăm API-ul extern pentru a genera documentul DOCX cu semnătură
+    const apiResponse = await axios.post('https://pnrr.digitalizarefirme.com/api/startup/documente', formData, {
+      headers: {
+        ...formData.getHeaders(), 
+        'Accept': 'application/json'
+      },
+      responseType: 'arraybuffer'
+    });
+    
+    if (apiResponse.status !== 200) {
+      throw new Error(`API extern a răspuns cu status: ${apiResponse.status}`);
+    }
+    
+    console.log('Document DOCX cu semnătură primit de la API extern');
+    
+    // Salvăm documentul DOCX primit
+    const uploadsDir = path.join(__dirname, '../../../uploads/contracts');
+    await fs.promises.mkdir(uploadsDir, { recursive: true });
+    
+    const docxFilename = `contract_${userId}.docx`;
+    const docxPath = path.join(uploadsDir, docxFilename);
+    
+    // Salvăm documentul DOCX primit
+    fs.writeFileSync(docxPath, apiResponse.data);
+    console.log(`Document DOCX semnat salvat la: ${docxPath}`);
+    
+    // Actualizăm informațiile în baza de date
+    user.documents.contractFormat = 'docx';
+    user.documents.contractPath = `/uploads/contracts/${docxFilename}`;
+    await user.save();
+    
+    // Convertăm la PDF și trimitem pe email
+    try {
+      const pdfBuffer = await convertToPdf(apiResponse.data);
+      console.log('Conversie la PDF reușită pentru contractul semnat');
+      
+      // Salvăm PDF-ul
+      const contractFilename = `contract_${userId}.pdf`;
+      const contractPath = path.join(uploadsDir, contractFilename);
+      fs.writeFileSync(contractPath, pdfBuffer);
+      
+      // Actualizăm calea în baza de date
+      user.documents.contractFormat = 'pdf';
+      user.documents.contractPath = `/uploads/contracts/${contractFilename}`;
+      await user.save();
+      
+      // Trimitem email cu contractul PDF
+      let displayName = user.idCard.fullName || user.name || userId;
+      displayName = removeDiacritics(displayName).replace(/\s+/g, '_');
+      logger.info(`Sending signed contract email to ${user.email} and contact@aplica-startup.ro`);
+      const emailResult = await sendContractEmail(
+        user, 
+        contractPath, 
+        `contract_semnat_${displayName}.pdf`, 
+        false
+      );
+    } catch (conversionError) {
+      console.error('Eroare la conversia în PDF:', conversionError);
+      logger.error(`PDF conversion error for signed contract: ${conversionError.message}`);
+      
+      // Trimitem email cu contractul DOCX
+      let displayName = user.idCard.fullName || user.name || userId;
+      displayName = removeDiacritics(displayName).replace(/\s+/g, '_');
+      
+      logger.info(`Sending DOCX signed contract email to ${user.email} and contact@aplica-startup.ro`);
+      const emailResult = await sendContractEmail(
+        user, 
+        docxPath, 
+        `contract_semnat_${displayName}.docx`, 
+        true
+      );
+    }
+    
     return res.status(200).json({
       success: true,
-      message: 'Contractul a fost semnat cu succes',
+      message: 'Contractul a fost semnat cu succes și trimis pe email',
       data: {
         contractSigned: user.contractSigned,
         contractSignedAt: user.contractSignedAt

@@ -25,6 +25,7 @@ router.post('/validate-id-card', protect, contractRateLimiter, contractControlle
 router.post('/generate-consulting', protect, contractRateLimiter, consultingController.generateConsultingContract);
 router.get('/download-consulting', protect, contractRateLimiter, consultingController.downloadConsultingContract);
 router.post('/reset-consulting', protect, contractRateLimiter, consultingController.resetConsultingContract);
+router.post('/sign-consulting', protect, contractRateLimiter, consultingController.signConsultingContract);
 
 // Admin routes - for generating contracts for specific users
 router.post('/admin/generate-consulting/:userId', protect, authorize('admin', 'super-admin'), consultingController.generateConsultingContractForUser);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Download, Check, AlertCircle, FileCheck, Printer, Search, ArrowRight, UserRound, X, PenTool } from 'lucide-react';
+import SignatureCapture from '../signature/SignatureCapture';
 import axios from 'axios';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -12,6 +13,8 @@ const ClientConsultingContractStep = ({ onStepComplete, userDocuments }) => {
   const [contractSigned, setContractSigned] = useState(false);
   const [loadingDownload, setLoadingDownload] = useState(false);
   const [loadingReset, setLoadingReset] = useState(false);
+  const [showSignatureDialog, setShowSignatureDialog] = useState(false);
+  const [signatureSaving, setSignatureSaving] = useState(false);
 
   // Verificare date contract din userDocuments
   useEffect(() => {
@@ -134,7 +137,7 @@ const ClientConsultingContractStep = ({ onStepComplete, userDocuments }) => {
     }
   };
 
-  // Generează contractul de consultanță
+  // Generează contractul de consultanță (fără semnătură inițial)
   const handleGenerateContract = async () => {
     setLoading(true);
     setError('');
@@ -160,7 +163,7 @@ const ClientConsultingContractStep = ({ onStepComplete, userDocuments }) => {
       const fullUrl = `${API_URL}/contracts/generate-consulting`;
       console.log(`Trimitere POST request la ${fullUrl}`);
       
-      // Facem request pentru a genera contractul
+      // Facem request pentru a genera contractul inițial (fără semnătură)
       const response = await axios.post(
         fullUrl,
         requestData,
@@ -176,21 +179,18 @@ const ClientConsultingContractStep = ({ onStepComplete, userDocuments }) => {
       
       if (response.data && response.data.success) {
         setContractGenerated(true);
-        setContractSigned(true); // Presupunem că acesta este semnat automat
         
         // Notificăm componenta părinte că contractul a fost generat
         if (onStepComplete && typeof onStepComplete === 'function') {
           // Actualizăm userDocuments pentru a marca contractul ca generat
           const updatedDocs = { 
             ...userDocuments, 
-            consultingContractGenerated: true,
-            consultingContractSigned: true,
-            contractSigned: true, // Marcăm și contractul de participare ca semnat
-            contractGenerated: true // Marcăm și contractul de participare ca generat
+            consultingContractGenerated: true
           };
-          onStepComplete('consulting_contract_complete', updatedDocs);
+          onStepComplete('consulting_contract_generate', updatedDocs);
         }
         
+        // Descărcăm contractul pentru vizualizare
         await handleDownloadContract();
       } else {
         throw new Error(response.data?.message || 'Eroare la generarea contractului de consultanță.');
@@ -199,32 +199,122 @@ const ClientConsultingContractStep = ({ onStepComplete, userDocuments }) => {
       console.error('Eroare la generarea contractului de consultanță:', error);
       console.error('Detalii eroare:', error.response?.status, error.response?.data);
       setError(error.response?.data?.message || error.message || 'A apărut o eroare la generarea contractului de consultanță. Te rugăm să încerci din nou.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Marchează contractul de consultanță ca semnat
+  const handleSignContract = async () => {
+    setLoading(true);
+    setError('');
+    
+    try {
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      const token = localStorage.getItem('token');
       
-      // Încercarea alternativă - dacă contractul nu se poate genera, marcăm totuși contractul ca semnat
-      // pentru a putea continua fluxul
-      if (error.response?.status === 404) {
-        console.log('Endpoint-ul nu a fost găsit. Continuăm fluxul prin marcarea manuală ca semnat');
+      if (!token) {
+        throw new Error('Nu există token de autentificare. Te rugăm să te conectezi din nou.');
+      }
+      
+      // Verificăm dacă utilizatorul are semnătură salvată
+      if (!currentUser.signature && !currentUser.consultingSignature) {
+        // Deschide dialog pentru adăugare semnătură
+        setShowSignatureDialog(true);
+        return;
+      }
+      
+      // Apelăm API-ul pentru a marca contractul ca semnat
+      const response = await axios.post(
+        `${API_URL}/contracts/sign-consulting`,
+        { signatureData: currentUser.signature || currentUser.consultingSignature },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      if (response.data && response.data.success) {
+        setContractSigned(true);
+        
+        // Notificăm componenta părinte că contractul a fost semnat
         if (onStepComplete && typeof onStepComplete === 'function') {
-          // Actualizăm userDocuments manual pentru a marca statutul ca semnat
+          // Actualizăm userDocuments pentru a marca contractul ca semnat
           const updatedDocs = { 
             ...userDocuments, 
             consultingContractGenerated: true,
-            consultingContractSigned: true,
-            contractSigned: true,
-            contractGenerated: true 
+            consultingContractSigned: true 
           };
-          
-          setTimeout(() => {
-            console.log('Actualizare manuală a statusului de contract...');
-            onStepComplete('consulting_contract_complete', updatedDocs);
-            setContractGenerated(true);
-            setContractSigned(true);
-            setError('Contractul a fost generat, dar descărcarea nu este disponibilă. Continuă la următorul pas.');
-          }, 1000);
+          onStepComplete('consulting_contract_sign_only', updatedDocs);
         }
+        
+        // Redesărcăm contractul semnat
+        await handleDownloadContract();
+      } else {
+        throw new Error(response.data?.message || 'Eroare la semnarea contractului de consultanță.');
       }
+    } catch (error) {
+      console.error('Eroare la semnarea contractului de consultanță:', error);
+      setError(error.response?.data?.message || error.message || 'A apărut o eroare la semnarea contractului de consultanță. Te rugăm să încerci din nou.');
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // Handler pentru salvarea semnăturii și semnarea contractului
+  const handleSaveSignature = async (signatureImageData) => {
+    setSignatureSaving(true);
+    setError('');
+    
+    try {
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('Nu există token de autentificare. Te rugăm să te conectezi din nou.');
+      }
+      
+      // Închide dialogul de semnătură
+      setShowSignatureDialog(false);
+      
+      // Apelăm API-ul pentru a semna contractul direct cu semnătura nou adăugată
+      const response = await axios.post(
+        `${API_URL}/contracts/sign-consulting`,
+        { signatureData: signatureImageData },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      if (response.data && response.data.success) {
+        setContractSigned(true);
+        
+        // Notificăm componenta părinte că contractul a fost semnat
+        if (onStepComplete && typeof onStepComplete === 'function') {
+          // Actualizăm userDocuments pentru a marca contractul ca semnat
+          const updatedDocs = { 
+            ...userDocuments, 
+            consultingContractGenerated: true,
+            consultingContractSigned: true 
+          };
+          onStepComplete('consulting_contract_sign_only', updatedDocs);
+        }
+        
+        // Redesărcăm contractul semnat
+        await handleDownloadContract();
+      } else {
+        throw new Error(response.data?.message || 'Eroare la semnarea contractului de consultanță.');
+      }
+    } catch (error) {
+      console.error('Eroare la salvarea semnăturii pentru contract de consultanță:', error);
+      setError(error.response?.data?.message || error.message || 'A apărut o eroare la salvarea semnăturii. Te rugăm să încerci din nou.');
+    } finally {
+      setSignatureSaving(false);
     }
   };
   
@@ -233,34 +323,13 @@ const ClientConsultingContractStep = ({ onStepComplete, userDocuments }) => {
     console.log('Buton "Doresc consultanta completa" apăsat');
     setError('');
     
-    // Marcăm automat și contractul de participare ca fiind semnat
-    // chiar înainte de a genera contractul de consultanță
-    if (onStepComplete && typeof onStepComplete === 'function') {
-      try {
-        // Actualizăm mai întâi contractul de participare ca fiind semnat
-        console.log('Actualizare status Contract Curs Antreprenoriat: semnat');
-        await onStepComplete('contract_sign', {
-          ...userDocuments,
-          contractGenerated: true,
-          contractSigned: true
-        });
-        
-        // Așteptăm puțin pentru a se aplica actualizarea
-        setTimeout(() => {
-          // Apoi generăm contractul de consultanță
-          console.log('Generare contract consultanță...');
-          handleGenerateContract();
-        }, 500);
-      } catch (error) {
-        console.error('Eroare la actualizarea statusului contractului de participare:', error);
-        setError('Eroare la actualizarea statusului contractului de participare. Încercăm să generăm contractul de consultanță oricum...');
-        
-        // Totuși, încertăm să generăm contractul de consultanță
-        setTimeout(() => handleGenerateContract(), 500);
-      }
-    } else {
-      // Dacă nu avem funcția onStepComplete, continuăm doar cu generarea
+    try {
+      // Generăm contractul de consultanță fără a-l marca automat ca semnat
+      console.log('Generare contract consultanță...');
       await handleGenerateContract();
+    } catch (error) {
+      console.error('Eroare la generarea contractului de consultanță:', error);
+      setError('Eroare la generarea contractului de consultanță. Te rugăm să încerci din nou.');
     }
   };
 
@@ -312,22 +381,58 @@ const ClientConsultingContractStep = ({ onStepComplete, userDocuments }) => {
             </div>
           )}
           
-          {/* Buton pentru a continua la următorul pas */}
-          <div className="mt-4">
-            {/* <button
-              onClick={() => {
-                setTimeout(() => {
-                  console.log('Executăm onStepComplete pentru consulting_contract_complete');
-                  onStepComplete('consulting_contract_complete');
-                  console.log('onStepComplete executat pentru consultanță, ar trebui să avanseze la pasul 4');
-                }, 100);
-              }}
-              className="bg-gradient-to-r from-green-500 to-green-600 text-white px-8 py-2 rounded-full font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center"
-            >
-              <span>Continuă la următorul pas</span>
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </button> */}
+        </div>
+      ) : contractGenerated ? (
+        // Contract generat dar nesemnat
+        <div className="border-2 border-blue-200 rounded-2xl p-8 flex flex-col items-center justify-center bg-blue-50/50">
+          <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-4 shadow-md">
+            <FileText className="h-8 w-8 text-blue-600" />
           </div>
+          <h3 className="text-lg font-semibold text-blue-700 mb-2">Contract de consultanță generat!</h3>
+          
+          <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 mb-6">
+            <button
+              onClick={() => handleDownloadContract()}
+              disabled={loadingDownload}
+              className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-full font-medium shadow-sm hover:bg-gray-50 transition-all duration-300 flex items-center justify-center"
+            >
+              {loadingDownload ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-700 mr-2"></div>
+                  <span>Se descarcă...</span>
+                </>
+              ) : (
+                <>
+                <Download className="h-4 w-4 mr-2" />
+                <span>Descarcă contract consultanță</span>
+                </>
+              )}
+            </button>
+            
+            <button
+              onClick={handleSignContract}
+              disabled={loading}
+              className="bg-blue-600 text-white px-4 py-2 rounded-full font-medium shadow-md hover:bg-blue-700 transition-all duration-300 flex items-center justify-center"
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  <span>Se procesează...</span>
+                </>
+              ) : (
+                <>
+                  <PenTool className="h-4 w-4 mr-2" />
+                  <span>Semnează contract</span>
+                </>
+              )}
+            </button>
+          </div>
+          
+          <p className="text-center text-gray-600 mb-6">
+            Te rugăm să descarci și să verifici contractul, apoi să-l semnezi electronic folosind butonul de mai sus.
+            <br/>
+            După semnare, contractul va fi regenerat automat cu semnătura inclusă și trimis și pe email.
+          </p>
         </div>
       ) : (
         // Starea inițială - nu a fost generat un contract
@@ -337,9 +442,8 @@ const ClientConsultingContractStep = ({ onStepComplete, userDocuments }) => {
           </div>
           <h3 className="text-lg font-semibold text-gray-800 mb-2">Contract de Consultanță</h3>
           <p className="text-center text-gray-600 mb-6">
-            Pentru a finaliza înscrierea în program, generează contractul de consultanță. 
-            Acest contract va include datele tale personale și va marca opțiunea "Doresc consultanță completă".
-            Apăsând butonul de mai jos, contractul va fi completat automat cu datele din buletinul dumneavoastră.
+            Pentru a finaliza înscrierea în program, generează contractul de consultanță, descarcă-l și verifică-l, apoi adaugă semnătura ta.
+            Contractul final va fi regenerat automat cu semnătura inclusă și trimis pe email.
           </p>
           
           <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
@@ -356,7 +460,7 @@ const ClientConsultingContractStep = ({ onStepComplete, userDocuments }) => {
               ) : (
                 <>
                   <FileText className="h-4 w-4 mr-2" />
-                  <span>Doresc consultanță completă: Click generează Contract consultanță</span>
+                  <span>Generează contract de consultanță</span>
                 </>
               )}
             </button>
@@ -400,6 +504,36 @@ const ClientConsultingContractStep = ({ onStepComplete, userDocuments }) => {
           </div>
         )}
       </div>
+      
+      {/* Modal pentru semnătură */}
+      {showSignatureDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold flex items-center">
+                <PenTool className="h-5 w-5 mr-2 text-blue-500" />
+                <span>Semnătură olografă</span>
+              </h3>
+              <button 
+                onClick={() => setShowSignatureDialog(false)} 
+                className="p-1 rounded-full hover:bg-gray-100"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-4">
+              Adaugă semnătura ta în spațiul de mai jos. Această semnătură va fi salvată și inclusă în contractul de consultanță.
+            </p>
+            
+            <SignatureCapture 
+              onSave={handleSaveSignature} 
+              onCancel={() => setShowSignatureDialog(false)}
+              required={true}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,4 +1,213 @@
-// @desc    Generate a consulting contract for a specific user (admin function)
+// @desc    Sign consulting contract
+// @route   POST /api/contracts/sign-consulting
+// @access  Private
+const signConsultingContract = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilizator negăsit'
+      });
+    }
+    
+    const { signatureData } = req.body;
+    
+    if (!signatureData) {
+      return res.status(400).json({
+        success: false,
+        message: 'Semnătura lipsește.'
+      });
+    }
+    
+    if (!user.documents) {
+      user.documents = {};
+    }
+    
+    user.documents.consultingContractSigned = true;
+    user.consultingSignature = signatureData.replace(/\s+/g, '');
+    
+    // Verificăm dacă avem un contract existent
+    if (!user.documents.consultingContractPath) {
+      // Căutăm contractul în locațiile posibile
+      const contractFilename = `contract_consultanta_${userId}.pdf`;
+      const contractPath = path.join(__dirname, `../../../uploads/contracts/${contractFilename}`);
+      
+      if (fs.existsSync(contractPath)) {
+        user.documents.consultingContractPath = `/uploads/contracts/${contractFilename}`;
+        user.documents.consultingContractFormat = 'pdf';
+      } else {
+        // Verificăm și formatul DOCX
+        const docxFilename = `contract_consultanta_${userId}.docx`;
+        const docxPath = path.join(__dirname, `../../../uploads/contracts/${docxFilename}`);
+        
+        if (fs.existsSync(docxPath)) {
+          user.documents.consultingContractPath = `/uploads/contracts/${docxFilename}`;
+          user.documents.consultingContractFormat = 'docx';
+        } else {
+          logger.warn(`Nu am găsit un contract de consultanță existent pentru utilizatorul ${userId} la semnare`);
+          return res.status(400).json({
+            success: false,
+            message: 'Contractul de consultanță nu a fost găsit. Te rugăm să generezi mai întâi contractul.',
+            error: 'consulting_contract_not_found'
+          });
+        }
+      }
+    }
+    
+    // Asigură-te că formatul contractului este setat corect
+    if (!user.documents.consultingContractFormat) {
+      user.documents.consultingContractFormat = 'pdf'; // Valoare implicită
+    }
+    
+    await user.save();
+    
+    // Acum vom regenera contractul de consultanță cu semnătura inclusă
+    // ---------------------------------------------------------
+    // Pregătim datele pentru a le trimite la API
+    const formData = new FormData();
+    
+    // Adăugăm datele utilizatorului
+    formData.append('userId', userId);
+    formData.append('fullName', user.idCard?.fullName || user.name || 'Utilizator');
+    formData.append('email', user.email || 'email@example.com');
+    formData.append('phone', user.phone || '');
+    formData.append('CNP', user.idCard?.CNP || '');
+    
+    // Adăugăm semnătura
+    formData.append('signature', user.consultingSignature);
+    formData.append('signedContract', 'true');
+    
+    logger.info('Trimitem datele la API extern pentru regenerarea contractului de consultanță semnat...');
+    
+    let apiResponse;
+    let useBackupTemplate = false;
+    
+    try {
+      // Apelăm API-ul de contracte de consultanță 
+      apiResponse = await axios.post('https://pnrr.digitalizarefirme.com/api/startup/consultanta', formData, {
+        headers: {
+          ...formData.getHeaders(), 
+          'Accept': 'application/json'
+        },
+        responseType: 'arraybuffer',
+        timeout: 5000
+      });
+      
+      if (apiResponse.status !== 200) {
+        logger.warn(`API consultanță a răspuns cu status non-200: ${apiResponse.status}`);
+        useBackupTemplate = true;
+      }
+    } catch (apiError) {
+      logger.warn(`API call failed: ${apiError.message}. Folosim template-ul backup...`);
+      useBackupTemplate = true;
+    }
+    
+    // Dacă API-ul eșuează, folosim un template local
+    if (useBackupTemplate) {
+      logger.info('Folosim template-ul local pentru contractul de consultanță');
+      
+      // Calea către fișierul template backup
+      const backupTemplatePath = path.join(__dirname, '../../templates/consulting_contract_template.docx');
+      
+      if (!fs.existsSync(backupTemplatePath)) {
+        throw new Error('Backup consulting contract template not found');
+      }
+      
+      // Citim template-ul backup
+      apiResponse = { 
+        data: await fs.promises.readFile(backupTemplatePath),
+        status: 200
+      };
+      logger.info('Succesul încărcarii template-ului backup pentru contractul de consultanță');
+    }
+    
+    logger.info('Am primit documentul DOCX pentru contractul de consultanță semnat');
+    
+    // Salvăm documentul DOCX primit
+    const uploadsDir = path.join(__dirname, '../../../uploads/contracts');
+    await fs.promises.mkdir(uploadsDir, { recursive: true });
+    
+    const docxFilename = `contract_consultanta_${userId}.docx`;
+    const docxPath = path.join(uploadsDir, docxFilename);
+    
+    // Salvăm documentul DOCX
+    fs.writeFileSync(docxPath, apiResponse.data);
+    logger.info(`Contract de consultanță DOCX semnat salvat la: ${docxPath}`);
+    
+    // Actualizăm informațiile în baza de date
+    user.documents.consultingContractFormat = 'docx';
+    user.documents.consultingContractPath = `/uploads/contracts/${docxFilename}`;
+    await user.save();
+    
+    // Convertăm la PDF și trimitem pe email
+    try {
+      const pdfBuffer = await convertToPdf(apiResponse.data);
+      logger.info('Conversie la PDF reușită pentru contractul de consultanță semnat');
+      
+      // Salvăm PDF-ul
+      const pdfFilename = `contract_consultanta_${userId}.pdf`;
+      const pdfPath = path.join(uploadsDir, pdfFilename);
+      fs.writeFileSync(pdfPath, pdfBuffer);
+      
+      // Actualizăm informațiile în baza de date
+      user.documents.consultingContractFormat = 'pdf';
+      user.documents.consultingContractPath = `/uploads/contracts/${pdfFilename}`;
+      await user.save();
+      
+      // Trimitem email cu contractul PDF
+      let displayName = user.idCard?.fullName || user.name || userId;
+      displayName = removeDiacritics(displayName).replace(/\s+/g, '_');
+      
+      const emailResult = await sendContractEmail(
+        user, 
+        pdfPath, 
+        `contract_consultanta_semnat_${displayName}.pdf`, 
+        false, // not DOCX
+        true  // is consulting contract
+      );
+      
+      if (emailResult.success) {
+        logger.info(`Email trimis cu succes cu contractul de consultanță semnat: ${emailResult.messageId}`);
+      } else {
+        logger.warn(`Eroare la trimiterea email-ului cu contractul de consultanță semnat: ${emailResult.error}`);
+      }
+    } catch (conversionError) {
+      logger.error(`Eroare la conversia în PDF pentru contractul de consultanță: ${conversionError.message}`);
+      
+      // Trimitem email cu contractul de consultanță în format DOCX dacă conversia la PDF eșuează
+      let displayName = user.idCard?.fullName || user.name || userId;
+      displayName = removeDiacritics(displayName).replace(/\s+/g, '_');
+      
+      const emailResult = await sendContractEmail(
+        user, 
+        docxPath, 
+        `contract_consultanta_semnat_${displayName}.docx`, 
+        true, // is DOCX
+        true  // is consulting contract
+      );
+      
+      if (emailResult.success) {
+        logger.info(`Email trimis cu succes cu contractul de consultanță semnat în format DOCX: ${emailResult.messageId}`);
+      } else {
+        logger.warn(`Eroare la trimiterea email-ului cu contractul de consultanță semnat în format DOCX: ${emailResult.error}`);
+      }
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Contractul de consultanță a fost semnat cu succes și trimis pe email',
+      data: {
+        consultingContractSigned: user.documents.consultingContractSigned
+      }
+    });
+  } catch (error) {
+    logger.error(`Consulting contract signing error: ${error.message}`);
+    next(error);
+  }
+};// @desc    Generate a consulting contract for a specific user (admin function)
 // @route   POST /api/contracts/admin/generate-consulting/:userId
 // @access  Private (Admin, super-admin)
 const fs = require('fs');
@@ -882,5 +1091,6 @@ module.exports = {
   generateConsultingContract,
   downloadConsultingContract,
   resetConsultingContract,
-  generateConsultingContractForUser
+  generateConsultingContractForUser,
+  signConsultingContract
 };
