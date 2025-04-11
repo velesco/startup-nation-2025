@@ -95,7 +95,7 @@ const ClientDashboardPage = () => {
           
           const progress = Math.round((completedSteps / 4) * 100);
           
-          // Determinăm pasul curent în funcție de progres
+          // Determinăm pasul curent în funcție de progres și documentele din baza de date
           let currentStepValue = 1;
           
           if (documents.id_cardUploaded) {
@@ -128,18 +128,8 @@ const ClientDashboardPage = () => {
             currentStepValue = 3;
           }
           
-          // Verificăm dacă avem un pas salvat în localStorage
-          const savedStep = localStorage.getItem('currentStep');
-          if (savedStep) {
-            const stepNumber = parseInt(savedStep, 10);
-            // Folosim pasul din localStorage doar dacă este mai mare decât cel calculat
-            // pentru a evita regresul la pași anteriori
-            if (!isNaN(stepNumber) && stepNumber >= currentStepValue) {
-              console.log(`Folosim pasul ${stepNumber} din localStorage în loc de ${currentStepValue} calculat`);
-              currentStepValue = stepNumber;
-            }
-          }
-          
+          // Folosim valoarea calculată direct, fără a folosi localStorage
+          console.log(`Setăm pasul curent la ${currentStepValue} bazat pe datele din baza de date`);
           setCurrentStep(currentStepValue);
           
           // Încercăm să obținem notificările utilizatorului din API
@@ -231,7 +221,7 @@ const ClientDashboardPage = () => {
       console.log('Token disponibil:', !!token);
       console.log('Request endpoint:', `${API_URL}/auth/update-details`);
       
-      // Asigurăm consistența datelor
+      // Dacă actualizăm documentele, ne asigurăm că toate flag-urile sunt corecte și coerente
       let dataToUpdate = {...newData};
       
       // Dacă actualizăm documentele, ne asigurăm că toate flag-urile sunt corecte și coerente
@@ -254,12 +244,6 @@ const ClientDashboardPage = () => {
             dataToUpdate.documents.contractSigned = true;
             dataToUpdate.documents.contractGenerated = true;
           }
-        }
-        
-        // Persistăm datele în localStorage ca backup
-        localStorage.setItem('userDocuments', JSON.stringify(dataToUpdate.documents));
-        if (newData.nextStep) {
-          localStorage.setItem('currentStep', newData.nextStep.toString());
         }
       }
       
@@ -408,13 +392,12 @@ const ClientDashboardPage = () => {
     setUser(null);
     setError(null);
     
-    console.log('Forțăm resetarea cache-ului și reîncărcarea datelor...');
+    console.log('Forțăm reîncărcarea datelor...');
     
-    // Forțăm un refresh complet al paginii pentru a evita problemele de cache
-    localStorage.setItem('dashboardNeedsRefresh', 'true');
-    window.location.reload();
+    // Reîncărcăm datele direct fără a folosi localStorage
+    fetchUserData();
     
-  }, []);
+  }, [fetchUserData]);
 
   // Detectare dimensiune ecran pentru design responsive
   useEffect(() => {
@@ -430,49 +413,8 @@ const ClientDashboardPage = () => {
 
   // Încărcarea inițială a datelor
   useEffect(() => {
-    // Important: verificăm dacă trebuie să forțăm un refresh total
-    const needsRefresh = localStorage.getItem('dashboardNeedsRefresh') === 'true';
+    // Verificăm dacă trebuie să forțăm un refresh total
     const forceRefresh = new URLSearchParams(window.location.search).get('refresh');
-    
-    // Verificăm dacă trebuie să forțăm un anumit pas
-    const forceNextStep = localStorage.getItem('forceNextStep');
-    if (forceNextStep) {
-      console.log(`Avem pas forțat din localStorage: ${forceNextStep}`);
-      const stepNumber = parseInt(forceNextStep, 10);
-      if (!isNaN(stepNumber)) {
-        console.log(`Setăm pasul forțat: ${stepNumber}`);
-        setCurrentStep(stepNumber);
-        
-        // Șterge valoarea din localStorage pentru a preveni bucle infinite
-        localStorage.removeItem('forceNextStep');
-      }
-    }
-    
-    // Restaurăm starea din localStorage și o prioritizăm
-    const savedStep = localStorage.getItem('currentStep');
-    if (savedStep) {
-      const stepNumber = parseInt(savedStep, 10);
-      if (!isNaN(stepNumber)) {
-        console.log(`Restaurăm pasul salvat din localStorage: ${stepNumber}`);
-        // Setăm pasul direct în state pentru a fi disponibil imediat
-        setCurrentStep(stepNumber);
-        // Setăm și flag-ul de forțare pentru a ne asigura că pasul este respectat
-        if (!forceNextStep) {
-          localStorage.setItem('forceNextStep', stepNumber.toString());
-        }
-      }
-    }
-    
-    if (needsRefresh && !forceRefresh) {
-      // Setăm flag-ul în localStorage
-      localStorage.removeItem('dashboardNeedsRefresh');
-      
-      // Reîncărcăm pagina cu parameter de refresh
-      const currentUrl = window.location.pathname + '?refresh=' + Date.now();
-      console.log('Forțăm reactualizarea completă pentru a evita cache-ul...');
-      window.location.href = currentUrl;
-      return;
-    }
     
     console.log('Reîncărcăm datele utilizatorului...');
     setLoading(true);
@@ -486,7 +428,7 @@ const ClientDashboardPage = () => {
     }, 100);
     
     return () => clearTimeout(timer);
-  }, [fetchUserData, setCurrentStep]);
+  }, [fetchUserData]);
 
   // Funcție pentru scroll la conținutul pașilor
   const scrollToStepsContent = useCallback(() => {
@@ -523,10 +465,9 @@ const ClientDashboardPage = () => {
       }
     }
     
-    // Setăm pasul current și îl salvăm în localStorage pentru persistență între refreshuri
+    // Setăm pasul curent în starea locală fără a mai folosi localStorage
     setCurrentStep(step);
-    localStorage.setItem('currentStep', step.toString());
-    console.log(`Pasul ${step} a fost salvat în localStorage`);
+    console.log(`Pasul ${step} a fost setat`);
     
     // Dacă suntem pe mobil și tab-ul nu este 'steps', mai întâi schimbăm la tab-ul steps
     if (isMobile && activeTab !== 'steps') {
@@ -743,16 +684,12 @@ const ClientDashboardPage = () => {
             </div>
             <div>
               <p className="font-medium">A apărut o eroare</p>
-              <p className="text-sm text-red-600">{error || "Se afișează date vechi. Pentru a vedea cele mai recente date, curățați cache-ul."}</p>
+              <p className="text-sm text-red-600">{error || "Nu s-au putut încărca datele corect. Apasă butonul Actualizează din dreapta sus."}</p>
               <button 
                 className="mt-2 px-3 py-1 text-sm bg-red-100 hover:bg-red-200 rounded transition-colors text-red-800"
-                onClick={() => {
-                  localStorage.clear(); // Ștergem tot din localStorage
-                  localStorage.setItem('dashboardNeedsRefresh', 'true');
-                  window.location.href = window.location.pathname + '?forceRefresh=' + Date.now();
-                }}
+                onClick={handleRefresh}
               >
-                Curăță cache-ul și reîncărcă
+                Reîncarcă datele
               </button>
             </div>
           </div>
