@@ -8,7 +8,8 @@ import {
   ChevronRight,
   Check,
   X,
-  FileText
+  FileText,
+  Trash2
 } from 'lucide-react';
 
 /**
@@ -20,6 +21,7 @@ const ClientsTable = ({
   toggleClientSelection,
   toggleSelectAllClients,
   handleSendEmail,
+  handleDeleteClient,
   page,
   setPage,
   totalPages,
@@ -195,6 +197,19 @@ const ClientsTable = ({
                         title="Trimite email"
                       >
                         <Mail className="h-5 w-5" />
+                      </button>
+                      
+                      <button 
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (window.confirm(`Sigur doriți să ștergeți clientul ${client.name}?`)) {
+                            handleDeleteClient(client._id);
+                          }
+                        }}
+                        title="Șterge client"
+                      >
+                        <Trash2 className="h-5 w-5" />
                       </button>
                       
                       <button 

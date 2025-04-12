@@ -11,6 +11,7 @@ const ImportClientsModal = ({ isOpen, onClose, onImportSuccess }) => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState(1);
+  const [createdUsers, setCreatedUsers] = useState([]);
   const [headers, setHeaders] = useState([]);
   const [preview, setPreview] = useState([]);
   const [fieldMapping, setFieldMapping] = useState({
@@ -362,6 +363,8 @@ const ImportClientsModal = ({ isOpen, onClose, onImportSuccess }) => {
       setUploading(true);
       setError('');
       
+      console.log('Starting import process with field mapping:', fieldMapping);
+      
       // Process file based on its type
       const fileExtension = file.name.split('.').pop().toLowerCase();
       
@@ -374,43 +377,77 @@ const ImportClientsModal = ({ isOpen, onClose, onImportSuccess }) => {
             try {
               // Map CSV data to client format
               const clients = results.data.map(row => {
-                return {
+                const client = {
                   name: fieldMapping.name ? row[fieldMapping.name] : '',
                   email: fieldMapping.email ? row[fieldMapping.email] : '',
-                  phone: fieldMapping.phone ? row[fieldMapping.phone] : '',
+                  phone: fieldMapping.phone ? row[fieldMapping.phone] : '0000000000', // Default phone
                   status: fieldMapping.status ? row[fieldMapping.status] : 'Nou',
                   businessDetails: {
                     companyName: fieldMapping.company ? row[fieldMapping.company] : ''
                   },
                   group: fieldMapping.group ? row[fieldMapping.group] : ''
                 };
+                return client;
               });
               
-              const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+              console.log('Processed CSV data:', clients.slice(0, 2)); // Log first 2 rows for debugging
+              
+              // Determine API URL
+              const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api'; // Updated port to match backend .env
+              console.log('Using API URL:', API_URL);
+              
+              // Verify authorization token
+              const token = localStorage.getItem('token');
+              if (!token) {
+                throw new Error('Token de autorizare lipsă. Vă rugăm să vă autentificați din nou.');
+              }
+              console.log('Token exists, proceeding with request...');
               
               // Send clients data to API
               const response = await axios.post(`${API_URL}/clients/import`, { clients }, {
                 headers: {
                   Authorization: `Bearer ${localStorage.getItem('token')}`
-                }
+                },
+                timeout: 30000 // 30 seconds timeout for larger imports
               });
               
               if (response.data && response.data.success) {
                 setSuccess(true);
+                
+                // Check if user accounts were created
+                if (response.data.data.userAccounts && response.data.data.userAccounts.length > 0) {
+                  setCreatedUsers(response.data.data.userAccounts);
+                  // Don't close automatically if users were created, so admin can see the credentials
+                } else {
+                  // Close modal after success if no user accounts created
+                  setTimeout(() => {
+                    onClose();
+                  }, 2000);
+                }
+                
                 if (onImportSuccess) {
                   onImportSuccess(response.data.data);
                 }
-                
-                // Close modal after success
-                setTimeout(() => {
-                  onClose();
-                }, 2000);
               } else {
                 throw new Error(response.data?.message || 'Eroare la importul clienților');
               }
             } catch (error) {
               console.error('Error importing clients:', error);
-              setError(error.response?.data?.message || 'Eroare la importul clienților. Verificați formatul datelor.');
+              let errorMessage = 'Eroare la importul clienților. Verificați formatul datelor.';
+              
+              if (error.response) {
+                console.error('Error response data:', error.response.data);
+                console.error('Error response status:', error.response.status);
+                errorMessage = error.response.data?.message || errorMessage;
+              } else if (error.request) {
+                console.error('No response received:', error.request);
+                errorMessage = 'Nu s-a primit niciun răspuns de la server. Verificați conexiunea.';
+              } else {
+                console.error('Error message:', error.message);
+                errorMessage = error.message || errorMessage;
+              }
+              
+              setError(errorMessage);
             } finally {
               setUploading(false);
             }
@@ -439,37 +476,48 @@ const ImportClientsModal = ({ isOpen, onClose, onImportSuccess }) => {
             if (excelData && excelData.length > 0) {
               // Map Excel data to client format
               const clients = excelData.map(row => {
-                return {
+                const client = {
                   name: fieldMapping.name ? row[fieldMapping.name] : '',
                   email: fieldMapping.email ? row[fieldMapping.email] : '',
-                  phone: fieldMapping.phone ? row[fieldMapping.phone] : '',
+                  phone: fieldMapping.phone ? row[fieldMapping.phone] : '0000000000', // Default phone
                   status: fieldMapping.status ? row[fieldMapping.status] : 'Nou',
                   businessDetails: {
                     companyName: fieldMapping.company ? row[fieldMapping.company] : ''
                   },
                   group: fieldMapping.group ? row[fieldMapping.group] : ''
                 };
+                return client;
               });
               
-              const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+              console.log('Processed Excel data:', clients.slice(0, 2)); // Log first 2 rows for debugging
+              
+              const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api'; // Updated port to match backend .env
               
               // Send clients data to API
               const response = await axios.post(`${API_URL}/clients/import`, { clients }, {
                 headers: {
                   Authorization: `Bearer ${localStorage.getItem('token')}`
-                }
+                },
+                timeout: 30000 // 30 seconds timeout for larger imports
               });
               
               if (response.data && response.data.success) {
                 setSuccess(true);
+                
+                // Check if user accounts were created
+                if (response.data.data.userAccounts && response.data.data.userAccounts.length > 0) {
+                  setCreatedUsers(response.data.data.userAccounts);
+                  // Don't close automatically if users were created, so admin can see the credentials
+                } else {
+                  // Close modal after success if no user accounts created
+                  setTimeout(() => {
+                    onClose();
+                  }, 2000);
+                }
+                
                 if (onImportSuccess) {
                   onImportSuccess(response.data.data);
                 }
-                
-                // Close modal after success
-                setTimeout(() => {
-                  onClose();
-                }, 2000);
               } else {
                 throw new Error(response.data?.message || 'Eroare la importul clienților');
               }
@@ -478,7 +526,21 @@ const ImportClientsModal = ({ isOpen, onClose, onImportSuccess }) => {
             }
           } catch (error) {
             console.error('Error importing Excel clients:', error);
-            setError(error.response?.data?.message || 'Eroare la importul clienților din Excel. Verificați formatul datelor.');
+            let errorMessage = 'Eroare la importul clienților din Excel. Verificați formatul datelor.';
+            
+            if (error.response) {
+              console.error('Error response data:', error.response.data);
+              console.error('Error response status:', error.response.status);
+              errorMessage = error.response.data?.message || errorMessage;
+            } else if (error.request) {
+              console.error('No response received:', error.request);
+              errorMessage = 'Nu s-a primit niciun răspuns de la server. Verificați conexiunea.';
+            } else {
+              console.error('Error message:', error.message);
+              errorMessage = error.message || errorMessage;
+            }
+            
+            setError(errorMessage);
           } finally {
             setUploading(false);
           }
@@ -493,7 +555,7 @@ const ImportClientsModal = ({ isOpen, onClose, onImportSuccess }) => {
       }
     } catch (error) {
       console.error('Error handling import:', error);
-      setError('Eroare la procesarea importului. Încercați din nou.');
+      setError('Eroare la procesarea importului. Încercați din nou. Detalii: ' + error.message);
       setUploading(false);
     }
   };
@@ -598,10 +660,38 @@ const ImportClientsModal = ({ isOpen, onClose, onImportSuccess }) => {
                 )}
                 
                 {error && (
-                  <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                    {error}
+                <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                <p className="font-medium">Eroare:</p>
+                  <p>{error}</p>
                   </div>
-                )}
+        )}
+              </div>
+            )}
+
+            {/* Display created user accounts */}
+            {success && createdUsers.length > 0 && (
+              <div className="mt-4 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
+                <h4 className="font-medium mb-2">Conturi utilizator create ({createdUsers.length}):</h4>
+                <p className="text-sm mb-2">Următoarele conturi au fost create automat pentru clienții importați:</p>
+                <div className="max-h-60 overflow-y-auto bg-white p-3 rounded border border-green-100">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="bg-green-50">
+                        <th className="text-left p-2">Email</th>
+                        <th className="text-left p-2">Parolă</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {createdUsers.map((user, idx) => (
+                        <tr key={idx} className="border-t border-green-100">
+                          <td className="p-2">{user.email}</td>
+                          <td className="p-2 font-mono">{user.password}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-sm mt-2 text-green-700">⚠️ Notă: Salvați aceste informații deoarece parolele nu vor mai fi disponibile ulterior.</p>
               </div>
             )}
             

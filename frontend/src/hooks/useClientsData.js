@@ -48,6 +48,7 @@ const useClientsData = () => {
     try {
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
       
+      console.log('Solicită statistici de la API...');
       const response = await axios.get(`${API_URL}/admin/clients/statistics`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`
@@ -55,7 +56,38 @@ const useClientsData = () => {
       });
       
       if (response.data && response.data.success) {
-        setStatsData(response.data.data);
+        console.log('Răspuns statistici API:', response.data);
+
+        // Calculăm statistici suplimentare dacă nu sunt furnizate de backend
+        const stats = response.data.data || {};
+        
+        // Dacă nu avem newClientsThisMonth, încercăm să o calculăm manual folosind endpoint de clienti nou
+        if (stats.newClientsThisMonth === undefined) {
+          try {
+            const now = new Date();
+            const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+            const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+            
+            // Solicităm clienții înregistrați în luna curentă
+            const newClientsResponse = await axios.get(
+              `${API_URL}/admin/clients?registrationStartDate=${firstDayOfMonth}&registrationEndDate=${lastDayOfMonth}&limit=1`, 
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem('token')}`
+                }
+              }
+            );
+            
+            if (newClientsResponse.data && newClientsResponse.data.success) {
+              stats.newClientsThisMonth = newClientsResponse.data.pagination?.total || 0;
+              console.log(`Clienți noi în luna curentă (calculat manual): ${stats.newClientsThisMonth}`);
+            }
+          } catch (err) {
+            console.error('Eroare la calcularea clienților noi din luna curentă:', err);
+          }
+        }
+        
+        setStatsData(stats);
       }
     } catch (err) {
       console.error('Error loading client statistics:', err);
@@ -170,6 +202,14 @@ const useClientsData = () => {
       fetchClients();
     }
   }, [fetchClients, statusFilter, groupFilter, dateFilter, searchTerm, page]);
+  
+  // Effect pentru actualizarea statisticilor când clienții se schimbă
+  useEffect(() => {
+    if (!isInitialMount.current) {
+      // Reîmprospătăm statisticile când numărul de clienți se schimbă
+      fetchStatistics();
+    }
+  }, [total]);
 
   // Exportăm toate staturile și funcțiile relevante
   return {

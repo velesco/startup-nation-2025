@@ -20,7 +20,7 @@ const ClientSchema = new mongoose.Schema(
     },
     phone: {
       type: String,
-      required: [true, 'Please provide a phone number'],
+      required: false, // Changed from true to false to make phone optional
       match: [/^[0-9]{10,15}$/, 'Please provide a valid phone number']
     },
     status: {

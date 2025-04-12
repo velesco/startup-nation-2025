@@ -175,6 +175,7 @@ exports.updateClient = async (req, res, next) => {
 exports.deleteClient = async (req, res, next) => {
   try {
     const client = await Client.findById(req.params.id);
+    const User = require('../models/User'); // Import the User model
     
     if (!client) {
       return res.status(404).json({
@@ -183,15 +184,39 @@ exports.deleteClient = async (req, res, next) => {
       });
     }
     
-    // Instead of deleting, mark as archived
-    client.isArchived = true;
-    await client.save();
+    // Check if permanent delete parameter is provided
+    const { permanent } = req.query;
     
-    res.status(200).json({
-      success: true,
-      data: {}
-    });
+    if (permanent === 'true') {
+      // If client has a userId, update the user to remove the client reference
+      if (client.userId) {
+        await User.findByIdAndUpdate(client.userId, { clientId: null });
+        logger.info(`Removed client reference from user ${client.userId}`);
+      }
+      
+      // Permanently delete the client
+      await Client.findByIdAndDelete(req.params.id);
+      logger.info(`Permanently deleted client: ${client.name} (${client._id})`);
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Client permanently deleted',
+        data: {}
+      });
+    } else {
+      // Just mark as archived (soft delete)
+      client.isArchived = true;
+      await client.save();
+      logger.info(`Archived client: ${client.name} (${client._id})`);
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Client archived',
+        data: {}
+      });
+    }
   } catch (error) {
+    logger.error(`Error deleting client: ${error.message}`);
     next(error);
   }
 };
@@ -468,18 +493,29 @@ exports.getStats = async (req, res, next) => {
 exports.importClients = async (req, res, next) => {
   try {
     const { clients } = req.body;
+    const User = require('../models/User'); // Import the User model
+    const crypto = require('crypto'); // For generating random passwords
+    
+    logger.info(`Import clients request received. User: ${req.user.id}, Client count: ${clients?.length || 0}`);
     
     // Validate input
     if (!clients || !Array.isArray(clients) || clients.length === 0) {
+      logger.error('Import clients error: Invalid input, empty or not an array');
       return res.status(400).json({
         success: false,
         message: 'Please provide a valid list of clients to import'
       });
     }
     
+    // Log the first client to help with debugging
+    if (clients.length > 0) {
+      logger.info(`Sample client data: ${JSON.stringify(clients[0])}`);
+    }
+    
     const results = {
       success: [],
-      errors: []
+      errors: [],
+      usersCreated: [] // Track created user accounts
     };
     
     // Process each client
@@ -494,8 +530,8 @@ exports.importClients = async (req, res, next) => {
           continue;
         }
         
-        // Check for duplicate email
-        const existingClient = await Client.findOne({ email: clientData.email });
+        // Check for duplicate email in clients
+        const existingClient = await Client.findOne({ email: clientData.email.toLowerCase() });
         if (existingClient) {
           results.errors.push({
             data: clientData,
@@ -504,11 +540,26 @@ exports.importClients = async (req, res, next) => {
           continue;
         }
         
+        // Verify and format phone number if present or set a default valid number
+        let phoneNumber = '0000000000'; // Default valid phone
+        
+        if (clientData.phone) {
+          // Clean up phone - remove any non-digit characters
+          const cleanPhone = clientData.phone.toString().replace(/\D/g, '');
+          
+          // If still valid after cleaning, use it
+          if (cleanPhone.match(/^[0-9]{10,15}$/)) {
+            phoneNumber = cleanPhone;
+          } else {
+            logger.warn(`Invalid phone format for client: ${clientData.name}. Using default.`);
+          }
+        }
+        
         // Set default values
         const newClientData = {
           name: clientData.name,
           email: clientData.email.toLowerCase(),
-          phone: clientData.phone || '',
+          phone: phoneNumber,
           status: clientData.status || 'Nou',
           assignedTo: req.user.id, // Assign to current user
           businessDetails: {}
@@ -531,13 +582,67 @@ exports.importClients = async (req, res, next) => {
           
           if (group) {
             newClientData.group = group._id;
+            logger.info(`Client ${clientData.name} assigned to group: ${group.name}`);
+          } else {
+            logger.warn(`Group not found for client: ${clientData.name}, group value: ${clientData.group}`);
           }
         }
         
         // Create the client
         const client = await Client.create(newClientData);
         results.success.push(client);
+        logger.info(`Successfully imported client: ${client.name} (${client._id})`);
+        
+        // Check if a user with this email already exists
+        const existingUser = await User.findOne({ email: client.email.toLowerCase() });
+        
+        // If no user exists, create one
+        if (!existingUser) {
+          try {
+            // Use the client's phone number as password
+            const password = client.phone;
+            
+            // Create user data
+            const userData = {
+              name: client.name,
+              email: client.email.toLowerCase(),
+              password: password,
+              role: 'client', // Set role as client
+              phone: client.phone,
+              clientId: client._id, // Associate with the client record
+              isActive: true
+            };
+            
+            // Create the user
+            const newUser = await User.create(userData);
+            
+            // Update the client to reference the user
+            await Client.findByIdAndUpdate(client._id, { userId: newUser._id });
+            
+            // Add to results
+            results.usersCreated.push({
+              id: newUser._id,
+              email: newUser.email,
+              password: password, // Include password in response for sending to client
+              clientId: client._id
+            });
+            
+            logger.info(`Created user account for client: ${client.name} (${client._id}) with user ID: ${newUser._id}`);
+          } catch (userError) {
+            logger.error(`Failed to create user for client ${client._id}: ${userError.message}`);
+            // We don't add to errors array since the client was successfully created
+          }
+        } else {
+          // If user exists but is not associated with this client, update the association
+          if (!existingUser.clientId || !existingUser.clientId.equals(client._id)) {
+            await User.findByIdAndUpdate(existingUser._id, { clientId: client._id });
+            await Client.findByIdAndUpdate(client._id, { userId: existingUser._id });
+            logger.info(`Associated existing user ${existingUser._id} with client ${client._id}`);
+          }
+        }
       } catch (error) {
+        logger.error(`Error importing individual client: ${error.message}`);
+        logger.error(`Client data: ${JSON.stringify(clientData)}`);
         results.errors.push({
           data: clientData,
           message: error.message
@@ -546,17 +651,26 @@ exports.importClients = async (req, res, next) => {
     }
     
     // Return response
+    const responseMessage = `Imported ${results.success.length} clients with ${results.errors.length} errors. Created ${results.usersCreated.length} new user accounts.`;
+    logger.info(responseMessage);
+    
     res.status(200).json({
       success: true,
-      message: `Imported ${results.success.length} clients with ${results.errors.length} errors`,
+      message: responseMessage,
       data: {
         successful: results.success.length,
         failed: results.errors.length,
-        errors: results.errors
+        usersCreated: results.usersCreated.length,
+        errors: results.errors,
+        userAccounts: results.usersCreated // Include created user accounts
       }
     });
   } catch (error) {
     logger.error(`Failed to import clients: ${error.message}`);
-    next(error);
+    logger.error(`Error stack: ${error.stack}`);
+    return res.status(500).json({
+      success: false,
+      message: `Failed to import clients: ${error.message}`
+    });
   }
 };

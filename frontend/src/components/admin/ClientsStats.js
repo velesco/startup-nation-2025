@@ -1,17 +1,41 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 
 /**
  * Componentă pentru afișarea statisticilor despre clienți
+ * @param {Object} props
+ * @param {Array} props.clients - Lista de clienți din pagina curentă
+ * @param {number} props.totalClients - Numărul total de clienți din sistem
+ * @param {Object} props.statsData - Date statistice de la backend (opțional)
  */
-const ClientsStats = ({ clients }) => {
-  // Calculăm numărul de clienți pe status
-  const inProgressCount = clients.filter(client => client.status === 'În progres').length || 0;
-  const completedCount = clients.filter(client => client.status === 'Complet').length || 0;
-  const newCount = clients.filter(client => client.status === 'Nou').length || 0;
+const ClientsStats = ({ clients, totalClients, statsData }) => {
+  console.log('Date statistice primite:', { statsData });
+  
+  // Calculăm clienții noi din luna curentă
+  const currentMonthClients = useMemo(() => {
+    // Dacă avem date de la backend, le folosim
+    if (statsData?.newClientsThisMonth !== undefined) {
+      return statsData.newClientsThisMonth;
+    }
+    
+    // Altfel, calculăm manual
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    return clients.filter(client => {
+      const regDate = new Date(client.registrationDate);
+      return regDate.getMonth() === currentMonth && regDate.getFullYear() === currentYear;
+    }).length;
+  }, [clients, statsData]);
+  
+  // Utilizăm datele de la backend dacă sunt disponibile, altfel calculăm din lista clienților
+  const inProgressCount = statsData?.inProgressCount || clients.filter(client => client.status === 'În progres').length || 0;
+  const completedCount = statsData?.completedCount || clients.filter(client => client.status === 'Complet').length || 0;
+  const newCount = statsData?.newCount || clients.filter(client => client.status === 'Nou').length || 0;
   
   // Calculăm rata de conversie
-  const conversionRate = clients.length > 0
-    ? Math.round((completedCount / clients.length) * 100)
+  const conversionRate = totalClients > 0
+    ? Math.round((completedCount / totalClients) * 100)
     : 0;
 
   return (
@@ -21,7 +45,7 @@ const ClientsStats = ({ clients }) => {
         <div className="relative z-10">
           <h3 className="text-gray-500 text-sm">Total Clienți</h3>
           <p className="text-3xl font-bold mt-2 bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
-            {clients.length || 0}
+            {totalClients || 0}
           </p>
           <div className="mt-2 h-0.5 w-7 bg-gray-200 rounded-full"></div>
           <div className="mt-4 flex items-center">
@@ -56,7 +80,7 @@ const ClientsStats = ({ clients }) => {
         <div className="relative z-10">
           <h3 className="text-gray-500 text-sm">Clienți Noi (Luna curentă)</h3>
           <p className="text-3xl font-bold mt-2 bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
-            {newCount}
+            {currentMonthClients}
           </p>
           <div className="mt-2 h-0.5 w-7 bg-gray-200 rounded-full"></div>
           <div className="mt-4 flex items-center">

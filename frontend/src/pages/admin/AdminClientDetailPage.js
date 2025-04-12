@@ -23,6 +23,20 @@ import LoadingScreen from '../../components/client/LoadingScreen';
 import SendEmailToClientModal from '../../components/admin/SendEmailToClientModal';
 import ClientDocumentsPanel from '../../components/clients/ClientDocumentsPanel';
 
+// Funcție pentru extragerea și formatarea datelor clientului
+const extractIdCardInfo = (clientData) => {
+  console.log('Extract ID Card Info called with:', clientData);
+  return {
+    ...clientData,
+    // Extragem date de afaceri
+    company: clientData.businessDetails?.companyName || '',
+    address: clientData.businessDetails?.address || '',
+    // Formatăm date buletin pentru editare
+    idCard: clientData.idCard ? `${clientData.idCard.series || ''}${clientData.idCard.number || ''}` : '',
+    cnp: clientData.idCard?.CNP || ''
+  };
+};
+
 const statusColors = {
   'Nou': 'bg-orange-100 text-orange-700',
   'În progres': 'bg-blue-100 text-blue-700',
@@ -59,7 +73,9 @@ const AdminClientDetailPage = () => {
   const fetchClientData = async () => {
     try {
       setLoading(true);
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
+      
+      console.log(`Încarcă datele clientului cu ID: ${id}`);
       
       const response = await axios.get(`${API_URL}/admin/clients/${id}`, {
         headers: {
@@ -68,8 +84,27 @@ const AdminClientDetailPage = () => {
       });
       
       if (response.data && response.data.success) {
-        setClient(response.data.data);
-        setEditedClient(response.data.data);
+        const clientData = response.data.data;
+        console.log('Date primite de la server în fetchClientData:', clientData);
+        
+        if (!clientData) {
+          throw new Error('Datele clientului lipsesc din răspunsul serverului');
+        }
+        
+        // Folosim funcția de extragere pentru formatarea datelor
+        const formattedClientData = extractIdCardInfo(clientData);
+        console.log('Date formatate pentru editare:', formattedClientData);
+        
+        setClient(clientData);
+        setEditedClient(formattedClientData);
+        
+        // Verificăm dacă s-au încărcat corect datele CNP și idCard
+        console.log('Verificare date idCard după încărcare:', {
+          'CNP din server': clientData.idCard?.CNP,
+          'CNP formatat': formattedClientData.cnp,
+          'Serie+Număr din server': clientData.idCard ? `${clientData.idCard.series || ''}${clientData.idCard.number || ''}` : '',
+          'Serie+Număr formatat': formattedClientData.idCard
+        });
       } else {
         throw new Error('Failed to load client data');
       }
@@ -92,24 +127,72 @@ const AdminClientDetailPage = () => {
   const handleSaveChanges = async () => {
     try {
       setLoading(true);
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      console.log('Datele de editat înainte de formatare:', editedClient);
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
       
-      const response = await axios.put(`${API_URL}/admin/clients/${id}`, editedClient, {
+      // Creem un obiect idCard înainte pentru a simplifica procesarea
+      let idCard = {};
+      
+      // Adaugăm CNP în idCard dacă există
+      if (editedClient.cnp) {
+        idCard.CNP = editedClient.cnp;
+      }
+      
+      // Adaugăm serie și număr CI în idCard dacă există
+      if (editedClient.idCard && typeof editedClient.idCard === 'string' && editedClient.idCard.length >= 2) {
+        idCard.series = editedClient.idCard.substring(0, 2);
+        idCard.number = editedClient.idCard.substring(2);
+      }
+      
+      // Construim obiectul complet pentru backend
+      const formattedClientData = {
+        name: editedClient.name,
+        email: editedClient.email,
+        phone: editedClient.phone,
+        status: editedClient.status,
+        businessDetails: {
+          companyName: editedClient.company,
+          address: editedClient.address || '',
+        },
+        notes: editedClient.notes || '',
+        // Includem idCard doar dacă avem cel puțin un câmp completat
+        idCard: Object.keys(idCard).length > 0 ? idCard : null
+      };
+      
+      console.log('Data trimisă la server:', formattedClientData);
+      
+      const response = await axios.put(`${API_URL}/admin/clients/${id}`, formattedClientData, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
       
       if (response.data && response.data.success) {
-        setClient(response.data.data);
-        setEditedClient(response.data.data);
-        setIsEditing(false);
+        console.log('Răspuns de la server după salvare:', response.data);
+        // Setăm loading pentru a indica utilizatorului că datele se reîncărcă
+        setLoading(true);
+        
+        try {
+          // Adăugăm un timp de așteptare pentru a ne asigura că datele sunt disponibile pe server
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Reîncărcăm datele complete ale clientului pentru a ne asigura că primim toate modificările
+          await fetchClientData();
+          alert('Datele clientului au fost actualizate cu succes!');
+        } catch (fetchError) {
+          console.error('Eroare la reîncărcarea datelor clientului:', fetchError);
+          // Forțăm un reload complet al paginii în caz de eroare
+          window.location.reload();
+        } finally {
+          setIsEditing(false);
+          setLoading(false);
+        }
       } else {
         throw new Error('Failed to update client data');
       }
     } catch (err) {
       console.error('Error updating client data:', err);
-      setError('Nu s-au putut actualiza datele clientului. Vă rugăm să încercați din nou.');
+      setError(`Nu s-au putut actualiza datele clientului: ${err.response?.data?.message || err.message}`);
     } finally {
       setLoading(false);
     }
@@ -120,7 +203,7 @@ const AdminClientDetailPage = () => {
     // Clear groups before fetching
     setGroups([]);
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
       
       // First try to get all groups without filtering by status
       const response = await axios.get(`${API_URL}/admin/groups`, {
@@ -161,7 +244,7 @@ const AdminClientDetailPage = () => {
 
     try {
       setAssigningGroup(true);
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
       
       const response = await axios.put(`${API_URL}/admin/clients/${id}/assign-group`, 
         { groupId: selectedGroupId },
@@ -294,8 +377,27 @@ const AdminClientDetailPage = () => {
                   onClick={() => {
                     if (window.confirm('Sigur doriți să ștergeți acest client? Această acțiune este ireversibilă.'))
                     {
-                      // Implementați logica de ștergere aici
-                      alert('Funcționalitate în curs de implementare');
+                      // Implementăm logica de ștergere
+                      const deleteClient = async () => {
+                        try {
+                          const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
+                          const response = await axios.delete(`${API_URL}/clients/${client._id}?permanent=true`, {
+                            headers: {
+                              Authorization: `Bearer ${localStorage.getItem('token')}`
+                            }
+                          });
+                          
+                          if (response.data && response.data.success) {
+                            alert('Clientul a fost șters cu succes!');
+                            navigate('/admin/clients');
+                          }
+                        } catch (error) {
+                          console.error('Error deleting client:', error);
+                          setError(`Eroare la ștergerea clientului: ${error.response?.data?.message || error.message}`);
+                        }
+                      };
+                      
+                      deleteClient();
                     }
                   }}
                 >
@@ -385,7 +487,7 @@ const AdminClientDetailPage = () => {
                       className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   ) : (
-                    <span className="text-gray-800">{client.address || 'Nicio adresă specificată'}</span>
+                    <span className="text-gray-800">{client.businessDetails?.address || 'Nicio adresă specificată'}</span>
                   )}
                 </div>
                 
@@ -417,7 +519,7 @@ const AdminClientDetailPage = () => {
                       className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   ) : (
-                    <span className="text-gray-800">Companie: {client.company || 'Nespecificat'}</span>
+                    <span className="text-gray-800">Companie: {client.businessDetails?.companyName || 'Nespecificat'}</span>
                   )}
                 </div>
                 
@@ -502,8 +604,8 @@ const AdminClientDetailPage = () => {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        <p><span className="font-medium">CNP:</span> {client.cnp || 'Nespecificat'}</p>
-                        <p><span className="font-medium">Serie și Număr CI:</span> {client.idCard || 'Nespecificat'}</p>
+                        <p><span className="font-medium">CNP:</span> {client.idCard?.CNP || 'Nespecificat'}</p>
+                        <p><span className="font-medium">Serie și Număr CI:</span> {client.idCard && (client.idCard.series || client.idCard.number) ? `${client.idCard.series || ''}${client.idCard.number || ''}` : 'Nespecificat'}</p>
                         <p><span className="font-medium">Informații Suplimentare:</span></p>
                         <p className="text-gray-600 whitespace-pre-line">{client.notes || 'Nu există informații suplimentare.'}</p>
                       </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlusCircle } from 'lucide-react';
+import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import DashboardLayout from '../../components/layouts/DashboardLayout';
 import LoadingScreen from '../../components/client/LoadingScreen';
@@ -48,7 +49,8 @@ const AdminClientsPage = () => {
     availableGroups,
     fetchClients,
     fetchStatistics,
-    resetFilters
+    resetFilters,
+    statsData
   } = useClientsData();
 
   // Verificăm dacă utilizatorul este autentificat și are rolul potrivit
@@ -104,6 +106,28 @@ const AdminClientsPage = () => {
     setIsEmailModalOpen(true);
   };
 
+  // Gestionarea ștergerii clientului
+  const handleDeleteClient = async (clientId) => {
+    try {
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
+      const response = await axios.delete(`${API_URL}/clients/${clientId}?permanent=true`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.data && response.data.success) {
+        // Actualizăm lista de clienți
+        fetchClients();
+        fetchStatistics();
+        alert('Clientul a fost șters cu succes!');
+      }
+    } catch (error) {
+      console.error('Error deleting client:', error);
+      alert(`Eroare la ștergerea clientului: ${error.response?.data?.message || error.message}`);
+    }
+  };
+
   if (loading && clients.length === 0) {
     return <LoadingScreen />;
   }
@@ -123,7 +147,11 @@ const AdminClientsPage = () => {
         </div>
 
         {/* Statistici */}
-        <ClientsStats clients={clients} />
+        <ClientsStats 
+          clients={clients} 
+          totalClients={total} 
+          statsData={statsData}
+        />
 
         {error && (
           <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
@@ -165,6 +193,7 @@ const AdminClientsPage = () => {
           toggleClientSelection={toggleClientSelection}
           toggleSelectAllClients={toggleSelectAllClients}
           handleSendEmail={handleSendEmail}
+          handleDeleteClient={handleDeleteClient}
           page={page}
           setPage={setPage}
           totalPages={totalPages}
