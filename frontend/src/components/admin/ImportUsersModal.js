@@ -262,7 +262,7 @@ const ImportUsersModal = ({ isOpen, onClose, onImportSuccess }) => {
               console.log('Processed CSV data:', users.slice(0, 2)); // Log first 2 rows for debugging
               
               // Determine API URL
-              const API_URL = 'http://localhost:5002/api';
+              const API_URL = 'http://aplica-startup.ro/api';
               console.log('Using API URL:', API_URL);
               
               // Verify authorization token
@@ -358,7 +358,7 @@ const ImportUsersModal = ({ isOpen, onClose, onImportSuccess }) => {
               
               console.log('Processed Excel data:', users.slice(0, 2)); // Log first 2 rows for debugging
               
-              const API_URL = 'http://localhost:5002/api';
+              const API_URL = 'http://aplica-startup.ro/api';
               
               // Send users data to API
               const response = await axios.post(`${API_URL}/users/import`, { users }, {
