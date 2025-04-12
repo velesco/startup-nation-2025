@@ -45,7 +45,7 @@ router.use(protect);
 router.get('/dashboard', authorize('admin', 'partner'), getDashboardStats);
 
 // User statistics route
-router.get('/users/statistics', authorize('admin', 'super-admin'), getUsersStatistics);
+router.get('/users/statistics', authorize('admin', 'partner'), getUsersStatistics);
 
 // Client routes
 router.route('/clients')
@@ -74,20 +74,20 @@ router.route('/groups')
   .get(authorize('admin', 'partner'), getGroups)
   .post(authorize('admin'), addGroup);
 
-// User routes - restricted to admin only
+// User routes - restricted to admin and partner
 router.route('/users')
-  .get(authorize('admin', 'super-admin'), getUsers)
-  .post(authorize('admin', 'super-admin'), addUser);
+  .get(authorize('admin', 'partner'), getUsers)
+  .post(authorize('admin', 'partner'), addUser);
 
 router.route('/users/:id')
-  .get(authorize('admin', 'super-admin'), getUserById)
-  .put(authorize('admin', 'super-admin'), updateUser);
+  .get(authorize('admin', 'partner'), getUserById)
+  .put(authorize('admin', 'partner'), updateUser);
 
 // User Contract Download  
-router.get('/users/:id/download-contract', authorize('admin', 'super-admin'), downloadUserContract);
+router.get('/users/:id/download-contract', authorize('admin', 'partner', 'super-admin'), downloadUserContract);
 
 // User Consulting Contract Download
-router.get('/users/:id/download-consulting-contract', authorize('admin', 'super-admin'), downloadUserConsultingContract);
+router.get('/users/:id/download-consulting-contract', authorize('admin', 'partner', 'super-admin'), downloadUserConsultingContract);
 
 // Send user data to external API
 router.post('/users/:id/send-data', authorize('admin', 'super-admin'), sendUserDataToExternalAPI);
@@ -106,8 +106,8 @@ router.get('/contracts/counts', authorize('admin', 'super-admin'), getContractsC
 
 // User Document routes
 router.route('/users/:id/documents')
-  .get(authorize('admin', 'super-admin'), getUserDocuments)
-  .post(authorize('admin', 'super-admin'), uploadUserDocument);
+  .get(authorize('admin', 'partner', 'super-admin'), getUserDocuments)
+  .post(authorize('admin', 'partner', 'super-admin'), uploadUserDocument);
 
 // User Token Generation for Contract Download
 router.post('/generate-user-token', authorize('admin', 'partner', 'super-admin'), generateUserToken);

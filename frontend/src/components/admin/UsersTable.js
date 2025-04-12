@@ -1,18 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Mail, 
-  Building, 
-  Clock, 
-  Calendar,
+  Eye, 
+  Mail,
   ChevronLeft,
   ChevronRight,
-  Send,
   Check,
   X,
   FileText,
-  UserCheck,
-  Phone
+  Trash2,
+  UserPlus,
+  UserCog
 } from 'lucide-react';
 
 /**
@@ -20,7 +18,11 @@ import {
  */
 const UsersTable = ({ 
   users, 
+  selectedUsers, 
+  toggleUserSelection,
+  toggleSelectAllUsers,
   handleSendEmail,
+  handleDeleteUser,
   page,
   setPage,
   totalPages,
@@ -29,13 +31,11 @@ const UsersTable = ({
 }) => {
   const navigate = useNavigate();
 
-  // Status colors
+  // Role colors
   const roleColors = {
     'admin': 'bg-purple-100 text-purple-700',
     'partner': 'bg-blue-100 text-blue-700',
     'client': 'bg-green-100 text-green-700',
-    'user': 'bg-gray-100 text-gray-700',
-    'super-admin': 'bg-red-100 text-red-700'
   };
 
   // Generam inițialele pentru utilizator
@@ -50,33 +50,15 @@ const UsersTable = ({
 
   // Formatare dată pentru afișare
   const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
     const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
     return new Date(dateString).toLocaleDateString('ro-RO', options);
   };
 
-  // Formatare data ultimei conectări
-  const formatLastLogin = (dateString) => {
-    if (!dateString) return 'Niciodată';
-    
-    const now = new Date();
-    const lastLogin = new Date(dateString);
-    const diffMs = now - lastLogin;
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) {
-      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-      if (diffHours === 0) {
-        const diffMinutes = Math.floor(diffMs / (1000 * 60));
-        return `Acum ${diffMinutes} minute`;
-      }
-      return `Acum ${diffHours} ore`;
-    } else if (diffDays === 1) {
-      return 'Ieri';
-    } else if (diffDays < 7) {
-      return `Acum ${diffDays} zile`;
-    }
-    
-    return formatDate(dateString);
+  // Get creator name
+  const getCreatorName = (user) => {
+    if (!user.added_by) return 'N/A';
+    return typeof user.added_by === 'object' ? user.added_by.name : 'Necunoscut';
   };
 
   return (
@@ -87,35 +69,36 @@ const UsersTable = ({
           <table className="min-w-full divide-y divide-gray-200">
             <thead>
               <tr className="bg-white/70">
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Utilizator
+                <th scope="col" className="p-4 text-left">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                      checked={selectedUsers.length === users.length && users.length > 0}
+                      onChange={toggleSelectAllUsers}
+                    />
+                  </div>
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
+                  Nume
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Telefon
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Organizație
+                  Contact
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Rol
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ultima conectare
+                  Documente
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Înregistrat
+                  Status
                 </th>
-                <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contract
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Adăugat de
                 </th>
-                <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Cons.
-                </th>
-                <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Buletin
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Data înregistrării
                 </th>
                 <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Acțiuni
@@ -129,6 +112,16 @@ const UsersTable = ({
                   className="hover:bg-gray-50 transition-colors cursor-pointer"
                   onClick={() => navigate(`/admin/users/${user._id}`)}
                 >
+                  <td className="p-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                        checked={selectedUsers.includes(user._id)}
+                        onChange={() => toggleUserSelection(user._id)}
+                      />
+                    </div>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="h-10 w-10 flex-shrink-0">
@@ -137,135 +130,132 @@ const UsersTable = ({
                         </div>
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                        <div className="flex items-center flex-wrap gap-1">
+                          <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                        </div>
                         <div className="text-sm text-gray-500">ID: {user._id.substr(-5)}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center text-sm text-gray-900">
-                      <Mail className="h-4 w-4 mr-1 text-gray-400" />
-                      <a 
-                        href={`mailto:${user.email}`} 
-                        className="text-blue-600 hover:text-blue-800"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {user.email}
-                      </a>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center text-sm text-gray-900">
-                      <Phone className="h-4 w-4 mr-1 text-gray-400" />
-                      {user.phone || <span className="text-gray-500">-</span>}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center text-sm text-gray-900">
-                      {user.organization ? (
-                        <>
-                          <Building className="h-4 w-4 mr-1 text-gray-400" />
-                          {user.organization}
-                          {user.position && <span className="text-xs text-gray-500 ml-1">({user.position})</span>}
-                        </>
-                      ) : (
-                        <span className="text-gray-500">-</span>
-                      )}
-                    </div>
+                    <div className="text-sm text-gray-900">{user.email}</div>
+                    <div className="text-sm text-gray-500">{user.phone || 'N/A'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${roleColors[user.role] || 'bg-gray-100 text-gray-800'}`}>
                       {user.role === 'admin' ? 'Administrator' : 
-                        user.role === 'partner' ? 'Partener' : 
-                        user.role === 'client' ? 'Client' : 
-                        user.role === 'super-admin' ? 'Super Admin' : 
-                        'Utilizator'}
+                       user.role === 'partner' ? 'Partener' : 
+                       user.role === 'client' ? 'Client' : user.role}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center text-sm text-gray-500">
-                      <Clock className="h-4 w-4 mr-1 text-gray-400" />
-                      {formatLastLogin(user.lastLogin)}
+                    <div className="flex flex-col gap-1">
+                      {user.documents && user.documents.id_cardUploaded ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                          <Check className="h-3 w-3 mr-1" />
+                          Buletin
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                          <X className="h-3 w-3 mr-1" />
+                          Buletin
+                        </span>
+                      )}
+                      
+                      {user.documents && user.documents.contractGenerated ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                          <Check className="h-3 w-3 mr-1" />
+                          Contract Curs
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                          <X className="h-3 w-3 mr-1" />
+                          Contract Curs
+                        </span>
+                      )}
+                      
+                      {user.documents && user.documents.consultingContractGenerated ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                          <Check className="h-3 w-3 mr-1" />
+                          Contract Consultanță
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                          <X className="h-3 w-3 mr-1" />
+                          Contract Consultanță
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center text-sm text-gray-500">
-                      <Calendar className="h-4 w-4 mr-1 text-gray-400" />
-                      {formatDate(user.createdAt)}
+                    {user.isActive ? (
+                      <div className="flex items-center">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          <Check className="h-3 w-3 mr-1" />
+                          Activ
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          <X className="h-3 w-3 mr-1" />
+                          Inactiv
+                        </span>
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {getCreatorName(user)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {formatDate(user.createdAt)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-center space-x-2">
+                      <button 
+                        className="p-2 text-orange-600 hover:bg-orange-50 rounded-md transition-colors"
+                        onClick={(e) => handleSendEmail(user, e)}
+                        title="Trimite email"
+                      >
+                        <Mail className="h-5 w-5" />
+                      </button>
+                      
+                      <button 
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (window.confirm(`Sigur doriți să ștergeți utilizatorul ${user.name}?`)) {
+                            handleDeleteUser(user._id);
+                          }
+                        }}
+                        title="Șterge utilizator"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </button>
+                      
+                      <button 
+                        className="text-blue-600 hover:text-blue-800 px-4 py-2 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/admin/users/${user._id}`);
+                        }}
+                      >
+                        <div className="flex items-center">
+                          <Eye className="h-5 w-5 mr-2" />
+                          <span className="font-medium">Vizualizare</span>
+                        </div>
+                      </button>
                     </div>
-                  </td>
-                    {/* Contract */}
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      {user.contractSigned || 
-                       user.documents?.contractSigned || 
-                       user.documents?.contractGenerated || 
-                       user.documents?.contractPath ? (
-                      <div className="flex items-center justify-center">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          <Check className="h-3 w-3 mr-1" />
-                          {user.contractSigned ? 'Semnat' : 'Generat'}
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          <X className="h-3 w-3 mr-1" />
-                          Lipsă
-                        </span>
-                      </div>
-                    )}
-                  </td>
-                      {/* Contract de consultanță */}
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        {user.documents?.consultingContractSigned || 
-                         user.documents?.consultingContractGenerated || 
-                         user.documents?.consultingContractPath ? (
-                      <div className="flex items-center justify-center">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          <Check className="h-3 w-3 mr-1" />
-                          {user.documents?.consultingContractSigned ? 'Semnat' : 'Generat'}
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          <X className="h-3 w-3 mr-1" />
-                          Lipsă
-                        </span>
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    {user.documents?.id_cardUploaded || user.idCard?.verified ? (
-                      <div className="flex items-center justify-center">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          <FileText className="h-3 w-3 mr-1" />
-                          Încărcat
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          <X className="h-3 w-3 mr-1" />
-                          Lipsă
-                        </span>
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation(); // Oprim propagarea pentru a nu naviga la profil
-                        handleSendEmail(user);
-                      }}
-                      className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-2 rounded-lg hover:opacity-90 transition-all focus:outline-none focus:ring-2 focus:ring-green-500 mr-2"
-                      title="Trimite email"
-                    >
-                      <Send className="h-4 w-4" />
-                    </button>
                   </td>
                 </tr>
               ))}
+              {users.length === 0 && (
+                <tr>
+                  <td colSpan="9" className="px-6 py-10 text-center text-gray-500">
+                    Nu există utilizatori care să corespundă criteriilor de căutare.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

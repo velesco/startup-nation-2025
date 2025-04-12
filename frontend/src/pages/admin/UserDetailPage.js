@@ -45,6 +45,10 @@ const UserDetailPage = () => {
     return new Date(dateString).toLocaleDateString('ro-RO', options);
   };
 
+  // Verifică permisiunile de editare în funcţie de rolul utilizatorului și relaţia cu utilizatorul afișat
+
+  // Verifică permisiunile de utilizatori în funcție de relația added_by
+  
   // Fetch user data
   useEffect(() => {
     const fetchUser = async () => {
@@ -167,8 +171,31 @@ const UserDetailPage = () => {
           </div>
         </div>
 
-        {/* Error message */}
-        {error && (
+        {/* Mesaj pentru parteneri */}
+        {currentUser && currentUser.role === 'partner' && user && (
+        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-blue-700">
+                {(typeof user.added_by === 'string' && user.added_by === currentUser._id) ||
+                 (typeof user.added_by === 'object' && 
+                  ((user.added_by._id && (user.added_by._id === currentUser._id || user.added_by._id.toString() === currentUser._id)) ||
+                   user.added_by === currentUser._id)) ? 
+                  'Puteți gestiona acest utilizator deoarece l-ați adăugat dumneavoastră.' : 
+                  'Aveți permisiuni limitate pentru acest utilizator deoarece nu a fost adăugat de dumneavoastră.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error message */}
+      {error && (
           <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
             <div className="flex">
               <div className="flex-shrink-0">
@@ -241,21 +268,36 @@ const UserDetailPage = () => {
                     <div className="flex justify-between items-center mb-6">
                       <h2 className="text-xl font-semibold text-gray-800">Detalii profil</h2>
                       <div className="flex space-x-2">
-                        {currentUser && (currentUser.role === 'admin' || currentUser.role === 'super-admin') && (
+                        {currentUser && (
+                          // Admins și super-admins pot edita orice utilizator
+                          (currentUser.role === 'admin' || currentUser.role === 'super-admin') ||
+                          // Partenerii pot edita doar utilizatorii pe care i-au adăugat
+                          (currentUser.role === 'partner' && user.added_by && (
+                            // added_by poate fi string
+                            (typeof user.added_by === 'string' && user.added_by === currentUser._id) ||
+                            // sau poate fi un obiect cu _id
+                            (typeof user.added_by === 'object' && 
+                             ((user.added_by._id && (user.added_by._id === currentUser._id || user.added_by._id.toString() === currentUser._id)) ||
+                              user.added_by === currentUser._id)
+                            )
+                          ))
+                        ) && (
                           <>
-                            <button
-                              onClick={sendUserDataToSheet}
-                              disabled={isSendingData || user.dataSentToSheet}
-                              className={`${
-                                user.dataSentToSheet
-                                  ? 'bg-gray-300 cursor-not-allowed'
-                                  : 'bg-gradient-to-r from-indigo-500 to-blue-600 hover:opacity-90'
-                              } text-white px-4 py-2 rounded-lg transition-colors flex items-center`}
-                              title={user.dataSentToSheet ? 'Datele au fost deja trimise' : 'Trimite datele utilizatorului către Google Sheets'}
-                            >
-                              <ExternalLink className="h-4 w-4 mr-2" />
-                              {isSendingData ? 'Se trimite...' : (user.dataSentToSheet ? 'Date trimise' : 'Trimite la Sheet')}
-                            </button>
+                            {(currentUser.role === 'admin' || currentUser.role === 'super-admin') && (
+                              <button
+                                onClick={sendUserDataToSheet}
+                                disabled={isSendingData || user.dataSentToSheet}
+                                className={`${
+                                  user.dataSentToSheet
+                                    ? 'bg-gray-300 cursor-not-allowed'
+                                    : 'bg-gradient-to-r from-indigo-500 to-blue-600 hover:opacity-90'
+                                } text-white px-4 py-2 rounded-lg transition-colors flex items-center`}
+                                title={user.dataSentToSheet ? 'Datele au fost deja trimise' : 'Trimite datele utilizatorului către Google Sheets'}
+                              >
+                                <ExternalLink className="h-4 w-4 mr-2" />
+                                {isSendingData ? 'Se trimite...' : (user.dataSentToSheet ? 'Date trimise' : 'Trimite la Sheet')}
+                              </button>
+                            )}
                             
                             <button
                               onClick={() => setIsEmailModalOpen(true)}

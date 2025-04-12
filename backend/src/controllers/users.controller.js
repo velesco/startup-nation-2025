@@ -80,7 +80,7 @@ exports.getUsers = async (req, res, next) => {
 
 // @desc    Get user by ID
 // @route   GET /api/admin/users/:id
-// @access  Private (Admin, Super Admin)
+// @access  Private (Admin, Partner)
 exports.getUserById = async (req, res, next) => {
   try {
     const userId = req.params.id;
@@ -93,6 +93,16 @@ exports.getUserById = async (req, res, next) => {
       return res.status(404).json({
         success: false,
         message: 'User not found'
+      });
+    }
+    
+    // Check if partner is trying to access a user they didn't add
+    if (req.user.role === 'partner' && 
+        user.added_by && 
+        user.added_by.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to view this user'
       });
     }
     
@@ -109,11 +119,30 @@ exports.getUserById = async (req, res, next) => {
 
 // @desc    Update user
 // @route   PUT /api/admin/users/:id
-// @access  Private (Admin, Super Admin)
+// @access  Private (Admin, Partner)
 exports.updateUser = async (req, res, next) => {
   try {
     const userId = req.params.id;
     const updateData = req.body;
+    
+    // Find user to check permissions
+    const userToUpdate = await User.findById(userId);
+    if (!userToUpdate) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    // Check if partner is trying to update a user they didn't add
+    if (req.user.role === 'partner' && 
+        userToUpdate.added_by && 
+        userToUpdate.added_by.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to update this user'
+      });
+    }
     
     // Don't allow role update to super-admin unless current user is super-admin
     if (updateData.role === 'super-admin' && req.user.role !== 'super-admin') {
@@ -149,18 +178,9 @@ exports.updateUser = async (req, res, next) => {
         updateData.idCardIssueDate || updateData.idCardExpiryDate || updateData.idCardAddress || updateData.idCardFullName) {
       logger.info(`Updating ID card data for user: ${userId}`);
       
-      // Get current user to check existing data
-      const currentUser = await User.findById(userId);
-      if (!currentUser) {
-        return res.status(404).json({
-          success: false,
-          message: 'User not found'
-        });
-      }
-      
       // Create or update idCard field
       if (!updateData.idCard) {
-        updateData.idCard = currentUser.idCard || {};
+        updateData.idCard = userToUpdate.idCard || {};
       }
       
       // Map frontend field names to backend model fields
@@ -209,15 +229,15 @@ exports.updateUser = async (req, res, next) => {
         updateData.idCard.verified = true;
         
         // If we don't have a fullName set, use the user's name
-        if (!updateData.idCard.fullName && currentUser.name) {
-          updateData.idCard.fullName = currentUser.name;
+        if (!updateData.idCard.fullName && userToUpdate.name) {
+          updateData.idCard.fullName = userToUpdate.name;
         }
       }
       
       // If ID card data is verified, also set the documents.id_cardUploaded flag
       if (updateData.idCard.verified) {
         if (!updateData.documents) {
-          updateData.documents = currentUser.documents || {};
+          updateData.documents = userToUpdate.documents || {};
         }
         updateData.documents.id_cardUploaded = true;
       }
@@ -229,14 +249,6 @@ exports.updateUser = async (req, res, next) => {
       updateData,
       { new: true, runValidators: true }
     ).select('-password');
-    
-    // Check if user exists
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
     
     // Return updated user
     res.status(200).json({

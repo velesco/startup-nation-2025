@@ -2,24 +2,26 @@ import React, { useState } from 'react';
 import { 
   Filter, 
   Search, 
+  Download, 
+  Upload, 
   X 
 } from 'lucide-react';
 
 /**
- * Componentă pentru filtrarea utilizatorilor
+ * Componentă pentru filtrarea și acțiuni asupra utilizatorilor
  */
 const UsersFilter = ({ 
   searchTerm, 
   setSearchTerm, 
   roleFilter, 
-  setRoleFilter,
-  activeFilter,
+  setRoleFilter, 
+  activeFilter, 
   setActiveFilter,
-  organizationFilter,
-  setOrganizationFilter,
   resetFilters,
   handleSearch,
-  onOpenFilterModal
+  onOpenExportModal,
+  onOpenImportModal,
+  onOpenFilterModal,
 }) => {
   // Statut pentru a determina dacă s-a modificat searchTerm-ul
   const [searchTermChanged, setSearchTermChanged] = useState(false);
@@ -43,7 +45,7 @@ const UsersFilter = ({
           <div className="relative">
             <input
               type="text"
-              placeholder="Caută după nume, email sau organizație..."
+              placeholder="Caută după nume, email sau telefon..."
               className="glassmorphism w-full h-full pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={searchTerm}
               onChange={handleInputChange}
@@ -55,33 +57,34 @@ const UsersFilter = ({
         </form>
         
         <div className="flex space-x-2">
-          <select
-            className="glassmorphism px-4 py-2 rounded-lg text-gray-700"
-            value={roleFilter}
-            onChange={(e) => {
-              setRoleFilter(e.target.value);
-              handleSearch();
-            }}
-          >
-            <option value="">Toate rolurile</option>
-            <option value="admin">Administrator</option>
-            <option value="partner">Partener</option>
-            <option value="client">Client</option>
-            <option value="user">Utilizator</option>
-          </select>
-          
           <button 
             className="glassmorphism px-4 py-2 rounded-lg flex items-center text-gray-700 hover:bg-white/80 transition-colors"
             onClick={onOpenFilterModal}
           >
             <Filter className="h-5 w-5 mr-2" />
-            <span>Mai multe filtre</span>
+            <span>Filtrează</span>
+          </button>
+          
+          <button 
+            className="glassmorphism px-4 py-2 rounded-lg flex items-center text-gray-700 hover:bg-white/80 transition-colors"
+            onClick={onOpenExportModal}
+          >
+            <Download className="h-5 w-5 mr-2" />
+            <span>Export</span>
+          </button>
+          
+          <button 
+            className="glassmorphism px-4 py-2 rounded-lg flex items-center text-gray-700 hover:bg-white/80 transition-colors"
+            onClick={onOpenImportModal}
+          >
+            <Upload className="h-5 w-5 mr-2" />
+            <span>Import</span>
           </button>
         </div>
       </div>
 
       {/* Filtre active */}
-      {(roleFilter || activeFilter || organizationFilter) && (
+      {(roleFilter || activeFilter) && (
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <span className="text-sm text-gray-500 mr-2">Filtre active:</span>
           
@@ -89,9 +92,7 @@ const UsersFilter = ({
             <div className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm flex items-center">
               Rol: {roleFilter === 'admin' ? 'Administrator' : 
                   roleFilter === 'partner' ? 'Partener' : 
-                  roleFilter === 'client' ? 'Client' : 
-                  roleFilter === 'super-admin' ? 'Super Admin' : 
-                  'Utilizator'}
+                  roleFilter === 'client' ? 'Client' : roleFilter}
               <button 
                 className="ml-2 text-blue-500 hover:text-blue-700"
                 onClick={() => {
@@ -111,21 +112,6 @@ const UsersFilter = ({
                 className="ml-2 text-green-500 hover:text-green-700"
                 onClick={() => {
                   setActiveFilter('');
-                  handleSearch();
-                }}
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-          
-          {organizationFilter && (
-            <div className="bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-sm flex items-center">
-              Organizație: {organizationFilter}
-              <button 
-                className="ml-2 text-purple-500 hover:text-purple-700"
-                onClick={() => {
-                  setOrganizationFilter('');
                   handleSearch();
                 }}
               >

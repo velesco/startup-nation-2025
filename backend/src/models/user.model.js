@@ -12,6 +12,10 @@ const userSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
     },
+    added_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
     password: {
       type: String,
       required: true,
@@ -138,6 +142,7 @@ userSchema.methods.getInitials = function () {
     .substring(0, 2);
 };
 
-const User = mongoose.model('User', userSchema);
+// Try to get the model first, or create it if it doesn't exist
+const User = mongoose.models.User || mongoose.model('User', userSchema);
 
 module.exports = User;

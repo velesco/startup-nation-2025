@@ -8,6 +8,7 @@ const useUsersData = () => {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
   const [error, setError] = useState(null);
+  const [statsData, setStatsData] = useState(null);
   
   // Pagination and filtering
   const [page, setPage] = useState(1);
@@ -17,11 +18,31 @@ const useUsersData = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [activeFilter, setActiveFilter] = useState('');
-  const [organizationFilter, setOrganizationFilter] = useState('');
   
   // Flag pentru a preveni cereri multiple
   const isInitialMount = useRef(true);
   const isFilterChange = useRef(false);
+
+  // Încărcare date statistice
+  const fetchStatistics = async () => {
+    try {
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      
+      console.log('Solicită statistici de la API...');
+      const response = await axios.get(`${API_URL}/admin/users/statistics`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.data && response.data.success) {
+        console.log('Răspuns statistici API:', response.data);
+        setStatsData(response.data.data || {});
+      }
+    } catch (err) {
+      console.error('Error loading user statistics:', err);
+    }
+  };
 
   // Încărcăm utilizatorii cu paginare și filtre
   const fetchUsers = useCallback(async () => {
@@ -29,19 +50,23 @@ const useUsersData = () => {
       setLoading(true);
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
       
+      // Fetch users
       let queryString = `?page=${page}&limit=${limit}`;
       if (searchTerm) queryString += `&search=${encodeURIComponent(searchTerm)}`;
       if (roleFilter) queryString += `&role=${encodeURIComponent(roleFilter)}`;
-      if (activeFilter) queryString += `&active=${encodeURIComponent(activeFilter)}`;
-      if (organizationFilter) queryString += `&organization=${encodeURIComponent(organizationFilter)}`;
+      if (activeFilter) queryString += `&isActive=${encodeURIComponent(activeFilter)}`;
       
-      const response = await axios.get(`${API_URL}/admin/users${queryString}`, {
+      console.log('Cerere API: ', `${API_URL}/users${queryString}`);
+      
+      const response = await axios.get(`${API_URL}/users${queryString}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
       
       if (response.data && response.data.success) {
+        console.log('Răspuns API:', response.data);
+        
         setUsers(response.data.data);
         setTotal(response.data.pagination.total);
         setTotalPages(response.data.pagination.pages);
@@ -55,13 +80,12 @@ const useUsersData = () => {
       setLoading(false);
       isFilterChange.current = false;
     }
-  }, [page, limit, searchTerm, roleFilter, activeFilter, organizationFilter]);
+  }, [page, limit, searchTerm, roleFilter, activeFilter]);
 
   // Resetarea filtrelor
   const resetFilters = () => {
     setRoleFilter('');
     setActiveFilter('');
-    setOrganizationFilter('');
     setSearchTerm('');
     setPage(1);
     isFilterChange.current = true;
@@ -72,16 +96,26 @@ const useUsersData = () => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
       fetchUsers();
+      fetchStatistics();
     } else if (isFilterChange.current) {
       fetchUsers();
     }
-  }, [fetchUsers, roleFilter, activeFilter, organizationFilter, searchTerm, page]);
+  }, [fetchUsers, roleFilter, activeFilter, searchTerm, page]);
+  
+  // Effect pentru actualizarea statisticilor când utilizatorii se schimbă
+  useEffect(() => {
+    if (!isInitialMount.current) {
+      // Reîmprospătăm statisticile când numărul de utilizatori se schimbă
+      fetchStatistics();
+    }
+  }, [total]);
 
   // Exportăm toate staturile și funcțiile relevante
   return {
     loading,
     users,
     error,
+    statsData,
     page, 
     setPage: (newPage) => {
       setPage(newPage);
@@ -109,15 +143,11 @@ const useUsersData = () => {
       setActiveFilter(active);
       isFilterChange.current = true;
     },
-    organizationFilter,
-    setOrganizationFilter: (org) => {
-      setOrganizationFilter(org);
-      isFilterChange.current = true;
-    },
     fetchUsers: () => {
       isFilterChange.current = true;
       fetchUsers();
     },
+    fetchStatistics,
     resetFilters
   };
 };

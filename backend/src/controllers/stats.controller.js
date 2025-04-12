@@ -92,9 +92,15 @@ exports.getDashboardStats = async (req, res, next) => {
 
 // @desc    Get user statistics
 // @route   GET /api/admin/users/statistics
-// @access  Private (Admin)
+// @access  Private (Admin, Partner)
 exports.getUsersStatistics = async (req, res, next) => {
   try {
+    // Filtru pentru parteneri care pot vedea doar utilizatorii adăugați de ei
+    const filter = {};
+    if (req.user.role === 'partner') {
+      filter.added_by = req.user._id;
+    }
+    
     // Data curentă
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -109,6 +115,7 @@ exports.getUsersStatistics = async (req, res, next) => {
     
     // Utilizatori înregistrați azi
     const appliedToday = await User.countDocuments({
+      ...filter,
       createdAt: {
         $gte: today,
         $lt: tomorrow
@@ -117,6 +124,7 @@ exports.getUsersStatistics = async (req, res, next) => {
     
     // Utilizatori înregistrați ieri
     const appliedYesterday = await User.countDocuments({
+      ...filter,
       createdAt: {
         $gte: yesterday,
         $lt: today
@@ -125,6 +133,7 @@ exports.getUsersStatistics = async (req, res, next) => {
     
     // Utilizatori care au încărcat buletinul
     const idCardUploaded = await User.countDocuments({
+      ...filter,
       $or: [
         { 'documents.id_cardUploaded': true },
         { 'idCard.verified': true }
@@ -133,11 +142,13 @@ exports.getUsersStatistics = async (req, res, next) => {
     
     // Utilizatori care au generat contractele
     const contractsGenerated = await User.countDocuments({
+      ...filter,
       'documents.contractGenerated': true
     });
     
     // Utilizatori care au generat contractele de consultanță
     let consultingContractsQuery = {
+      ...filter,
       $or: [
         { 'documents.consultingContractGenerated': true },
         { 'documents.consultingContractPath': { $exists: true } }
@@ -147,33 +158,8 @@ exports.getUsersStatistics = async (req, res, next) => {
     // Număr consultingContractsGenerated
     let consultingContractsGenerated = await User.countDocuments(consultingContractsQuery);
     
-    // Dacă rezultatul este 0, verificăm manual în directorul de contracte
-    if (consultingContractsGenerated === 0) {
-      try {
-        const fs = require('fs');
-        const path = require('path');
-        const contractsDir = path.join(__dirname, '../../../uploads/contracts');
-        
-        if (fs.existsSync(contractsDir)) {
-          const files = fs.readdirSync(contractsDir);
-          const consultingContractFiles = files.filter(file => 
-            file.toLowerCase().includes('consultanta') || 
-            file.toLowerCase().includes('consultant') ||
-            file.toLowerCase().includes('consult')
-          );
-          
-          console.log(`Găsite ${consultingContractFiles.length} fișiere de contract de consultanță:`);
-          consultingContractFiles.forEach(file => console.log(` - ${file}`));
-          
-          consultingContractsGenerated = consultingContractFiles.length;
-        }
-      } catch (err) {
-        console.error(`Eroare la verificarea manuală a contractelor: ${err.message}`);
-      }
-    }
-    
     // Număr total de utilizatori
-    const totalUsers = await User.countDocuments();
+    const totalUsers = await User.countDocuments(filter);
     
     res.status(200).json({
       success: true,
@@ -187,7 +173,7 @@ exports.getUsersStatistics = async (req, res, next) => {
       }
     });
   } catch (error) {
-    logger.error(`Error getting user statistics: ${error.message}`);
+    console.error(`Error getting user statistics: ${error.message}`);
     next(error);
   }
 };

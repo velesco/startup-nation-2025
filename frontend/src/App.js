@@ -111,11 +111,11 @@ function App() {
           }
         />
 
-        {/* Pagina de users - doar pentru admin */}
+        {/* Pagina de users */}
         <Route
           path="/admin/users"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'super-admin']}>
+            <ProtectedRoute allowedRoles={['admin', 'partner', 'super-admin']}>
               <AdminUsersPage />
             </ProtectedRoute>
           }
@@ -124,7 +124,7 @@ function App() {
         <Route
           path="/admin/users/:id"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'super-admin']}>
+            <ProtectedRoute allowedRoles={['admin', 'partner', 'super-admin']}>
               <UserDetailPage />
             </ProtectedRoute>
           }

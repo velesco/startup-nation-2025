@@ -47,6 +47,10 @@ const UserSchema = new mongoose.Schema(
       trim: true,
       maxlength: [50, 'Position cannot be more than 50 characters']
     },
+    added_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
     profileImage: {
       type: String
     },

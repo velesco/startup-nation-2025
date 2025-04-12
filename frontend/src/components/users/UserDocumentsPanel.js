@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
+import { useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
 import { 
   Upload, 
@@ -13,6 +15,9 @@ import {
 } from 'lucide-react';
 
 const UserDocumentsPanel = ({ userId }) => {
+  const { currentUser } = useAuth();
+  const [targetUser, setTargetUser] = useState(null);
+  const [canEdit, setCanEdit] = useState(false);
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -358,6 +363,45 @@ const UserDocumentsPanel = ({ userId }) => {
   const [hasContract, setHasContract] = useState(false);
   const [hasConsultingContract, setHasConsultingContract] = useState(false);
 
+  // Încarcă utilizatorul și verifică permisiunile
+  useEffect(() => {
+    const fetchUserAndCheckPermissions = async () => {
+      if (!userId || !currentUser) return;
+      
+      try {
+        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+        const response = await axios.get(`${API_URL}/admin/users/${userId}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        if (response.data && response.data.success) {
+          const user = response.data.data;
+          setTargetUser(user);
+          
+          // Verifică dacă utilizatorul curent poate edita acest utilizator
+          const hasEditPermission = 
+            currentUser.role === 'admin' || 
+            currentUser.role === 'super-admin' || 
+            (currentUser.role === 'partner' && user.added_by && (
+              (typeof user.added_by === 'string' && user.added_by === currentUser._id) ||
+              (typeof user.added_by === 'object' && 
+               ((user.added_by._id && (user.added_by._id === currentUser._id || user.added_by._id.toString() === currentUser._id)) ||
+                user.added_by === currentUser._id)
+              )
+            ));
+          
+          setCanEdit(hasEditPermission);
+        }
+      } catch (err) {
+        console.error('Error loading user for permission check:', err);
+      }
+    };
+
+    fetchUserAndCheckPermissions();
+  }, [userId, currentUser]);
+
   // Check for contracts
   useEffect(() => {
     const checkContract = async () => {
@@ -398,21 +442,23 @@ const UserDocumentsPanel = ({ userId }) => {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-gray-800">Documente utilizator</h2>
         <div>
-          <label 
-            htmlFor="file-upload" 
-            className={`inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg shadow-sm hover:bg-blue-700 transition-colors cursor-pointer ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            <FilePlus className="h-4 w-4 mr-2" />
-            <span>Încarcă documente</span>
-            <input
-              id="file-upload"
-              type="file"
-              multiple
-              className="hidden"
-              onChange={handleFileUpload}
-              disabled={uploading}
-            />
-          </label>
+          {canEdit && (
+            <label 
+              htmlFor="file-upload" 
+              className={`inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg shadow-sm hover:bg-blue-700 transition-colors cursor-pointer ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <FilePlus className="h-4 w-4 mr-2" />
+              <span>Încarcă documente</span>
+              <input
+                id="file-upload"
+                type="file"
+                multiple
+                className="hidden"
+                onChange={handleFileUpload}
+                disabled={uploading}
+              />
+            </label>
+          )}
         </div>
       </div>
 
@@ -531,13 +577,15 @@ const UserDocumentsPanel = ({ userId }) => {
                   <p className="text-sm text-gray-500">Acest contract nu a fost generat încă</p>
                 </div>
               </div>
-              <button
-                onClick={handleGenerateConsultingContract}
-                className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
-              >
-                <FilePlus className="h-4 w-4 mr-2" />
-                <span>Generează</span>
-              </button>
+              {canEdit && (
+                <button
+                  onClick={handleGenerateConsultingContract}
+                  className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+                >
+                  <FilePlus className="h-4 w-4 mr-2" />
+                  <span>Generează</span>
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -650,13 +698,15 @@ const UserDocumentsPanel = ({ userId }) => {
                       >
                         <Download className="h-5 w-5" />
                       </button>
-                      <button
-                        onClick={() => handleDeleteDocument(doc._id)}
-                        className="text-red-600 hover:text-red-900 p-1"
-                        title="Șterge"
-                      >
-                        <Trash2 className="h-5 w-5" />
-                      </button>
+                      {canEdit && (
+                        <button
+                          onClick={() => handleDeleteDocument(doc._id)}
+                          className="text-red-600 hover:text-red-900 p-1"
+                          title="Șterge"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -667,6 +717,11 @@ const UserDocumentsPanel = ({ userId }) => {
       )}
     </div>
   );
+};
+
+// Adăugăm o proprietate pentru a verifica dacă utilizatorul curent are permisiuni de editare
+UserDocumentsPanel.propTypes = {
+  userId: PropTypes.string.isRequired,
 };
 
 export default UserDocumentsPanel;

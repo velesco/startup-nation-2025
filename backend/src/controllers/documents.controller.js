@@ -8,7 +8,7 @@ const { v4: uuidv4 } = require('uuid');
 
 // @desc    Get user documents
 // @route   GET /api/admin/users/:id/documents
-// @access  Private (Admin, Super Admin)
+// @access  Private (Admin, Partner, Super Admin)
 exports.getUserDocuments = async (req, res, next) => {
   try {
     const userId = req.params.id;
@@ -21,6 +21,16 @@ exports.getUserDocuments = async (req, res, next) => {
       return res.status(404).json({
         success: false,
         message: 'User not found'
+      });
+    }
+    
+    // Check if partner is trying to access a user they didn't add
+    if (req.user.role === 'partner' && 
+        user.added_by && 
+        user.added_by.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to view this user\'s documents'
       });
     }
     
@@ -41,7 +51,7 @@ exports.getUserDocuments = async (req, res, next) => {
 
 // @desc    Upload user document
 // @route   POST /api/admin/users/:id/documents
-// @access  Private (Admin, Super Admin)
+// @access  Private (Admin, Partner, Super Admin)
 exports.uploadUserDocument = async (req, res, next) => {
   try {
     const userId = req.params.id;
@@ -53,6 +63,16 @@ exports.uploadUserDocument = async (req, res, next) => {
       return res.status(404).json({
         success: false,
         message: 'User not found'
+      });
+    }
+    
+    // Check if partner is trying to upload documents for a user they didn't add
+    if (req.user.role === 'partner' && 
+        user.added_by && 
+        user.added_by.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to upload documents for this user'
       });
     }
     
@@ -361,7 +381,7 @@ exports.deleteDocument = async (req, res, next) => {
 
 // @desc    Download user contract
 // @route   GET /api/admin/users/:id/download-contract
-// @access  Private (Admin, super-admin)
+// @access  Private (Admin, Partner, Super Admin)
 exports.downloadUserContract = async (req, res, next) => {
   try {
     const userId = req.params.id;
@@ -373,6 +393,16 @@ exports.downloadUserContract = async (req, res, next) => {
       return res.status(404).json({
         success: false,
         message: 'Utilizator negăsit'
+      });
+    }
+    
+    // Check if partner is trying to download a contract for a user they didn't add
+    if (req.user.role === 'partner' && 
+        user.added_by && 
+        user.added_by.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Nu aveți permisiunea să descărcați contractul acestui utilizator'
       });
     }
     
@@ -452,7 +482,7 @@ exports.downloadUserContract = async (req, res, next) => {
 
 // @desc    Download user consulting contract
 // @route   GET /api/admin/users/:id/download-consulting-contract
-// @access  Private (Admin, super-admin)
+// @access  Private (Admin, Partner, Super Admin)
 exports.downloadUserConsultingContract = async (req, res, next) => {
   try {
     const userId = req.params.id;
@@ -464,6 +494,16 @@ exports.downloadUserConsultingContract = async (req, res, next) => {
       return res.status(404).json({
         success: false,
         message: 'Utilizator negăsit'
+      });
+    }
+    
+    // Check if partner is trying to download a contract for a user they didn't add
+    if (req.user.role === 'partner' && 
+        user.added_by && 
+        user.added_by.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Nu aveți permisiunea să descărcați contractul de consultanță al acestui utilizator'
       });
     }
     

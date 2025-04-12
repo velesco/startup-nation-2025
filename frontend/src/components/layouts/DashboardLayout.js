@@ -154,16 +154,10 @@ const DashboardLayout = ({ children }) => {
               Dashboard
             </Link>
             
-            <Link
-              to="/admin/clients"
-              className={`flex items-center px-2 py-4 ${isActive('/admin/clients') ? 'text-blue-600 border-b-2 border-blue-600 font-medium' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              <Users className="h-5 w-5 mr-2" />
-              Clienți
-            </Link>
+            {/* Removed Clients link */}
             
-            {/* Users link - visible only for admin users */}
-            {currentUser && currentUser.role === 'admin' && (
+            {/* Users link - visible for admin and partner */}
+            {currentUser && (currentUser.role === 'admin' || currentUser.role === 'partner') && (
               <Link
                 to="/admin/users"
                 className={`flex items-center px-2 py-4 ${isActive('/admin/users') ? 'text-blue-600 border-b-2 border-blue-600 font-medium' : 'text-gray-500 hover:text-gray-700'}`}
@@ -218,16 +212,9 @@ const DashboardLayout = ({ children }) => {
                 Dashboard
               </Link>
               
-              <Link
-                to="/admin/clients"
-                className={`flex items-center py-3 px-4 ${isActive('/admin/clients') ? 'bg-blue-50 text-blue-600 font-medium rounded-lg' : 'text-gray-600'}`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <Users className="h-5 w-5 mr-3" />
-                Clienți
-              </Link>
+              {/* Removed Clients link */}
               
-              {currentUser && currentUser.role === 'admin' && (
+              {currentUser && (currentUser.role === 'admin' || currentUser.role === 'partner') && (
                 <Link
                   to="/admin/users"
                   className={`flex items-center py-3 px-4 ${isActive('/admin/users') ? 'bg-blue-50 text-blue-600 font-medium rounded-lg' : 'text-gray-600'}`}
