@@ -266,7 +266,7 @@ exports.updateUser = async (req, res, next) => {
 // @access  Private (Admin)
 exports.addUser = async (req, res, next) => {
   try {
-    const { name, email, password, role, organization, position, phone } = req.body;
+    const { name, email, password, role, organization, position, phone, added_by } = req.body;
     
     // Check if user with this email already exists
     const existingUser = await User.findOne({ email });
@@ -303,7 +303,8 @@ exports.addUser = async (req, res, next) => {
       organization,
       position,
       phone,
-      isActive: true
+      isActive: true,
+      added_by: added_by || req.user._id // Setăm added_by cu ID-ul utilizatorului curent dacă nu e furnizat
     });
     
     // Return new user without password

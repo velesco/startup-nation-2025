@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
 import { X, User, Mail, Lock, Building, Phone } from 'lucide-react';
 
 const AddUserModal = ({ isOpen, onClose, onAddUser }) => {
+  const { currentUser } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -33,9 +35,16 @@ const AddUserModal = ({ isOpen, onClose, onAddUser }) => {
     
     try {
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      
+      // Adăugăm added_by cu ID-ul utilizatorului curent
+      const dataToSend = {
+        ...formData,
+        added_by: currentUser?._id
+      };
+      
       const response = await axios.post(
         `${API_URL}/admin/users`,
-        formData,
+        dataToSend,
         {
           headers: {
             'Content-Type': 'application/json',
