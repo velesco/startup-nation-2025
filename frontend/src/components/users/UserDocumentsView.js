@@ -247,6 +247,8 @@ const UserDocumentsView = () => {
   // Download authority document
   const handleDownloadAuthorityDocument = async () => {
     try {
+      setError(null);
+      console.log('Attempting to download authority document');
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
       const token = localStorage.getItem('token');
       
@@ -261,23 +263,55 @@ const UserDocumentsView = () => {
         responseType: 'blob'
       });
       
+      console.log('Document download response received:', response.status);
+      
+      // Check if response is valid
+      if (response.status !== 200 || !response.data || response.data.size === 0) {
+        throw new Error('Documentul descărcat este invalid sau gol');
+      }
+      
       // Create download link
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `imputernicire_${currentUser.name}.pdf`);
+      
+      // Get proper file extension based on content type
+      const isDocx = response.headers['content-type'] && 
+                      response.headers['content-type'].includes('openxmlformats');
+      const fileExt = isDocx ? '.docx' : '.pdf';
+      
+      link.setAttribute('download', `imputernicire_${currentUser.name}${fileExt}`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      
+      console.log('Document download successful');
     } catch (err) {
       console.error('Eroare la descărcarea împuternicirii:', err);
-      setError('A apărut o eroare la descărcarea împuternicirii');
+      
+      // Check if the error indicates the document needs to be generated
+      if (err.response && err.response.data && err.response.data.shouldGenerate) {
+        setError('Documentul nu există sau nu a fost găsit. Vă rugăm să îl generați din nou.');
+        
+        // Reset the status so the Generate button appears
+        setContractStatus(prev => ({
+          ...prev,
+          authorityDocument: {
+            ...prev.authorityDocument,
+            generated: false
+          }
+        }));
+      } else {
+        setError('A apărut o eroare la descărcarea împuternicirii. Vă rugăm să încercați din nou.');
+      }
     }
   };
 
   // Generate authority document
   const handleGenerateAuthorityDocument = async () => {
     try {
+      setError(null);
+      console.log('Attempting to generate authority document');
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
       const token = localStorage.getItem('token');
       
@@ -285,13 +319,19 @@ const UserDocumentsView = () => {
         throw new Error('Token de autentificare lipsă');
       }
       
-      await axios.get(`${API_URL}/authority/generate`, {
+      // Show a loading state
+      setLoading(true);
+      
+      const response = await axios.get(`${API_URL}/authority/generate`, {
         headers: {
           Authorization: `Bearer ${token}`
-        }
+        },
+        responseType: 'blob' // We expect a document in response
       });
       
-      // Refresh contract status
+      console.log('Generation complete, response status:', response.status);
+      
+      // Update the UI to show document is generated
       setContractStatus(prev => ({
         ...prev,
         authorityDocument: {
@@ -303,11 +343,33 @@ const UserDocumentsView = () => {
       // Refresh document status from API to ensure we have the latest state
       await refreshDocumentStatus();
       
+      // If the response includes the document, offer it for download
+      if (response.data && response.data.size > 0) {
+        console.log('Document received, offering for download');
+        
+        // Create download link
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        
+        // Get proper file extension based on content type
+        const isDocx = response.headers['content-type'] && 
+                       response.headers['content-type'].includes('openxmlformats');
+        const fileExt = isDocx ? '.docx' : '.pdf';
+        
+        link.setAttribute('download', `imputernicire_${currentUser.name}${fileExt}`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      
       // Show success message
       setError(null);
+      setLoading(false);
       alert('Documentul de împuternicire a fost generat cu succes!');
     } catch (err) {
       console.error('Eroare la generarea împuternicirii:', err);
+      setLoading(false);
       setError(err.response?.data?.message || err.message || 'A apărut o eroare la generarea împuternicirii');
     }
   };

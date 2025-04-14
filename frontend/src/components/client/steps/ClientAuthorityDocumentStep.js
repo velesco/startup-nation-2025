@@ -104,6 +104,11 @@ const ClientAuthorityDocumentStep = ({ onStepComplete, userDocuments }) => {
         }
       });
       
+      // Verificăm dacă răspunsul este valid
+      if (!response.data || response.data.size === 0) {
+        throw new Error('Documentul descărcat este gol sau invalid');
+      }
+      
       // Creăm un URL pentru blob-ul primit
       const blob = new Blob([response.data], { 
         type: response.headers['content-type'] || 'application/pdf' 
