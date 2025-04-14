@@ -10,7 +10,7 @@ const {
   getClientDocuments, uploadClientDocument, 
   getUserDocuments, uploadUserDocument,
   downloadDocument, deleteDocument, 
-  downloadUserContract, downloadUserConsultingContract,
+  downloadUserContract, downloadUserConsultingContract, downloadUserAuthorityDocument,
   updateDocumentFlags
 } = require('../controllers/documents.controller');
 const { 
@@ -88,6 +88,9 @@ router.get('/users/:id/download-contract', authorize('admin', 'partner', 'super-
 
 // User Consulting Contract Download
 router.get('/users/:id/download-consulting-contract', authorize('admin', 'partner', 'super-admin'), downloadUserConsultingContract);
+
+// User Authority Document Download
+router.get('/users/:id/download-authority-document', authorize('admin', 'partner', 'super-admin'), downloadUserAuthorityDocument);
 
 // Send user data to external API
 router.post('/users/:id/send-data', authorize('admin', 'super-admin'), sendUserDataToExternalAPI);

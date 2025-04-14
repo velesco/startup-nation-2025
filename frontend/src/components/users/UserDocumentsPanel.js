@@ -25,6 +25,11 @@ const UserDocumentsPanel = ({ userId }) => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [notification, setNotification] = useState(null);
 
+  // Check if user has a contract, consulting contract and authority document
+  const [hasContract, setHasContract] = useState(false);
+  const [hasConsultingContract, setHasConsultingContract] = useState(false);
+  const [hasAuthorityDocument, setHasAuthorityDocument] = useState(false);
+
   // Fetch user documents
   useEffect(() => {
     const fetchDocuments = async () => {
@@ -359,9 +364,85 @@ const UserDocumentsPanel = ({ userId }) => {
     }
   };
 
-  // Check if user has a contract and consulting contract
-  const [hasContract, setHasContract] = useState(false);
-  const [hasConsultingContract, setHasConsultingContract] = useState(false);
+  // Generate authority document
+  const handleGenerateAuthorityDocument = async () => {
+    try {
+      setError(null);
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      
+      // Generate authority document via admin API
+      const response = await axios.post(
+        `${API_URL}/contracts/admin/generate-authority/${userId}`, 
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+      
+      if (response.data && response.data.success) {
+        showNotification('success', 'Documentul de împuternicire a fost generat cu succes');
+        // Force reload of user data to update document status
+        const userResponse = await axios.get(`${API_URL}/admin/users/${userId}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        if (userResponse.data && userResponse.data.success) {
+          const user = userResponse.data.data;
+          setHasAuthorityDocument(user.documents?.authorityDocumentGenerated || false);
+        }
+      } else {
+        throw new Error(response.data?.message || 'Generarea documentului de împuternicire a eșuat');
+      }
+    } catch (err) {
+      console.error('Error generating authority document:', err);
+      showNotification('error', err.response?.data?.message || err.message || 'Generarea documentului de împuternicire a eșuat');
+    }
+  };
+
+  // Download authority document
+  const handleDownloadAuthorityDocument = async () => {
+    try {
+      setError(null);
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      
+      // Make a direct request to download the authority document for this specific user
+      const response = await axios.get(`${API_URL}/admin/users/${userId}/download-authority-document`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        responseType: 'blob'
+      });
+      
+      // Verify if response has content
+      if (!response.data || response.data.size === 0) {
+        throw new Error('Documentul de împuternicire descărcat este gol sau invalid');
+      }
+      
+      // Create a blob URL and trigger download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = window.document.createElement('a');
+      link.href = url;
+      
+      // Determine file extension for setting file name
+      const contentType = response.headers['content-type'];
+      const extension = contentType === 'application/pdf' ? '.pdf' : '.docx';
+      
+      link.setAttribute('download', `imputernicire_${userId}${extension}`);
+      window.document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      showNotification('success', 'Document de împuternicire descărcat cu succes');
+    } catch (err) {
+      console.error('Error downloading authority document:', err);
+      showNotification('error', err.response?.data?.message || err.message || 'Descărcarea documentului de împuternicire a eșuat');
+    }
+  };
 
   // Încarcă utilizatorul și verifică permisiunile
   useEffect(() => {
@@ -419,6 +500,7 @@ const UserDocumentsPanel = ({ userId }) => {
           console.log('User contract data:', user.documents);
           setHasContract(user.documents?.contractGenerated || false);
           setHasConsultingContract(user.documents?.consultingContractGenerated || false);
+          setHasAuthorityDocument(user.documents?.authorityDocumentGenerated || false);
         }
       } catch (err) {
         console.error('Error checking contract status:', err);
@@ -580,6 +662,53 @@ const UserDocumentsPanel = ({ userId }) => {
               {canEdit && (
                 <button
                   onClick={handleGenerateConsultingContract}
+                  className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+                >
+                  <FilePlus className="h-4 w-4 mr-2" />
+                  <span>Generează</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Authority Document Section */}
+        {hasAuthorityDocument ? (
+          <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="h-10 w-10 rounded-md bg-orange-100 flex items-center justify-center text-orange-600 mr-3">
+                  <FileText className="h-6 w-6" />
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-800">Împuternicire</h4>
+                  <p className="text-sm text-gray-500">Document de împuternicire pentru programul Start-Up Nation</p>
+                </div>
+              </div>
+              <button
+                onClick={handleDownloadAuthorityDocument}
+                className="px-3 py-1.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                <span>Descarcă</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="h-10 w-10 rounded-md bg-gray-100 flex items-center justify-center text-gray-600 mr-3">
+                  <FileText className="h-6 w-6" />
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-800">Împuternicire</h4>
+                  <p className="text-sm text-gray-500">Acest document nu a fost generat încă</p>
+                </div>
+              </div>
+              {canEdit && (
+                <button
+                  onClick={handleGenerateAuthorityDocument}
                   className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
                 >
                   <FilePlus className="h-4 w-4 mr-2" />

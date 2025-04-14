@@ -5,6 +5,7 @@ const logger = require('../utils/logger');
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const { downloadAuthorityDocument } = require('./contract.controller.authority');
 
 // @desc    Get user documents
 // @route   GET /api/admin/users/:id/documents
@@ -789,5 +790,17 @@ exports.updateDocumentFlags = async (req, res, next) => {
       message: 'Eroare la actualizarea flag-urilor de documente',
       error: error.message
     });
+  }
+};
+
+// @desc    Download user authority document
+// @route   GET /api/admin/users/:id/download-authority-document
+// @access  Private (Admin, Partner, Super Admin)
+exports.downloadUserAuthorityDocument = async (req, res, next) => {
+  try {
+    await downloadAuthorityDocument(req, res, next);
+  } catch (error) {
+    logger.error(`Error downloading user authority document: ${error.message}`);
+    next(error);
   }
 };
