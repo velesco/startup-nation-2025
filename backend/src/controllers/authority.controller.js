@@ -178,9 +178,9 @@ const generateAuthorityDocument = async (req, res) => {
     // Save the received DOCX document
     const uploadsDir = path.join(__dirname, '../../../uploads/authorization');
     await fs.promises.mkdir(uploadsDir, { recursive: true });
+    
     const docxFilename = `imputernicire_${userId}.docx`;
     const docxPath = path.join(uploadsDir, docxFilename);
-    console.log('Saving DOCX file to:', docxPath);
     
     // Save the DOCX document
     fs.writeFileSync(docxPath, apiResponse.data);
@@ -200,7 +200,6 @@ const generateAuthorityDocument = async (req, res) => {
       user.documents.authorityDocumentGenerated = true;
       user.documents.authorityDocumentFormat = 'pdf';
       user.documents.authorityDocumentPath = `/uploads/authorization/${pdfFilename}`;
-      console.log('Updated user document path:', user.documents.authorityDocumentPath);
       await user.save();
 
       // Try to send an email with the document
@@ -230,7 +229,6 @@ const generateAuthorityDocument = async (req, res) => {
       user.documents.authorityDocumentGenerated = true;
       user.documents.authorityDocumentFormat = 'docx';
       user.documents.authorityDocumentPath = `/uploads/authorization/${docxFilename}`;
-      console.log('Updated user document path (DOCX):', user.documents.authorityDocumentPath);
       await user.save();
       
       // Try to send an email with the DOCX document
@@ -270,25 +268,9 @@ const generateAuthorityDocument = async (req, res) => {
 // @route   GET /api/authority/download
 // @access  Private
 const downloadAuthorityDocument = async (req, res) => {
-  logger.info('Attempting to download authority document');
-  
-  // List all files in the uploads/authorization directory for debugging
-  try {
-    const uploadsDir = path.join(__dirname, '../../../uploads/authorization');
-    if (fs.existsSync(uploadsDir)) {
-      const files = fs.readdirSync(uploadsDir);
-      logger.info(`Files in uploads/authorization: ${JSON.stringify(files)}`);
-    } else {
-      logger.info('Uploads directory does not exist');
-    }
-  } catch (err) {
-    logger.error(`Error listing files: ${err.message}`);
-  }
   try {
     const userId = req.user.id;
-    logger.info(`Looking for user with ID: ${userId}`);
     const user = await User.findById(userId);
-    logger.info(`User found: ${user ? 'Yes' : 'No'}`);
     
     if (!user) {
       return res.status(404).json({
@@ -303,11 +285,8 @@ const downloadAuthorityDocument = async (req, res) => {
     
     if (!user.documents.authorityDocumentPath) {
       // If no document path is set, look for standard names
-      const userIdStr = userId.toString();
-      logger.info(`User ID string: ${userIdStr}`);
-      const pdfPath = path.join(__dirname, `../../../uploads/authorization/imputernicire_${userIdStr}.pdf`);
-      const docxPath = path.join(__dirname, `../../../uploads/authorization/imputernicire_${userIdStr}.docx`);
-      logger.info(`Looking for files at: ${pdfPath} and ${docxPath}`);
+      const pdfPath = path.join(__dirname, `../../../uploads/authorization/imputernicire_${userId}.pdf`);
+      const docxPath = path.join(__dirname, `../../../uploads/authorization/imputernicire_${userId}.docx`);
       
       if (fs.existsSync(pdfPath)) {
         user.documents.authorityDocumentPath = `/uploads/authorization/imputernicire_${userId}.pdf`;
@@ -327,96 +306,15 @@ const downloadAuthorityDocument = async (req, res) => {
     }
     
     // Get the file path
-    let filePath = path.join(__dirname, `../../../${user.documents.authorityDocumentPath.substring(1)}`);
-    logger.info(`Attempting to download file from: ${filePath}`);
+    const filePath = path.join(__dirname, `../../../${user.documents.authorityDocumentPath.substring(1)}`);
     
     // Check if file exists
     if (!fs.existsSync(filePath)) {
-      logger.info('File not found at the expected path, searching for alternatives');
-      
-      // Check all files in the uploads/authorization directory
-      const uploadsDir = path.join(__dirname, '../../../uploads/authorization');
-      const userIdStr = userId.toString();
-      
-      if (fs.existsSync(uploadsDir)) {
-        const files = fs.readdirSync(uploadsDir);
-        logger.info(`Found ${files.length} files in the directory`);
-        
-        // Look for any file that might match this user
-        const matchingFile = files.find(file => 
-          file.startsWith('imputernicire_') && 
-          (file.includes(userIdStr) || file.includes(userId))
-        );
-        
-        if (matchingFile) {
-          logger.info(`Found matching file: ${matchingFile}`);
-          filePath = path.join(uploadsDir, matchingFile);
-          
-          // Update the user document path
-          user.documents.authorityDocumentPath = `/uploads/authorization/${matchingFile}`;
-          user.documents.authorityDocumentFormat = matchingFile.endsWith('.pdf') ? 'pdf' : 'docx';
-          await user.save();
-          logger.info(`Updated user document path to: ${user.documents.authorityDocumentPath}`);
-        }
-      }
-      
-      // If we still haven't found a file
-      // If we still need to try more paths
-      logger.info('Still looking for alternate paths');
-      // We already have userIdStr
-      const altPath1 = path.join(__dirname, `../../../uploads/authorization/imputernicire_${userIdStr}.pdf`);
-      const altPath2 = path.join(__dirname, `../../../uploads/authorization/imputernicire_${userIdStr}.docx`);
-      console.log('Trying alternate paths:', altPath1, altPath2);
-      
-      let foundPath = null;
-      if (fs.existsSync(altPath1)) {
-        foundPath = altPath1;
-        console.log('Found file at alternate path (PDF):', altPath1);
-      } else if (fs.existsSync(altPath2)) {
-        foundPath = altPath2;
-        console.log('Found file at alternate path (DOCX):', altPath2);
-      }
-      
-      if (foundPath) {
-        // Update the user's document path
-        user.documents.authorityDocumentPath = `/uploads/authorization/imputernicire_${userIdStr}${foundPath.endsWith('.pdf') ? '.pdf' : '.docx'}`;
-        user.documents.authorityDocumentFormat = foundPath.endsWith('.pdf') ? 'pdf' : 'docx';
-        await user.save();
-        
-        // Use the found path instead
-        return res.sendFile(foundPath);
-      }
-      console.log('File not found at path:', filePath);
-      // Try alternate paths
-      const userIdStr = user._id.toString();
-      const altPath1 = path.join(__dirname, `../../../uploads/authorization/imputernicire_${userIdStr}.pdf`);
-      const altPath2 = path.join(__dirname, `../../../uploads/authorization/imputernicire_${userIdStr}.docx`);
-      console.log('Trying alternate paths:', altPath1, altPath2);
-      
-      let foundPath = null;
-      if (fs.existsSync(altPath1)) {
-        foundPath = altPath1;
-        console.log('Found file at alternate path (PDF):', altPath1);
-      } else if (fs.existsSync(altPath2)) {
-        foundPath = altPath2;
-        console.log('Found file at alternate path (DOCX):', altPath2);
-      }
-      
-      if (foundPath) {
-        // Update the user's document path
-        user.documents.authorityDocumentPath = `/uploads/authorization/imputernicire_${userIdStr}${foundPath.endsWith('.pdf') ? '.pdf' : '.docx'}`;
-        user.documents.authorityDocumentFormat = foundPath.endsWith('.pdf') ? 'pdf' : 'docx';
-        await user.save();
-        
-        // Use the found path instead
-        filePath = foundPath;
-      } else {
-        return res.status(404).json({
-          success: false,
-          message: 'Documentul de împuternicire nu a fost găsit. Vă rugăm să îl generați din nou.',
-          shouldGenerate: true
-        });
-      }
+      return res.status(404).json({
+        success: false,
+        message: 'Documentul de împuternicire nu a fost găsit. Vă rugăm să îl generați din nou.',
+        shouldGenerate: true
+      });
     }
     
     // Determine file type
@@ -436,18 +334,8 @@ const downloadAuthorityDocument = async (req, res) => {
     
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
     
-    // Double check file exists before sending
-    if (fs.existsSync(filePath)) {
-      logger.info(`Sending file: ${filePath}`);
-      return res.sendFile(filePath);
-    } else {
-      logger.error(`Final file path does not exist: ${filePath}`);
-      return res.status(404).json({
-        success: false,
-        message: 'Documentul de împuternicire nu a fost găsit. Vă rugăm să îl generați din nou.',
-        shouldGenerate: true
-      });
-    }
+    // Send the file
+    res.sendFile(filePath);
     
   } catch (error) {
     logger.error(`Authorization document download error: ${error.message}`);
