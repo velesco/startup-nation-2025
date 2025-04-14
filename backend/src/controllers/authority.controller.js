@@ -118,6 +118,9 @@ const generateAuthorityDocument = async (req, res) => {
     formData.append('email', user.email || 'email@example.com');
     formData.append('phone', user.phone || '');
     formData.append('CNP', user.idCard?.CNP || '');
+    formData.append('address', user.idCard.address || '');
+    formData.append('idSeries', user.idCard.series);
+    formData.append('idNumber', user.idCard.number);
     
     // Add signature if available
     if (user.signature) {
@@ -127,7 +130,7 @@ const generateAuthorityDocument = async (req, res) => {
     
     logger.info('Sending data to external API for authorization document...');
     
-    let apiResponse;
+    let apiResponse; 
     let useBackupTemplate = false;
     
     try {
