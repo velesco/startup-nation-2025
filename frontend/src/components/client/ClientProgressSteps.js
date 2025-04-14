@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle, FileText, Calendar, ArrowRight } from 'lucide-react';
+import { CheckCircle, FileText, Calendar, ArrowRight, FileSignature } from 'lucide-react';
 
 const ClientProgressSteps = ({ steps, currentStep, setCurrentStep }) => {
   // Mapare icoane

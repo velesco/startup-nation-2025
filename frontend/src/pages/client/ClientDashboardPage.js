@@ -90,10 +90,11 @@ const ClientDashboardPage = () => {
             documents.id_cardUploaded,
             documents.contractSigned,
             documents.consultingContractSigned,
+            documents.authorityDocumentSigned,
             documents.appDownloaded
           ].filter(Boolean).length;
           
-          const progress = Math.round((completedSteps / 4) * 100);
+          const progress = Math.round((completedSteps / 5) * 100);
           
           // Determinăm pasul curent în funcție de progres și documentele din baza de date
           let currentStepValue = 1;
@@ -105,7 +106,11 @@ const ClientDashboardPage = () => {
               currentStepValue = 3; // Pas contract consultanță
               
               if (documents.consultingContractSigned) {
-                currentStepValue = 4; // Pas instalare aplicație
+                currentStepValue = 4; // Pas împuternicire
+                
+                if (documents.authorityDocumentSigned) {
+                  currentStepValue = 5; // Pas instalare aplicație
+                }
               }
             }
           }
@@ -270,13 +275,14 @@ const ClientDashboardPage = () => {
           if (dataToUpdate.documents) {
             console.log('Documente noi după corecții:', dataToUpdate.documents);
             const completedSteps = [
-              dataToUpdate.documents.id_cardUploaded,
-              dataToUpdate.documents.contractSigned,
-              dataToUpdate.documents.consultingContractSigned,
+            dataToUpdate.documents.id_cardUploaded,
+            dataToUpdate.documents.contractSigned,
+            dataToUpdate.documents.consultingContractSigned,
+            dataToUpdate.documents.authorityDocumentSigned,
               dataToUpdate.documents.appDownloaded
             ].filter(Boolean).length;
             
-            updatedUser.progress = Math.round((completedSteps / 4) * 100);
+          updatedUser.progress = Math.round((completedSteps / 5) * 100);
             updatedUser.documents = {
               ...user.documents,
               ...dataToUpdate.documents
@@ -306,8 +312,11 @@ const ClientDashboardPage = () => {
                 if (dataToUpdate.documents.contractSigned) {
                   nextStep = 3;
                   if (dataToUpdate.documents.consultingContractSigned) {
-                    nextStep = 4;
+                  nextStep = 4;
+                    if (dataToUpdate.documents.authorityDocumentSigned) {
+                    nextStep = 5;
                   }
+                }
                 } else if (dataToUpdate.documents.consultingContractSigned) {
                   // Dacă avem consultingContractSigned dar nu avem contractSigned (caz special), 
                   // marcăm contractSigned = true și setăm pasul la 3
@@ -507,7 +516,7 @@ const ClientDashboardPage = () => {
     { id: 1, name: "Încărcare Buletin", icon: "document", completed: user.documents?.id_cardUploaded },
     { id: 2, name: "Contract Curs Antreprenoriat", icon: "document", completed: user.documents?.contractSigned },
     { id: 3, name: "Contract Consultanță", icon: "document", completed: user.documents?.consultingContractSigned },
-    // { id: 4, name: "Instalare Aplicație", icon: "check", completed: user.documents?.appDownloaded }
+    { id: 4, name: "Împuternicire", icon: "document", completed: user.documents?.authorityDocumentSigned },
   ] : [];
 
   const handleLogout = async () => {

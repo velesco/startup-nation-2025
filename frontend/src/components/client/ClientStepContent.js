@@ -5,6 +5,7 @@ import ClientCourseSelectStep from './steps/ClientCourseSelectStep';
 import ClientAppDownloadStep from './steps/ClientAppDownloadStep';
 import ClientContractStep from './steps/ClientContractStep';
 import ClientConsultingContractStep from './steps/ClientConsultingContractStep';
+import ClientAuthorityDocumentStep from './steps/ClientAuthorityDocumentStep';
 
 const ClientStepContent = ({ step, updateUserData, userDocuments }) => {
   // Funcție pentru gestionarea completării unui pas
@@ -111,7 +112,48 @@ const ClientStepContent = ({ step, updateUserData, userDocuments }) => {
                 contractGenerated: true,
                 contractComplete: true
               };
-              forceNextStep = 4; // Forțăm trecerea la pasul următor după consultanță
+              forceNextStep = 4; // Forțăm trecerea la pasul de împuternicire
+              break;
+            case 'authority_document_generate':
+              docsToUpdate = { 
+                ...userDocuments, 
+                authorityDocumentGenerated: true
+              };
+              break;
+            case 'authority_document_sign_only':
+              docsToUpdate = { 
+                ...userDocuments, 
+                authorityDocumentGenerated: true,
+                authorityDocumentSigned: true
+              };
+              break;
+            case 'authority_document_sign':
+              docsToUpdate = { 
+                ...userDocuments, 
+                authorityDocumentGenerated: true,
+                authorityDocumentSigned: true
+              };
+              forceNextStep = 5;
+              break;
+            case 'authority_document_complete':
+              docsToUpdate = { 
+                ...userDocuments, 
+                authorityDocumentGenerated: true,
+                authorityDocumentSigned: true,
+                authorityDocumentComplete: true,
+                consultingContractSigned: true,
+                consultingContractGenerated: true,
+                contractSigned: true,
+                contractGenerated: true
+              };
+              forceNextStep = 5; // Forțăm trecerea la pasul următor după împuternicire
+              break;
+            case 'authority_document_reset':
+              docsToUpdate = { 
+                ...userDocuments, 
+                authorityDocumentGenerated: false, 
+                authorityDocumentSigned: false
+              };
               break;
             case 'consulting_contract_reset':
               docsToUpdate = { ...userDocuments, consultingContractGenerated: false, consultingContractSigned: false };
@@ -134,6 +176,12 @@ const ClientStepContent = ({ step, updateUserData, userDocuments }) => {
           console.log('Se forțează setarea flag-urilor contractGenerated și contractSigned pentru a asigura integritatea datelor');
           docsToUpdate.contractGenerated = true;
           docsToUpdate.contractSigned = true;
+        }
+        
+        if (step >= 4 && !docsToUpdate.consultingContractSigned) {
+          console.log('Se forțează setarea flag-urilor consultingContractGenerated și consultingContractSigned pentru a asigura integritatea datelor');
+          docsToUpdate.consultingContractGenerated = true;
+          docsToUpdate.consultingContractSigned = true;
         }
         
         // Dacă avem un pas forțat, îl includem în actualizare
@@ -192,8 +240,9 @@ const ClientStepContent = ({ step, updateUserData, userDocuments }) => {
     case 3:
       return <ClientConsultingContractStep onStepComplete={handleStepComplete} userDocuments={userDocuments} />;
     case 4:
-      return <ClientConsultingContractStep onStepComplete={handleStepComplete} userDocuments={userDocuments} />;
-      // return <ClientAppDownloadStep onStepComplete={handleStepComplete} userDocuments={userDocuments} />;
+      return <ClientAuthorityDocumentStep onStepComplete={handleStepComplete} userDocuments={userDocuments} />;
+    case 5:
+      return <ClientAuthorityDocumentStep onStepComplete={handleStepComplete} userDocuments={userDocuments} />;
     default:
       return <ClientIDUploadStep onStepComplete={handleStepComplete} userDocuments={userDocuments} />;
   }

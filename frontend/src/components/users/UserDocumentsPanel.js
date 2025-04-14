@@ -647,7 +647,7 @@ const UserDocumentsPanel = ({ userId }) => {
               </button>
             </div>
           </div>
-        ) : (
+        ) : hasContract && (
           <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
@@ -694,7 +694,7 @@ const UserDocumentsPanel = ({ userId }) => {
               </button>
             </div>
           </div>
-        ) : (
+        ) : hasConsultingContract && (
           <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center">

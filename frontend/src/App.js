@@ -21,6 +21,7 @@ import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import UserDetailPage from './pages/admin/UserDetailPage';
 import TrainerDashboardPage from './pages/trainer/TrainerDashboardPage';
+import UserDocumentsView from './components/users/UserDocumentsView';
 
 // Admin Pages
 import AdminClientDetailPage from './pages/admin/AdminClientDetailPage';
@@ -68,6 +69,16 @@ function App() {
         <Route path="/termeni-conditii" element={<TermsAndConditionsPage />} />
         <Route path="/politica-confidentialitate" element={<PrivacyPolicyPage />} />
         <Route path="/share/:type/:id" element={<SharedPlanPage />} />
+        
+        {/* Documents View */}
+        <Route
+          path="/documente"
+          element={
+            <ProtectedRoute>
+              <UserDocumentsView />
+            </ProtectedRoute>
+          }
+        />
         
         {/* Redirecționare după autentificare în funcție de rol */}
         <Route 

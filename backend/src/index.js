@@ -83,6 +83,7 @@ const notificationRoutes = require('./routes/notification.routes');
 const activityRoutes = require('./routes/activity.routes');
 const logRoutes = require('./routes/log.routes');
 const contractRoutes = require('./routes/contract.routes');
+const authorityRoutes = require('./routes/authority.routes');
 const emailRoutes = require('./routes/email.routes');
 const documentFlagsRoutes = require('./routes/documentFlags.routes');
 
@@ -96,6 +97,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/contracts', contractRoutes);
+app.use('/api/authority', authorityRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/document-flags', documentFlagsRoutes);
 
