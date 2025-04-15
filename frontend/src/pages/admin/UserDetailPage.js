@@ -290,6 +290,7 @@ const UserDetailPage = () => {
                 }
               }}
               className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center shadow-sm"
+              id="generate-authority-btn"
               disabled={isGeneratingAuthority}
             >
               {isGeneratingAuthority ? (
@@ -312,41 +313,87 @@ const UserDetailPage = () => {
               onClick={async () => {
                 try {
                   setError(null);
+                  setIsGeneratingAuthority(true); // Folosim același indicator pentru loading
                   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
                   const token = localStorage.getItem('token');
                   
-                  // Direct download using fetch with Authorization header
+                  // Descărcare folosind fetch pentru control mai bun al erorilor
                   const response = await fetch(`${API_URL}/admin/users/${user._id}/download-authority-document`, {
                     headers: {
                       'Authorization': `Bearer ${token}`
                     }
                   });
                   
+                  // Verifică dacă răspunsul este OK
                   if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Eroare la descărcarea documentului');
+                    let errorMessage = 'Eroare la descărcarea împuternicirii.';
+                    
+                    // Încearcă să citească mesajul de eroare JSON
+                    try {
+                      const errorData = await response.json();
+                      errorMessage = errorData.message || errorMessage;
+                    } catch (e) {
+                      // Dacă nu poate citi JSON, folosește statusText
+                      errorMessage = response.statusText || errorMessage;
+                    }
+                    
+                    throw new Error(errorMessage);
                   }
                   
+                  // Determină extensia fișierului din tipul de conținut
+                  const contentType = response.headers.get('content-type');
+                  const isDocx = contentType && contentType.includes('openxmlformats');
+                  
+                  // Obține numele fișierului din Content-Disposition sau folosește un nume implicit
+                  const contentDisposition = response.headers.get('content-disposition');
+                  let fileName = `imputernicire_${user.name || user._id}${isDocx ? '.docx' : '.pdf'}`;
+                  
+                  if (contentDisposition) {
+                    const fileNameMatch = contentDisposition.match(/filename="(.+?)"/i);
+                    if (fileNameMatch && fileNameMatch.length > 1) {
+                      fileName = fileNameMatch[1];
+                    }
+                  }
+                  
+                  // Convertește răspunsul în blob
                   const blob = await response.blob();
+                  
+                  // Creeză URL pentru blob și îl descărcă
                   const url = window.URL.createObjectURL(blob);
                   const a = document.createElement('a');
                   a.style.display = 'none';
                   a.href = url;
-                  
-                  // Get filename from Content-Disposition or use default
-                  const contentDisposition = response.headers.get('content-disposition');
-                  const fileName = contentDisposition 
-                    ? contentDisposition.split('filename=')[1].replace(/"/g, '') 
-                    : `imputernicire_${user.name || user._id}.pdf`;
-                    
                   a.download = fileName;
+                  
+                  // Adaugă elementul în DOM, dă click și îl remove
                   document.body.appendChild(a);
                   a.click();
+                  
+                  // Curăță resursa
                   window.URL.revokeObjectURL(url);
                   document.body.removeChild(a);
+                  
+                  // Afișează un mesaj de succes temporar
+                  setAuthoritySuccess(true);
+                  setTimeout(() => {
+                    setAuthoritySuccess(false);
+                  }, 3000);
+                  
                 } catch (err) {
                   console.error('Error downloading authority document:', err);
-                  setError(`Eroare la descărcarea împuternicirii: ${err.message}. Vă rugăm să generați documentul mai întâi.`);
+                  setError(`Eroare la descărcarea împuternicirii: ${err.message}`);
+                  
+                  // Dacă eroarea indică faptul că documentul nu a fost găsit, sugerăm generarea
+                  if (err.message.includes('nu a fost găsit') || err.message.includes('Utilizator negăsit')) {
+                    setTimeout(() => {
+                      if (window.confirm('Documentul nu a fost găsit. Doriți să generați împuternicirea acum?')) {
+                        // Apelează funcția de generare a împuternicirii
+                        document.getElementById('generate-authority-btn').click();
+                      }
+                    }, 1000);
+                  }
+                } finally {
+                  setIsGeneratingAuthority(false);
                 }
               }}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center shadow-sm"

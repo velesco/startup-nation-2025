@@ -293,153 +293,137 @@ const generateAuthorityDocumentForUser = async (req, res, next) => {
 };
 
 // @desc    Download authorization document for a specific user (admin function)
-// @route   GET /api/admin/users/:userId/download-authority
+// @route   GET /api/admin/users/:userId/download-authority-document
 // @access  Private (Admin, super-admin)
 const downloadAuthorityDocument = async (req, res, next) => {
   try {
     const userId = req.params.userId;
-    const user = await User.findById(userId);
+    logger.info(`Download authorization document requested for user: ${userId}`);
     
-    if (!user) {
-      return res.status(404).json({
+    // Verifică dacă ID-ul utilizatorului este valid
+    if (!userId) {
+      logger.error(`Empty user ID provided`);
+      return res.status(400).json({
         success: false,
-        message: 'Utilizator negăsit'
+        message: 'ID utilizator gol'
       });
     }
     
-    if (!user.documents) {
-      user.documents = {};
+    // Caută fișierele direct, fără a depinde de existența utilizatorului
+    const possibleLocations = [
+      {
+        path: path.join(__dirname, `../../../uploads/authorization/imputernicire_${userId}.pdf`),
+        format: 'pdf',
+        location: '/uploads/authorization/'
+      },
+      {
+        path: path.join(__dirname, `../../../uploads/authorization/imputernicire_${userId}.docx`),
+        format: 'docx',
+        location: '/uploads/authorization/'
+      },
+      {
+        path: path.join(__dirname, `../../../uploads/contracts/imputernicire_${userId}.pdf`),
+        format: 'pdf',
+        location: '/uploads/contracts/'
+      },
+      {
+        path: path.join(__dirname, `../../../uploads/contracts/imputernicire_${userId}.docx`),
+        format: 'docx',
+        location: '/uploads/contracts/'
+      }
+    ];
+    
+    // Caută documentul în toate locațiile posibile
+    let documentFullPath = null;
+    let fileFormat = 'pdf';
+    
+    for (const location of possibleLocations) {
+      logger.info(`Checking path: ${location.path}`);
+      if (fs.existsSync(location.path)) {
+        logger.info(`Found document at path: ${location.path}`);
+        documentFullPath = location.path;
+        fileFormat = location.format;
+        break;
+      }
     }
     
-    logger.info(`Download authorization document requested for user: ${userId}`);
-    logger.info(`User document state: ${JSON.stringify(user.documents)}`);
-    
-    let documentFullPath = null;
-    
-    if (user.documents.authorityDocumentPath) {
-      const documentRelativePath = user.documents.authorityDocumentPath;
-      logger.info(`Authorization document relative path from user document: ${documentRelativePath}`);
-      
-      documentFullPath = path.join(__dirname, `../../../${documentRelativePath.substring(1)}`);
-      logger.info(`Constructed full path: ${documentFullPath}`);
-      
-      if (!fs.existsSync(documentFullPath)) {
-        logger.error(`Authorization document file not found at path: ${documentFullPath}`);
-        
-        const alternativeFilename = `imputernicire_${userId}.pdf`;
-        const alternativePath = path.join(__dirname, `../../../uploads/contracts/${alternativeFilename}`);
-        logger.info(`Checking alternative path: ${alternativePath}`);
-        
-        if (fs.existsSync(alternativePath)) {
-          logger.info(`Found authorization document at alternative path: ${alternativePath}`);
-          documentFullPath = alternativePath;
-          
-          user.documents.authorityDocumentPath = `/uploads/contracts/${alternativeFilename}`;
-          await user.save();
-        } else {
-          // Check for DOCX as well
-          const docxAlternativeFilename = `imputernicire_${userId}.docx`;
-          const docxAlternativePath = path.join(__dirname, `../../../uploads/contracts/${docxAlternativeFilename}`);
-          logger.info(`Checking DOCX alternative path: ${docxAlternativePath}`);
-          
-          if (fs.existsSync(docxAlternativePath)) {
-            logger.info(`Found DOCX authorization document at alternative path: ${docxAlternativePath}`);
-            documentFullPath = docxAlternativePath;
-            
-            user.documents.authorityDocumentPath = `/uploads/contracts/${docxAlternativeFilename}`;
-            user.documents.authorityDocumentFormat = 'docx';
-            await user.save();
-          } else {
-            logger.error(`No authorization document file found for user at any path`);
-            documentFullPath = null;
+    // Dacă am găsit un document, actualizăm baza de date dacă utilizatorul există
+    if (documentFullPath) {
+      try {
+        const user = await User.findById(userId);
+        if (user) {
+          logger.info(`User found: ${userId}, updating document reference`);
+          if (!user.documents) {
+            user.documents = {};
           }
+          
+          const filename = path.basename(documentFullPath);
+          const directory = documentFullPath.includes('/contracts/') ? '/uploads/contracts/' : '/uploads/authorization/';
+          
+          user.documents.authorityDocumentGenerated = true;
+          user.documents.authorityDocumentPath = `${directory}${filename}`;
+          user.documents.authorityDocumentFormat = fileFormat;
+          await user.save();
+          logger.info(`Updated user document metadata for: ${userId}`);
+        } else {
+          logger.warn(`User not found: ${userId}, but document exists`);
+          // Continuăm cu descărcarea chiar dacă utilizatorul nu există
         }
+      } catch (userError) {
+        logger.error(`Error updating user document reference: ${userError.message}`);
+        // Continuăm cu descărcarea chiar dacă actualizarea a eșuat
+      }
+      
+      // Citim fișierul și îl trimitem
+      try {
+        logger.info(`Reading authority document file from: ${documentFullPath}`);
+        const fileBuffer = fs.readFileSync(documentFullPath);
+        logger.info(`Successfully read file, size: ${fileBuffer.length} bytes`);
+        
+        const isDocx = fileFormat === 'docx';
+        const fileName = `imputernicire_${userId}${isDocx ? '.docx' : '.pdf'}`;
+        
+        // Setăm header-ele pentru descărcare
+        if (isDocx) {
+          res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        } else {
+          res.setHeader('Content-Type', 'application/pdf');
+        }
+        
+        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+        
+        // Curățăm request-ul de fișiere temporare dacă există
+        if (req.files) {
+          delete req.files;
+        }
+        
+        logger.info(`Sending authority document file to client...`);
+        return res.send(fileBuffer);
+      } catch (readError) {
+        logger.error(`Error reading authority document file: ${readError.message}`);
+        return res.status(500).json({
+          success: false,
+          message: 'Eroare la citirea fișierului. Te rugăm să încerci din nou.',
+          error: readError.message
+        });
       }
     } else {
-      logger.info(`No authorization document path set for user: ${userId}`);
-      
-      // Try both PDF and DOCX
-      const defaultPdfFilename = `imputernicire_${userId}.pdf`;
-      const defaultPdfPath = path.join(__dirname, `../../../uploads/contracts/${defaultPdfFilename}`);
-      logger.info(`Checking default PDF path: ${defaultPdfPath}`);
-      
-      if (fs.existsSync(defaultPdfPath)) {
-        logger.info(`Found authorization document at default PDF path: ${defaultPdfPath}`);
-        documentFullPath = defaultPdfPath;
-        
-        user.documents.authorityDocumentPath = `/uploads/contracts/${defaultPdfFilename}`;
-        user.documents.authorityDocumentFormat = 'pdf';
-        await user.save();
-      } else {
-        // Check for DOCX
-        const defaultDocxFilename = `imputernicire_${userId}.docx`;
-        const defaultDocxPath = path.join(__dirname, `../../../uploads/contracts/${defaultDocxFilename}`);
-        logger.info(`Checking default DOCX path: ${defaultDocxPath}`);
-        
-        if (fs.existsSync(defaultDocxPath)) {
-          logger.info(`Found authorization document at default DOCX path: ${defaultDocxPath}`);
-          documentFullPath = defaultDocxPath;
-          
-          user.documents.authorityDocumentPath = `/uploads/contracts/${defaultDocxFilename}`;
-          user.documents.authorityDocumentFormat = 'docx';
-          await user.save();
-        }
-      }
-    }
-    
-    if (!documentFullPath) {
-      logger.error(`Authorization document not found. User state: authorityDocumentGenerated=${user.documents.authorityDocumentGenerated}, authorityDocumentPath=${user.documents.authorityDocumentPath}`);
+      // Nu am găsit documentul în nicio locație
+      logger.error(`No authority document found for user ${userId}`);
       return res.status(404).json({
         success: false,
-        message: 'Documentul de împuternicire nu a fost găsit. Te rugăm să generezi mai întâi documentul.',
+        message: 'Documentul de împuternicire nu a fost găsit. Vă rugăm să generați documentul mai întâi.',
         error: 'authority_document_not_found',
         shouldGenerate: true
       });
     }
-    
-    try {
-      logger.info(`Reading authorization document file from: ${documentFullPath}`);
-      const fileBuffer = fs.readFileSync(documentFullPath);
-      logger.info(`Successfully read authorization document file, size: ${fileBuffer.length} bytes`);
-      
-      const isDocx = user.documents.authorityDocumentFormat === 'docx' || documentFullPath.toLowerCase().endsWith('.docx');
-      
-      let displayName = user.idCard?.fullName;
-      if (!displayName || displayName === 'test') {
-        displayName = user.name || userId;
-      }
-      displayName = removeDiacritics(displayName).replace(/\\s+/g, '_');
-      const fileName = `imputernicire_${displayName}${isDocx ? '.docx' : '.pdf'}`;
-      
-      logger.info(`Using display name for authorization document: ${displayName}`);
-      
-      if (isDocx) {
-        logger.info(`Sending a DOCX authorization document file: ${fileName}`);
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-      } else {
-        logger.info(`Sending a PDF authorization document file: ${fileName}`);
-        res.setHeader('Content-Type', 'application/pdf');
-      }
-      
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-      
-      if (req.files) {
-        delete req.files;
-      }
-      
-      logger.info(`Sending authorization document file to client...`);
-      return res.send(fileBuffer);
-    } catch (readError) {
-      logger.error(`Error reading authorization document file: ${readError.message}`);
-      return res.status(500).json({
-        success: false,
-        message: 'Eroare la citirea fișierului document de împuternicire. Te rugăm să încerci din nou.',
-        error: readError.message
-      });
-    }
   } catch (error) {
     logger.error(`Authorization document download error: ${error.message}`);
-    next(error);
+    return res.status(500).json({
+      success: false,
+      message: 'A apărut o eroare neașteptată. Vă rugăm să încercați din nou.',
+      error: error.message
+    });
   }
 };
 
