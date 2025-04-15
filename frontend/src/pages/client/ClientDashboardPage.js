@@ -515,7 +515,7 @@ const ClientDashboardPage = () => {
   const steps = user ? [
     { id: 1, name: "Încărcare Buletin", icon: "document", completed: user.documents?.id_cardUploaded },
     { id: 2, name: "Contract Curs Antreprenoriat", icon: "document", completed: user.documents?.contractSigned },
-    { id: 3, name: "Contract Consultanță", icon: "document", completed: user.documents?.consultingContractSigned },
+    { id: 3, name: "Contract Consultanță (Optional)", icon: "document", completed: user.documents?.consultingContractSigned },
     { id: 4, name: "Împuternicire", icon: "document", completed: user.documents?.authorityDocumentSigned },
   ] : [];
 

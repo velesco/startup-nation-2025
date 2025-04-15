@@ -18,6 +18,9 @@ const {
   getContractInfo,
   getContractsCounts
 } = require('../controllers/contracts.controller');
+
+// Importăm controllerul pentru împuterniciri
+const { generateAuthorityDocumentForUser } = require('../controllers/contract.controller.authority');
 const {
   getClients,
   getGroups,
@@ -91,6 +94,9 @@ router.get('/users/:id/download-consulting-contract', authorize('admin', 'partne
 
 // User Authority Document Download
 router.get('/users/:id/download-authority-document', authorize('admin', 'partner', 'super-admin'), downloadUserAuthorityDocument);
+
+// Generate Authority Document for User
+router.post('/contracts/admin/generate-authority/:userId', authorize('admin', 'partner', 'super-admin'), generateAuthorityDocumentForUser);
 
 // Update user submission status
 router.post('/users/:id/update-submission', authorize('admin', 'partner', 'super-admin'), updateSubmissionStatus);

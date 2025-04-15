@@ -258,9 +258,12 @@ const UserDetailPage = () => {
                   setError(null);
                   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
                   
+                  // Log pentru debug
+                  console.log('Generez împuternicire pentru:', user._id);
+                  
                   // Call the API to generate the authority document
                   const response = await axios.post(
-                    `${API_URL}/contracts/admin/generate-authority/${user._id}`, 
+                    `${API_URL}/admin/contracts/admin/generate-authority/${user._id}`, 
                     {},
                     {
                       headers: {
