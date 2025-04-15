@@ -23,7 +23,17 @@ exports.getUsers = async (req, res, next) => {
     } = req.query;
     
     // Build query
-    const query = { isActive: true };
+    const query = {};
+    
+    // Apply active filter if provided
+    if (req.query.activeFilter === 'true') {
+      query.isActive = true;
+    } else if (req.query.activeFilter === 'false') {
+      query.isActive = false;
+    } else {
+      // Default behavior (no filter specified)
+      query.isActive = true;
+    }
     
     // Check user role for access restrictions
     if (req.user.role !== 'admin' && req.user.role !== 'super-admin') {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
 import { UserPlus, FileText, Calendar } from 'lucide-react';
 import axios from 'axios';
@@ -25,6 +26,7 @@ const AdminUsersPage = () => {
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedUsers, setSelectedUsers] = useState([]);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Use the users data hook
   const {
@@ -56,6 +58,128 @@ const AdminUsersPage = () => {
       navigate('/');
     }
   }, [isAuthenticated, currentUser, navigate]);
+
+  // Export users data to Excel
+  const handleExportToExcel = async () => {
+    try {
+      setIsExporting(true);
+      
+      // Obținem toate datele utilizatorilor (fără paginare)
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
+      
+      // Construim query-ul pentru a obține toate datele
+      let queryString = `?page=1&limit=10000`; // Limită mare pentru a obține toate datele
+      if (searchTerm) queryString += `&search=${encodeURIComponent(searchTerm)}`;
+      if (roleFilter) queryString += `&role=${encodeURIComponent(roleFilter)}`;
+      if (activeFilter) queryString += `&isActive=${encodeURIComponent(activeFilter)}`;
+      
+      const response = await axios.get(`${API_URL}/admin/users${queryString}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.data && response.data.success) {
+        const exportData = response.data.data.map(user => ({
+          'ID': user._id,
+          'Nume': user.name,
+          'Email': user.email,
+          'Telefon': user.phone || '',
+          'Rol': user.role === 'admin' ? 'Administrator' : 
+                 user.role === 'partner' ? 'Partener' : 
+                 user.role === 'client' ? 'Client' : user.role,
+          // Detalii CNP și ID
+          'CNP': user.idCard?.CNP || '',
+          'Nume complet din buletin': user.idCard?.fullName || '',
+          'Serie buletin': user.idCard?.series || '',
+          'Număr buletin': user.idCard?.number || '',
+          'Emis de': user.idCard?.issuedBy || '',
+          'Data emiterii': user.idCard?.issueDate ? new Date(user.idCard.issueDate).toLocaleDateString('ro-RO') : '',
+          'Data expirării': user.idCard?.expiryDate ? new Date(user.idCard.expiryDate).toLocaleDateString('ro-RO') : '',
+          'Adresă': user.idCard?.address || '',
+          // Documente și status-uri
+          'Buletin Încărcat': user.documents?.id_cardUploaded ? 'Da' : 'Nu',
+          'Contract Generat': user.documents?.contractGenerated ? 'Da' : 'Nu',
+          'Contract Consultanță': user.documents?.consultingContractGenerated ? 'Da' : 'Nu',
+          'Contract Consultanță Semnat': user.documents?.consultingContractSigned ? 'Da' : 'Nu',
+          'Depus': user.submitted?.status ? 'Da' : 'Nu',
+          'Actualizat de': user.submitted?.updated_by?.name || '',
+          'Data Actualizării': user.submitted?.updated_at ? new Date(user.submitted.updated_at).toLocaleString('ro-RO') : '',
+          'Status': user.isActive ? 'Activ' : 'Inactiv',
+          // Informații firmă
+          'Organizație': user.organization || '',
+          'Poziție': user.position || '',
+          // Date sistem
+          'Ultima Autentificare': user.lastLogin ? new Date(user.lastLogin).toLocaleString('ro-RO') : '',
+          'Data Înregistrării': user.createdAt ? new Date(user.createdAt).toLocaleString('ro-RO') : ''
+        }));
+        
+        // Creăm un workbook
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        
+        // Ajustăm lățimea coloanelor
+        const colWidths = [
+          { wch: 25 },  // ID
+          { wch: 30 },  // Nume
+          { wch: 30 },  // Email
+          { wch: 15 },  // Telefon
+          { wch: 15 },  // Rol
+          { wch: 15 },  // CNP
+          { wch: 30 },  // Nume complet buletin
+          { wch: 10 },  // Serie buletin
+          { wch: 10 },  // Număr buletin
+          { wch: 20 },  // Emis de
+          { wch: 15 },  // Data emiterii
+          { wch: 15 },  // Data expirării
+          { wch: 40 },  // Adresă
+          { wch: 10 },  // Buletin Încărcat
+          { wch: 10 },  // Contract Generat
+          { wch: 10 },  // Contract Consultanță
+          { wch: 10 },  // Contract Consultanță Semnat
+          { wch: 10 },  // Depus
+          { wch: 20 },  // Actualizat de
+          { wch: 20 },  // Data actualizării
+          { wch: 10 },  // Status
+          { wch: 25 },  // Organizație
+          { wch: 20 },  // Poziție
+          { wch: 20 },  // Ultima autentificare
+          { wch: 20 },  // Data înregistrării
+        ];
+
+        // Aplicăm lățimile coloanelor
+        worksheet['!cols'] = colWidths;
+        
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Utilizatori');
+        
+        // Generăm numele fișierului cu data și ora curentă
+        const now = new Date();
+        const dateStr = now.toISOString().slice(0, 10);
+        const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, '-');
+        
+        const filters = [];
+        if (searchTerm) filters.push(`search_${searchTerm.substring(0, 10)}`);
+        if (roleFilter) filters.push(roleFilter);
+        if (activeFilter) filters.push(activeFilter === 'true' ? 'activi' : 'inactivi');
+        
+        const filterStr = filters.length > 0 ? `_${filters.join('_')}` : '';
+        
+        const fileName = `StartupNation_Users_${dateStr}_${timeStr}${filterStr}.xlsx`;
+        
+        // Descărcăm fișierul
+        XLSX.writeFile(workbook, fileName);
+        
+        alert(`Exportul a fost finalizat cu succes!\n\nDetalii:\n- Fișier: ${fileName}\n- Număr de înregistrări: ${exportData.length}\n- Filtre aplicate: ${searchTerm ? `Căutare: "${searchTerm}", ` : ''}${roleFilter ? `Rol: ${roleFilter}, ` : ''}${activeFilter ? `Status: ${activeFilter === 'true' ? 'Activ' : 'Inactiv'}` : ''}${!searchTerm && !roleFilter && !activeFilter ? 'Niciun filtru' : ''}`);
+      } else {
+        throw new Error('Nu s-au putut obține datele pentru export');
+      }
+    } catch (error) {
+      console.error('Error exporting users:', error);
+      alert(`Eroare la exportul datelor: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // Handle user selection
   const toggleUserSelection = (userId) => {
@@ -227,9 +351,10 @@ const AdminUsersPage = () => {
           setActiveFilter={setActiveFilter}
           resetFilters={resetFilters}
           handleSearch={handleSearch}
-          onOpenExportModal={() => setIsExportModalOpen(true)}
+          onOpenExportModal={handleExportToExcel}
           onOpenImportModal={() => setIsImportModalOpen(true)}
           onOpenFilterModal={() => setIsFilterModalOpen(true)}
+          isExporting={isExporting}
         />
 
         {/* Users Table */}
