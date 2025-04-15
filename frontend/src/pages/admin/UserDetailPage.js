@@ -313,12 +313,40 @@ const UserDetailPage = () => {
                 try {
                   setError(null);
                   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
+                  const token = localStorage.getItem('token');
                   
-                  // Call API to download the authority document
-                  window.location.href = `${API_URL}/admin/users/${user._id}/download-authority-document?token=${localStorage.getItem('token')}`;
+                  // Direct download using fetch with Authorization header
+                  const response = await fetch(`${API_URL}/admin/users/${user._id}/download-authority-document`, {
+                    headers: {
+                      'Authorization': `Bearer ${token}`
+                    }
+                  });
+                  
+                  if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Eroare la descărcarea documentului');
+                  }
+                  
+                  const blob = await response.blob();
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.style.display = 'none';
+                  a.href = url;
+                  
+                  // Get filename from Content-Disposition or use default
+                  const contentDisposition = response.headers.get('content-disposition');
+                  const fileName = contentDisposition 
+                    ? contentDisposition.split('filename=')[1].replace(/"/g, '') 
+                    : `imputernicire_${user.name || user._id}.pdf`;
+                    
+                  a.download = fileName;
+                  document.body.appendChild(a);
+                  a.click();
+                  window.URL.revokeObjectURL(url);
+                  document.body.removeChild(a);
                 } catch (err) {
                   console.error('Error downloading authority document:', err);
-                  setError('Eroare la descărcarea împuternicirii. Vă rugăm să generați documentul mai întâi.');
+                  setError(`Eroare la descărcarea împuternicirii: ${err.message}. Vă rugăm să generați documentul mai întâi.`);
                 }
               }}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center shadow-sm"
