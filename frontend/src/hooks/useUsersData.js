@@ -26,7 +26,7 @@ const useUsersData = () => {
   // Încărcare date statistice
   const fetchStatistics = async () => {
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
       
       console.log('Solicită statistici de la API...');
       const response = await axios.get(`${API_URL}/admin/users/statistics`, {
@@ -48,7 +48,7 @@ const useUsersData = () => {
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
       
       // Fetch users
       let queryString = `?page=${page}&limit=${limit}`;
@@ -56,9 +56,9 @@ const useUsersData = () => {
       if (roleFilter) queryString += `&role=${encodeURIComponent(roleFilter)}`;
       if (activeFilter) queryString += `&isActive=${encodeURIComponent(activeFilter)}`;
       
-      console.log('Cerere API: ', `${API_URL}/users${queryString}`);
+      console.log('Cerere API: ', `${API_URL}/admin/users${queryString}`);
       
-      const response = await axios.get(`${API_URL}/users${queryString}`, {
+      const response = await axios.get(`${API_URL}/admin/users${queryString}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }

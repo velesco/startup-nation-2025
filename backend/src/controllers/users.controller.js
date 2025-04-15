@@ -53,7 +53,8 @@ exports.getUsers = async (req, res, next) => {
     
     // Execute query with pagination
     const users = await User.find(query)
-      .select('name email role organization position lastLogin createdAt phone documents contractSigned idCard')
+      .select('name email role organization position lastLogin createdAt phone documents contractSigned idCard submitted')
+      .populate('submitted.updated_by', 'name')
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
@@ -368,6 +369,56 @@ exports.generateUserToken = async (req, res, next) => {
     });
   } catch (error) {
     logger.error(`Error generating user token: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc    Update user submission status
+// @route   POST /api/admin/users/:id/update-submission
+// @access  Private (Admin, super-admin, partner)
+exports.updateSubmissionStatus = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+    const { status } = req.body;
+    
+    // Verificăm dacă utilizatorul există
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilizator negăsit'
+      });
+    }
+    
+    // Actualizăm status-ul de Depus
+    user.submitted = {
+      status: status === true,
+      updated_by: req.user._id,
+      updated_at: new Date()
+    };
+    
+    await user.save();
+    
+    // Obținem detalii despre utilizatorul care a făcut actualizarea
+    const updatedBy = await User.findById(req.user._id).select('name email');
+    
+    // Returnăm utilizatorul actualizat
+    res.status(200).json({
+      success: true,
+      message: `Status-ul "Depus" a fost ${status ? 'activat' : 'dezactivat'} cu succes`,
+      data: {
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          submitted: user.submitted
+        },
+        updated_by: updatedBy
+      }
+    });
+  } catch (error) {
+    logger.error(`Error updating submission status: ${error.message}`);
     next(error);
   }
 };

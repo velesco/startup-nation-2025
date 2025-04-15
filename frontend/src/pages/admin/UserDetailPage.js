@@ -4,12 +4,11 @@ import axios from 'axios';
 import { 
   ArrowLeft, 
   Save, 
-  Upload, 
   Download, 
-  Trash2, 
   FileText, 
   Mail, 
   Phone, 
+  FilePlus,
   Calendar, 
   Shield, 
   Building, 
@@ -37,6 +36,8 @@ const UserDetailPage = () => {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isSendingData, setIsSendingData] = useState(false);
   const [dataSentSuccess, setDataSentSuccess] = useState(false);
+  const [isGeneratingAuthority, setIsGeneratingAuthority] = useState(false);
+  const [authoritySuccess, setAuthoritySuccess] = useState(false);
 
   // Format date for display
   const formatDate = (dateString) => {
@@ -54,7 +55,7 @@ const UserDetailPage = () => {
     const fetchUser = async () => {
       setLoading(true);
       try {
-        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
         const response = await axios.get(`${API_URL}/admin/users/${id}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`
@@ -83,7 +84,7 @@ const UserDetailPage = () => {
   const handleUpdateUser = async (updatedData) => {
     try {
       setLoading(true);
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
       
       const response = await axios.put(`${API_URL}/admin/users/${id}`, updatedData, {
         headers: {
@@ -113,7 +114,7 @@ const UserDetailPage = () => {
     try {
       setIsSendingData(true);
       setError(null);
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
       
       const response = await axios.post(`${API_URL}/admin/users/${user._id}/send-data`, {}, {
         headers: {
@@ -194,6 +195,22 @@ const UserDetailPage = () => {
         </div>
       )}
 
+      {/* Success message for authority document */}
+      {authoritySuccess && (
+          <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-6">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-green-700">Împuternicirea a fost generată cu succes!</p>
+              </div>
+            </div>
+          </div>
+        )}
+        
       {/* Error message */}
       {error && (
           <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
@@ -212,20 +229,106 @@ const UserDetailPage = () => {
 
         {/* Succes message pentru trimiterea datelor */}
         {dataSentSuccess && (
-          <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-6">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-green-700">Datele utilizatorului au fost trimise cu succes către Google Sheets!</p>
-              </div>
-            </div>
-          </div>
+        <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-6">
+        <div className="flex">
+        <div className="flex-shrink-0">
+        <svg className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+        </svg>
+        </div>
+        <div className="ml-3">
+        <p className="text-sm text-green-700">Datele utilizatorului au fost trimise cu succes către Google Sheets!</p>
+        </div>
+        </div>
+        </div>
         )}
 
+        {/* Quick Actions Bar */}
+        {user && activeTab === 'documents' && currentUser && (currentUser.role === 'admin' || currentUser.role === 'super-admin' || (currentUser.role === 'partner' && user.added_by && (
+          (typeof user.added_by === 'string' && user.added_by === currentUser._id) ||
+          (typeof user.added_by === 'object' && 
+           ((user.added_by._id && (user.added_by._id === currentUser._id || user.added_by._id.toString() === currentUser._id)) ||
+            user.added_by === currentUser._id))
+        ))) && (
+          <div className="flex flex-wrap gap-3 mb-6">
+            <button
+              onClick={async () => {
+                try {
+                  setIsGeneratingAuthority(true);
+                  setError(null);
+                  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
+                  
+                  // Call the API to generate the authority document
+                  const response = await axios.post(
+                    `${API_URL}/contracts/admin/generate-authority/${user._id}`, 
+                    {},
+                    {
+                      headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                      }
+                    }
+                  );
+                  
+                  if (response.data && response.data.success) {
+                    setAuthoritySuccess(true);
+                    
+                    // Refresh document list or user data
+                    setActiveTab('documents');
+                    
+                    // Show success for 3 seconds
+                    setTimeout(() => {
+                      setAuthoritySuccess(false);
+                    }, 3000);
+                  } else {
+                    throw new Error(response.data?.message || 'Generarea documentului de împuternicire a eșuat');
+                  }
+                } catch (err) {
+                  console.error('Error generating authority document:', err);
+                  setError(err.response?.data?.message || err.message || 'Generarea documentului de împuternicire a eșuat');
+                } finally {
+                  setIsGeneratingAuthority(false);
+                }
+              }}
+              className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center shadow-sm"
+              disabled={isGeneratingAuthority}
+            >
+              {isGeneratingAuthority ? (
+                <>
+                  <svg className="animate-spin h-4 w-4 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Generare...</span>
+                </>
+              ) : (
+                <>
+                  <FilePlus className="h-4 w-4 mr-2" />
+                  <span>Generează Împuternicire</span>
+                </>
+              )}
+            </button>
+            
+            <button
+              onClick={async () => {
+                try {
+                  setError(null);
+                  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
+                  
+                  // Call API to download the authority document
+                  window.location.href = `${API_URL}/admin/users/${user._id}/download-authority-document?token=${localStorage.getItem('token')}`;
+                } catch (err) {
+                  console.error('Error downloading authority document:', err);
+                  setError('Eroare la descărcarea împuternicirii. Vă rugăm să generați documentul mai întâi.');
+                }
+              }}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center shadow-sm"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              <span>Descarcă Împuternicire</span>
+            </button>
+          </div>
+        )}
+        
         {/* Tabs */}
         <div className="flex border-b border-gray-200 mb-6">
           <button

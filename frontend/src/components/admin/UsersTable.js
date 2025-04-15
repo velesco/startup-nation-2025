@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { useAuth } from '../../contexts/AuthContext';
 import { 
   Eye, 
   Mail,
@@ -27,8 +29,11 @@ const UsersTable = ({
   setPage,
   totalPages,
   total,
-  limit
+  limit,
+  fetchUsers
 }) => {
+  const { currentUser } = useAuth();
+  const [isUpdatingSubmission, setIsUpdatingSubmission] = useState(null);
   const navigate = useNavigate();
 
   // Role colors
@@ -89,7 +94,13 @@ const UsersTable = ({
                   Rol
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  CNP
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Documente
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Depus
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
@@ -149,6 +160,11 @@ const UsersTable = ({
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-mono bg-gray-100 p-2 rounded">
+                      {user.idCard?.CNP || 'N/A'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex flex-col gap-1">
                       {user.documents && user.documents.id_cardUploaded ? (
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
@@ -184,6 +200,58 @@ const UsersTable = ({
                           <X className="h-3 w-3 mr-1" />
                           Contract Consultanță
                         </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center">
+                      <label className="inline-flex items-center cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          className="sr-only peer"
+                          checked={user.submitted?.status || false}
+                          onChange={async () => {
+                            try {
+                              setIsUpdatingSubmission(user._id);
+                              const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
+                              
+                              const response = await axios.post(
+                                `${API_URL}/admin/users/${user._id}/update-submission`,
+                                { status: !(user.submitted?.status || false) },
+                                {
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                    Authorization: `Bearer ${localStorage.getItem('token')}`
+                                  }
+                                }
+                              );
+
+                              // Reîncărcare utilizatori după actualizare
+                              if (response.data && response.data.success) {
+                                fetchUsers();
+                              }
+                            } catch (error) {
+                              console.error('Error updating submission status:', error);
+                              alert(`Eroare la actualizarea stării: ${error.response?.data?.message || error.message}`);
+                            } finally {
+                              setIsUpdatingSubmission(null);
+                            }
+                          }}
+                          disabled={isUpdatingSubmission === user._id}
+                        />
+                        <div className={`w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer ${user.submitted?.status ? 'peer-checked:after:translate-x-full peer-checked:after:border-white peer-checked:bg-blue-600' : ''} after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all`}></div>
+                      </label>
+                      {user.submitted?.updated_by && (
+                        <span className="ml-2 text-xs text-gray-500">
+                          {user.submitted.updated_by === currentUser._id ? 'de tine' : 
+                           (user.submitted.updated_by?.name || 'nespecificat')}
+                        </span>
+                      )}
+                      {isUpdatingSubmission === user._id && (
+                        <svg className="animate-spin ml-2 h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
                       )}
                     </div>
                   </td>

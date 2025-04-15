@@ -105,7 +105,7 @@ const AdminUsersPage = () => {
   const handleDeleteUser = async (userId) => {
     try {
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
-      const response = await axios.delete(`${API_URL}/users/${userId}`, {
+      const response = await axios.delete(`${API_URL}/admin/users/${userId}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }
@@ -245,6 +245,7 @@ const AdminUsersPage = () => {
           totalPages={totalPages}
           total={total}
           limit={limit}
+          fetchUsers={fetchUsers}
         />
       </div>
 

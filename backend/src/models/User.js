@@ -166,6 +166,19 @@ const UserSchema = new mongoose.Schema(
     },
     dataSentToSheetAt: {
       type: Date
+    },
+    submitted: {
+      status: {
+        type: Boolean,
+        default: false
+      },
+      updated_by: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      updated_at: {
+        type: Date
+      }
     }
   },
   {

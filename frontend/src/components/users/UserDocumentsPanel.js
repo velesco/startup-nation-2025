@@ -37,7 +37,7 @@ const UserDocumentsPanel = ({ userId }) => {
       
       setLoading(true);
       try {
-        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
         const response = await axios.get(`${API_URL}/admin/users/${userId}/documents`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`
@@ -96,7 +96,7 @@ const UserDocumentsPanel = ({ userId }) => {
     }
 
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
       
       const response = await axios.post(
         `${API_URL}/admin/users/${userId}/documents`, 
@@ -143,7 +143,7 @@ const UserDocumentsPanel = ({ userId }) => {
 
     try {
       setLoading(true);
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
       
       const response = await axios.delete(`${API_URL}/admin/documents/${documentId}`, {
         headers: {
@@ -174,7 +174,7 @@ const UserDocumentsPanel = ({ userId }) => {
         return;
       }
       
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
       
       const response = await axios.get(`${API_URL}/admin/documents/${doc._id}/download`, {
         headers: {
@@ -247,7 +247,7 @@ const UserDocumentsPanel = ({ userId }) => {
   const handleDownloadContract = async () => {
     try {
       setError(null); // Reset error state
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
       
       // Make a direct request to download the contract for this specific user
       const response = await axios.get(`${API_URL}/admin/users/${userId}/download-contract`, {
@@ -288,7 +288,7 @@ const UserDocumentsPanel = ({ userId }) => {
   const handleDownloadConsultingContract = async () => {
     try {
       setError(null); // Reset error state
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
       
       // Make a request to download the consulting contract for this specific user
       const response = await axios.get(`${API_URL}/admin/users/${userId}/download-consulting-contract`, {
@@ -329,7 +329,7 @@ const UserDocumentsPanel = ({ userId }) => {
   const handleGenerateConsultingContract = async () => {
     try {
       setError(null);
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
       
       // Generate consulting contract via admin API
       const response = await axios.post(
@@ -368,7 +368,7 @@ const UserDocumentsPanel = ({ userId }) => {
   const handleGenerateAuthorityDocument = async () => {
     try {
       setError(null);
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
       
       // Generate authority document via admin API
       const response = await axios.post(
@@ -407,7 +407,7 @@ const UserDocumentsPanel = ({ userId }) => {
   const handleDownloadAuthorityDocument = async () => {
     try {
       setError(null);
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
       
       // Make a direct request to download the authority document for this specific user
       const response = await axios.get(`${API_URL}/admin/users/${userId}/download-authority-document`, {
@@ -450,7 +450,7 @@ const UserDocumentsPanel = ({ userId }) => {
       if (!userId || !currentUser) return;
       
       try {
-        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
         const response = await axios.get(`${API_URL}/admin/users/${userId}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`
@@ -487,7 +487,7 @@ const UserDocumentsPanel = ({ userId }) => {
   useEffect(() => {
     const checkContract = async () => {
       try {
-        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003/api';
+        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
         
         const response = await axios.get(`${API_URL}/admin/users/${userId}`, {
           headers: {
