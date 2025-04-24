@@ -7,6 +7,7 @@ import ProgramInfoSection from '../components/landing/ProgramInfoSection';
 import ApplicationFormSection from '../components/landing/ApplicationFormSection';
 import PremiumBusinessPlanSection from '../components/landing/PremiumBusinessPlanSection';
 import BusinessPlanTemplatesSection from '../components/landing/BusinessPlanTemplatesSection';
+import AvailableSpotsSection from '../components/landing/AvailableSpotsSection';
 import Footer from '../components/common/Footer';
 
 const LandingPage = () => {
@@ -24,6 +25,9 @@ const LandingPage = () => {
       
       {/* Program Information Section */}
       <ProgramInfoSection />
+      
+      {/* Available Spots Section */}
+      <AvailableSpotsSection />
       
       {/* Application Form Section */}
       <ApplicationFormSection />

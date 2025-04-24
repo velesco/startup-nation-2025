@@ -1,0 +1,103 @@
+/* Spots Section Styles */
+.spots {
+  padding: 2rem 5%;
+  background: var(--bg-light);
+  position: relative;
+  overflow: hidden;
+}
+
+.spots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 2.5rem;
+  margin-top: 4rem;
+}
+
+.spot-card {
+  background: white;
+  border-radius: 12px;
+  padding: 2.5rem;
+  box-shadow: var(--shadow-soft);
+  transition: var(--transition-smooth);
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.spot-card::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary-blue), var(--primary-green));
+  transition: var(--transition-smooth);
+}
+
+.spot-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.spot-card:hover::before {
+  height: 8px;
+}
+
+.spot-text {
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+  min-height: 120px;
+  overflow-y: auto;
+}
+
+.spot-details {
+  border-top: 1px solid #eee;
+  padding-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.spot-total, .spot-available {
+  text-align: center;
+}
+
+.spot-label {
+  font-size: 0.9rem;
+  color: #777;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.spot-number {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  font-size: 2rem;
+}
+
+.spot-number-total {
+  color: var(--primary-blue);
+}
+
+.spot-number-available {
+  color: var(--primary-green);
+}
+
+.spot-number-unavailable {
+  color: #cc0000;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .spots-grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+}
+
+@media (max-width: 576px) {
+  .spots-grid {
+    grid-template-columns: 1fr;
+  }
+}
