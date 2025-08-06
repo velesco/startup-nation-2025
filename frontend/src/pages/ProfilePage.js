@@ -1,1 +1,250 @@
-import React, { useState, useEffect } from 'react';\nimport {\n  Container,\n  Grid,\n  Card,\n  CardContent,\n  Typography,\n  Box,\n  Tab,\n  Tabs,\n  Alert,\n  CircularProgress\n} from '@mui/material';\nimport {\n  Person as PersonIcon,\n  Badge as BadgeIcon,\n  Settings as SettingsIcon\n} from '@mui/icons-material';\nimport { useAuth } from '../../contexts/AuthContext';\nimport DashboardLayout from '../../components/layouts/DashboardLayout';\nimport IDCardUpload from '../../components/users/IDCardUpload';\nimport apiService from '../../services/api';\n\nconst ProfilePage = () => {\n  const { currentUser, refreshUser } = useAuth();\n  const [tabValue, setTabValue] = useState(0);\n  const [user, setUser] = useState(null);\n  const [loading, setLoading] = useState(true);\n  const [error, setError] = useState(null);\n\n  // Fetch user profile data\n  useEffect(() => {\n    const fetchUserProfile = async () => {\n      try {\n        setLoading(true);\n        const response = await apiService.users.getProfile();\n        setUser(response.data.user);\n      } catch (error) {\n        console.error('Error fetching profile:', error);\n        setError('Eroare la încărcarea profilului');\n      } finally {\n        setLoading(false);\n      }\n    };\n\n    if (currentUser) {\n      fetchUserProfile();\n    }\n  }, [currentUser]);\n\n  const handleTabChange = (event, newValue) => {\n    setTabValue(newValue);\n  };\n\n  const handleProfileUpdate = async () => {\n    // Refresh user data after ID card update\n    try {\n      const response = await apiService.users.getProfile();\n      setUser(response.data.user);\n      // Also refresh the auth context\n      if (refreshUser) {\n        await refreshUser();\n      }\n    } catch (error) {\n      console.error('Error refreshing profile:', error);\n    }\n  };\n\n  if (loading) {\n    return (\n      <DashboardLayout>\n        <Box display=\"flex\" justifyContent=\"center\" alignItems=\"center\" minHeight=\"60vh\">\n          <CircularProgress />\n        </Box>\n      </DashboardLayout>\n    );\n  }\n\n  if (error) {\n    return (\n      <DashboardLayout>\n        <Container maxWidth=\"lg\">\n          <Alert severity=\"error\">{error}</Alert>\n        </Container>\n      </DashboardLayout>\n    );\n  }\n\n  const TabPanel = ({ children, value, index }) => {\n    return (\n      <div\n        role=\"tabpanel\"\n        hidden={value !== index}\n        id={`profile-tabpanel-${index}`}\n        aria-labelledby={`profile-tab-${index}`}\n      >\n        {value === index && (\n          <Box sx={{ py: 3 }}>\n            {children}\n          </Box>\n        )}\n      </div>\n    );\n  };\n\n  return (\n    <DashboardLayout>\n      <Container maxWidth=\"lg\">\n        <Typography variant=\"h4\" gutterBottom>\n          Profil Utilizator\n        </Typography>\n\n        <Card sx={{ mb: 3 }}>\n          <CardContent>\n            <Grid container spacing={3} alignItems=\"center\">\n              <Grid item>\n                <PersonIcon sx={{ fontSize: 48, color: 'primary.main' }} />\n              </Grid>\n              <Grid item xs>\n                <Typography variant=\"h5\">{user?.name}</Typography>\n                <Typography variant=\"body1\" color=\"text.secondary\">\n                  {user?.email}\n                </Typography>\n                <Typography variant=\"body2\" color=\"text.secondary\">\n                  Rol: {user?.role === 'partner' ? 'Partener' : user?.role === 'admin' ? 'Administrator' : user?.role}\n                </Typography>\n                {user?.organization && (\n                  <Typography variant=\"body2\" color=\"text.secondary\">\n                    {user.organization}\n                  </Typography>\n                )}\n              </Grid>\n            </Grid>\n          </CardContent>\n        </Card>\n\n        <Card>\n          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>\n            <Tabs value={tabValue} onChange={handleTabChange}>\n              <Tab \n                icon={<PersonIcon />} \n                label=\"Informații Generale\" \n                id=\"profile-tab-0\"\n                aria-controls=\"profile-tabpanel-0\"\n              />\n              <Tab \n                icon={<BadgeIcon />} \n                label=\"Buletin Identitate\" \n                id=\"profile-tab-1\"\n                aria-controls=\"profile-tabpanel-1\"\n              />\n              <Tab \n                icon={<SettingsIcon />} \n                label=\"Setări\" \n                id=\"profile-tab-2\"\n                aria-controls=\"profile-tabpanel-2\"\n              />\n            </Tabs>\n          </Box>\n\n          <TabPanel value={tabValue} index={0}>\n            <Grid container spacing={3}>\n              <Grid item xs={12} md={6}>\n                <Card variant=\"outlined\">\n                  <CardContent>\n                    <Typography variant=\"h6\" gutterBottom>\n                      Informații Personale\n                    </Typography>\n                    <Box sx={{ '& > div': { mb: 2 } }}>\n                      <div>\n                        <Typography variant=\"body2\" color=\"text.secondary\">Nume:</Typography>\n                        <Typography variant=\"body1\">{user?.name}</Typography>\n                      </div>\n                      <div>\n                        <Typography variant=\"body2\" color=\"text.secondary\">Email:</Typography>\n                        <Typography variant=\"body1\">{user?.email}</Typography>\n                      </div>\n                      <div>\n                        <Typography variant=\"body2\" color=\"text.secondary\">Telefon:</Typography>\n                        <Typography variant=\"body1\">{user?.phone || 'N/A'}</Typography>\n                      </div>\n                      <div>\n                        <Typography variant=\"body2\" color=\"text.secondary\">Organizația:</Typography>\n                        <Typography variant=\"body1\">{user?.organization || 'N/A'}</Typography>\n                      </div>\n                      <div>\n                        <Typography variant=\"body2\" color=\"text.secondary\">Poziția:</Typography>\n                        <Typography variant=\"body1\">{user?.position || 'N/A'}</Typography>\n                      </div>\n                    </Box>\n                  </CardContent>\n                </Card>\n              </Grid>\n              <Grid item xs={12} md={6}>\n                <Card variant=\"outlined\">\n                  <CardContent>\n                    <Typography variant=\"h6\" gutterBottom>\n                      Informații Cont\n                    </Typography>\n                    <Box sx={{ '& > div': { mb: 2 } }}>\n                      <div>\n                        <Typography variant=\"body2\" color=\"text.secondary\">Rol:</Typography>\n                        <Typography variant=\"body1\">\n                          {user?.role === 'partner' ? 'Partener' : \n                           user?.role === 'admin' ? 'Administrator' : \n                           user?.role}\n                        </Typography>\n                      </div>\n                      <div>\n                        <Typography variant=\"body2\" color=\"text.secondary\">Status:</Typography>\n                        <Typography variant=\"body1\" color={user?.isActive ? 'success.main' : 'error.main'}>\n                          {user?.isActive ? 'Activ' : 'Inactiv'}\n                        </Typography>\n                      </div>\n                      <div>\n                        <Typography variant=\"body2\" color=\"text.secondary\">Ultima logare:</Typography>\n                        <Typography variant=\"body1\">\n                          {user?.lastLogin ? new Date(user.lastLogin).toLocaleDateString('ro-RO') : 'N/A'}\n                        </Typography>\n                      </div>\n                    </Box>\n                  </CardContent>\n                </Card>\n              </Grid>\n            </Grid>\n          </TabPanel>\n\n          <TabPanel value={tabValue} index={1}>\n            <IDCardUpload user={user} onUpdate={handleProfileUpdate} />\n          </TabPanel>\n\n          <TabPanel value={tabValue} index={2}>\n            <Card variant=\"outlined\">\n              <CardContent>\n                <Typography variant=\"h6\" gutterBottom>\n                  Setări Cont\n                </Typography>\n                <Typography variant=\"body2\" color=\"text.secondary\">\n                  Funcționalitățile de setări vor fi disponibile în curând.\n                </Typography>\n              </CardContent>\n            </Card>\n          </TabPanel>\n        </Card>\n      </Container>\n    </DashboardLayout>\n  );\n};\n\nexport default ProfilePage;"
+import React, { useState, useEffect } from 'react';
+import {
+  Container,
+  Grid,
+  Card,
+  CardContent,
+  Typography,
+  Box,
+  Tab,
+  Tabs,
+  Alert,
+  CircularProgress
+} from '@mui/material';
+import {
+  Person as PersonIcon,
+  Badge as BadgeIcon,
+  Settings as SettingsIcon
+} from '@mui/icons-material';
+import { useAuth } from '../../contexts/AuthContext';
+import DashboardLayout from '../../components/layouts/DashboardLayout';
+import IDCardUpload from '../../components/users/IDCardUpload';
+import apiService from '../../services/api';
+
+const ProfilePage = () => {
+  const { currentUser, refreshUser } = useAuth();
+  const [tabValue, setTabValue] = useState(0);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch user profile data
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        setLoading(true);
+        const response = await apiService.users.getProfile();
+        setUser(response.data.user);
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        setError('Eroare la incarcarea profilului');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (currentUser) {
+      fetchUserProfile();
+    }
+  }, [currentUser]);
+
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
+
+  const handleProfileUpdate = async () => {
+    // Refresh user data after ID card update
+    try {
+      const response = await apiService.users.getProfile();
+      setUser(response.data.user);
+      // Also refresh the auth context
+      if (refreshUser) {
+        await refreshUser();
+      }
+    } catch (error) {
+      console.error('Error refreshing profile:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+          <CircularProgress />
+        </Box>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <Container maxWidth="lg">
+          <Alert severity="error">{error}</Alert>
+        </Container>
+      </DashboardLayout>
+    );
+  }
+
+  const TabPanel = ({ children, value, index }) => {
+    return (
+      <div
+        role="tabpanel"
+        hidden={value !== index}
+        id={`profile-tabpanel-${index}`}
+        aria-labelledby={`profile-tab-${index}`}
+      >
+        {value === index && (
+          <Box sx={{ py: 3 }}>
+            {children}
+          </Box>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <DashboardLayout>
+      <Container maxWidth="lg">
+        <Typography variant="h4" gutterBottom>
+          Profil Utilizator
+        </Typography>
+
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Grid container spacing={3} alignItems="center">
+              <Grid item>
+                <PersonIcon sx={{ fontSize: 48, color: 'primary.main' }} />
+              </Grid>
+              <Grid item xs>
+                <Typography variant="h5">{user?.name}</Typography>
+                <Typography variant="body1" color="text.secondary">
+                  {user?.email}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Rol: {user?.role === 'partner' ? 'Partener' : user?.role === 'admin' ? 'Administrator' : user?.role}
+                </Typography>
+                {user?.organization && (
+                  <Typography variant="body2" color="text.secondary">
+                    {user.organization}
+                  </Typography>
+                )}
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+            <Tabs value={tabValue} onChange={handleTabChange}>
+              <Tab 
+                icon={<PersonIcon />} 
+                label="Informatii Generale" 
+                id="profile-tab-0"
+                aria-controls="profile-tabpanel-0"
+              />
+              <Tab 
+                icon={<BadgeIcon />} 
+                label="Buletin Identitate" 
+                id="profile-tab-1"
+                aria-controls="profile-tabpanel-1"
+              />
+              <Tab 
+                icon={<SettingsIcon />} 
+                label="Setari" 
+                id="profile-tab-2"
+                aria-controls="profile-tabpanel-2"
+              />
+            </Tabs>
+          </Box>
+
+          <TabPanel value={tabValue} index={0}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                      Informatii Personale
+                    </Typography>
+                    <Box sx={{ '& > div': { mb: 2 } }}>
+                      <div>
+                        <Typography variant="body2" color="text.secondary">Nume:</Typography>
+                        <Typography variant="body1">{user?.name}</Typography>
+                      </div>
+                      <div>
+                        <Typography variant="body2" color="text.secondary">Email:</Typography>
+                        <Typography variant="body1">{user?.email}</Typography>
+                      </div>
+                      <div>
+                        <Typography variant="body2" color="text.secondary">Telefon:</Typography>
+                        <Typography variant="body1">{user?.phone || 'N/A'}</Typography>
+                      </div>
+                      <div>
+                        <Typography variant="body2" color="text.secondary">Organizatia:</Typography>
+                        <Typography variant="body1">{user?.organization || 'N/A'}</Typography>
+                      </div>
+                      <div>
+                        <Typography variant="body2" color="text.secondary">Pozitia:</Typography>
+                        <Typography variant="body1">{user?.position || 'N/A'}</Typography>
+                      </div>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                      Informatii Cont
+                    </Typography>
+                    <Box sx={{ '& > div': { mb: 2 } }}>
+                      <div>
+                        <Typography variant="body2" color="text.secondary">Rol:</Typography>
+                        <Typography variant="body1">
+                          {user?.role === 'partner' ? 'Partener' : 
+                           user?.role === 'admin' ? 'Administrator' : 
+                           user?.role}
+                        </Typography>
+                      </div>
+                      <div>
+                        <Typography variant="body2" color="text.secondary">Status:</Typography>
+                        <Typography variant="body1" color={user?.isActive ? 'success.main' : 'error.main'}>
+                          {user?.isActive ? 'Activ' : 'Inactiv'}
+                        </Typography>
+                      </div>
+                      <div>
+                        <Typography variant="body2" color="text.secondary">Ultima logare:</Typography>
+                        <Typography variant="body1">
+                          {user?.lastLogin ? new Date(user.lastLogin).toLocaleDateString('ro-RO') : 'N/A'}
+                        </Typography>
+                      </div>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
+          </TabPanel>
+
+          <TabPanel value={tabValue} index={1}>
+            <IDCardUpload user={user} onUpdate={handleProfileUpdate} />
+          </TabPanel>
+
+          <TabPanel value={tabValue} index={2}>
+            <Card variant="outlined">
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Setari Cont
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Functionalitatile de setari vor fi disponibile in curand.
+                </Typography>
+              </CardContent>
+            </Card>
+          </TabPanel>
+        </Card>
+      </Container>
+    </DashboardLayout>
+  );
+};
+
+export default ProfilePage;

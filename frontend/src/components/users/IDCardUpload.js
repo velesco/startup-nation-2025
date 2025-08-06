@@ -50,7 +50,7 @@ const IDCardUpload = ({ user, onUpdate }) => {
         size: response.data.size,
         path: response.data.path
       });
-      setUploadSuccess('Buletinul a fost încărcat cu succes!');
+      setUploadSuccess('Buletinul a fost incarcat cu succes!');
       
       if (onUpdate) {
         onUpdate();
@@ -58,7 +58,7 @@ const IDCardUpload = ({ user, onUpdate }) => {
       
     } catch (error) {
       console.error('Upload error:', error);
-      setUploadError(error.response?.data?.message || 'Eroare la încărcarea buletinului');
+      setUploadError(error.response?.data?.message || 'Eroare la incarcarea buletinului');
     } finally {
       setUploading(false);
     }
@@ -119,7 +119,7 @@ const IDCardUpload = ({ user, onUpdate }) => {
     <Card>
       <CardContent>
         <Typography variant="h6" gutterBottom>
-          Încărcare Buletin de Identitate
+          Incarcare Buletin de Identitate
         </Typography>
         
         {/* Upload Area */}
@@ -144,8 +144,8 @@ const IDCardUpload = ({ user, onUpdate }) => {
             <UploadIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
             <Typography variant="body1" gutterBottom>
               {isDragActive
-                ? 'Eliberează fișierul aici...'
-                : 'Trage și lasă buletinul aici sau click pentru a selecta'}
+                ? 'Elibereaza fisierul aici...'
+                : 'Trage si lasa buletinul aici sau click pentru a selecta'}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Formate acceptate: JPG, PNG, GIF, WebP (max. 10MB)
@@ -158,7 +158,7 @@ const IDCardUpload = ({ user, onUpdate }) => {
           <Box sx={{ mb: 2 }}>
             <LinearProgress />
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Încărcare în curs...
+              Incarcare in curs...
             </Typography>
           </Box>
         )}
@@ -181,7 +181,7 @@ const IDCardUpload = ({ user, onUpdate }) => {
         {(uploadedFile || user?.idCard?.imagePath) && (
           <Box sx={{ mb: 3 }}>
             <Typography variant="subtitle2" gutterBottom>
-              Fișier încărcat:
+              Fisier incarcat:
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <Chip
@@ -215,7 +215,7 @@ const IDCardUpload = ({ user, onUpdate }) => {
                 disabled={extracting}
                 fullWidth
               >
-                {extracting ? 'Extragere în curs...' : 'Extrage date din buletin'}
+                {extracting ? 'Extragere in curs...' : 'Extrage date din buletin'}
               </Button>
             </Box>
 
@@ -224,7 +224,7 @@ const IDCardUpload = ({ user, onUpdate }) => {
               <Box sx={{ mb: 2 }}>
                 <LinearProgress />
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  Se analizează imaginea cu OpenAI...
+                  Se analizeaza imaginea cu OpenAI...
                 </Typography>
               </Box>
             )}
@@ -256,7 +256,7 @@ const IDCardUpload = ({ user, onUpdate }) => {
                     </Typography>
                   </Grid>
                   <Grid item xs={12}>
-                    <Typography variant="body2" color="text.secondary">Adresă:</Typography>
+                    <Typography variant="body2" color="text.secondary">Adresa:</Typography>
                     <Typography variant="body1">
                       {extractedData?.address || user?.idCard?.address || 'N/A'}
                     </Typography>
@@ -268,7 +268,7 @@ const IDCardUpload = ({ user, onUpdate }) => {
                     </Typography>
                   </Grid>
                   <Grid item xs={6} sm={3}>
-                    <Typography variant="body2" color="text.secondary">Număr:</Typography>
+                    <Typography variant="body2" color="text.secondary">Numar:</Typography>
                     <Typography variant="body1">
                       {extractedData?.number || user?.idCard?.number || 'N/A'}
                     </Typography>
@@ -280,19 +280,19 @@ const IDCardUpload = ({ user, onUpdate }) => {
                     </Typography>
                   </Grid>
                   <Grid item xs={6} sm={4}>
-                    <Typography variant="body2" color="text.secondary">Data nașterii:</Typography>
+                    <Typography variant="body2" color="text.secondary">Data nasterii:</Typography>
                     <Typography variant="body1">
                       {formatDate(extractedData?.birthDate || user?.idCard?.birthDate)}
                     </Typography>
                   </Grid>
                   <Grid item xs={6} sm={4}>
-                    <Typography variant="body2" color="text.secondary">Data eliberării:</Typography>
+                    <Typography variant="body2" color="text.secondary">Data eliberarii:</Typography>
                     <Typography variant="body1">
                       {formatDate(extractedData?.issueDate || user?.idCard?.issueDate)}
                     </Typography>
                   </Grid>
                   <Grid item xs={6} sm={4}>
-                    <Typography variant="body2" color="text.secondary">Data expirării:</Typography>
+                    <Typography variant="body2" color="text.secondary">Data expirarii:</Typography>
                     <Typography variant="body1">
                       {formatDate(extractedData?.expiryDate || user?.idCard?.expiryDate)}
                     </Typography>
