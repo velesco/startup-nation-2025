@@ -2,6 +2,8 @@ const User = require('../models/User');
 const { ApiError } = require('../utils/ApiError');
 const { deleteFile } = require('../utils/fileHelper');
 const logger = require('../utils/logger');
+const ocrService = require('../services/ocrService');
+const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 
@@ -66,6 +68,191 @@ exports.getUsers = async (req, res, next) => {
         pages: Math.ceil(total / limit)
       },
       data: users
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Configure multer for ID card uploads
+const idCardStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadPath = path.join(__dirname, '../../uploads/id-cards');
+    // Create directory if it doesn't exist
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const extension = path.extname(file.originalname).toLowerCase();
+    cb(null, `id-card-${req.user.id}-${uniqueSuffix}${extension}`);
+  }
+});
+
+const idCardUpload = multer({
+  storage: idCardStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  },
+  fileFilter: function (req, file, cb) {
+    // Check file type
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const mimeType = allowedTypes.test(file.mimetype);
+    const extension = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    
+    if (mimeType && extension) {
+      return cb(null, true);
+    } else {
+      cb(new ApiError(400, 'Doar fișiere imagine sunt permise (JPG, PNG, GIF, WebP)'));
+    }
+  }
+});
+
+/**
+ * Upload ID card image
+ */
+exports.uploadIDCard = async (req, res, next) => {
+  const upload = idCardUpload.single('idCard');
+  
+  upload(req, res, async function (err) {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return next(new ApiError(400, 'Fișierul este prea mare. Mărimea maximă permisă este 10MB'));
+      }
+      return next(new ApiError(400, `Eroare upload: ${err.message}`));
+    } else if (err) {
+      return next(err);
+    }
+
+    try {
+      if (!req.file) {
+        throw new ApiError(400, 'Nu a fost încărcat niciun fișier');
+      }
+
+      const user = await User.findById(req.user.id);
+      if (!user) {
+        throw new ApiError(404, 'Utilizator negăsit');
+      }
+
+      // Update user's ID card path
+      const idCardPath = `/uploads/id-cards/${req.file.filename}`;
+      
+      await User.findByIdAndUpdate(req.user.id, {
+        'idCard.imagePath': idCardPath,
+        'documents.id_cardUploaded': true
+      });
+
+      res.json({
+        success: true,
+        message: 'Buletinul a fost încărcat cu succes',
+        data: {
+          filename: req.file.filename,
+          path: idCardPath,
+          originalName: req.file.originalname,
+          size: req.file.size
+        }
+      });
+    } catch (error) {
+      // Clean up uploaded file if there was an error
+      if (req.file) {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (unlinkError) {
+          logger.error('Failed to cleanup uploaded file:', unlinkError);
+        }
+      }
+      next(error);
+    }
+  });
+};
+
+/**
+ * Extract ID card data using OCR
+ */
+exports.extractIDCardData = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      throw new ApiError(404, 'Utilizator negăsit');
+    }
+
+    // Check if user has an ID card image uploaded
+    if (!user.idCard || !user.idCard.imagePath) {
+      throw new ApiError(400, 'Nu există nicio imagine de buletin încărcată');
+    }
+
+    // Build full path to the image
+    const imagePath = path.join(__dirname, '../..', user.idCard.imagePath);
+    
+    // Validate image exists and is readable
+    const validation = await ocrService.validateIDCardImage(imagePath);
+    if (!validation.isValid) {
+      throw new ApiError(400, `Imagine invalidă: ${validation.error}`);
+    }
+
+    // Extract data using OCR
+    const extractedData = await ocrService.extractIDCardData(imagePath);
+    
+    // Update user with extracted data
+    const updateData = {
+      'idCard.CNP': extractedData.CNP,
+      'idCard.fullName': extractedData.fullName,
+      'idCard.address': extractedData.address,
+      'idCard.series': extractedData.series,
+      'idCard.number': extractedData.number,
+      'idCard.issuedBy': extractedData.issuedBy,
+      'idCard.birthDate': extractedData.birthDate,
+      'idCard.issueDate': extractedData.issueDate,
+      'idCard.expiryDate': extractedData.expiryDate,
+      'idCard.verified': true, // Mark as verified since OCR was successful
+      'idCard.extractedAt': new Date() // Timestamp when extraction was completed
+    };
+
+    // Remove null values from update data
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === null || updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      updateData,
+      { new: true, runValidators: false } // Skip validation for this update
+    ).select('-password');
+
+    res.json({
+      success: true,
+      message: 'Datele au fost extrase cu succes din buletin',
+      data: {
+        extractedData,
+        user: updatedUser.idCard
+      }
+    });
+    
+  } catch (error) {
+    logger.error('ID Card extraction error:', error);
+    next(error);
+  }
+};
+
+/**
+ * Get current user profile
+ */
+exports.getProfile = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      throw new ApiError(404, 'Utilizator negăsit');
+    }
+
+    res.json({
+      success: true,
+      data: {
+        user
+      }
     });
   } catch (error) {
     next(error);

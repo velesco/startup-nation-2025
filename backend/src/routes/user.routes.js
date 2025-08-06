@@ -13,13 +13,17 @@ const {
   uploadProfilePicture,
   updateUserStatus,
   importUsers,
-  getUsersStats
+  getUsersStats,
+  uploadIDCard,
+  extractIDCardData,
+  getProfile
 } = require('../controllers/user.controller');
 
 // Public routes (no auth required)
 
 // Protected routes (logged in users)
 router.route('/profile')
+  .get(protect, getProfile)
   .put(protect, updateProfile);
 
 router.route('/password')
@@ -27,6 +31,12 @@ router.route('/password')
 
 router.route('/profile-picture')
   .post(protect, uploadProfilePicture);
+
+router.route('/id-card')
+  .post(protect, uploadIDCard);
+
+router.route('/id-card/extract')
+  .post(protect, extractIDCardData);
 
 // Admin and partner routes
 router.route('/')

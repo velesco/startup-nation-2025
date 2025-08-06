@@ -66,6 +66,12 @@ app.use((req, res, next) => {
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+// Ensure id-cards directory exists
+const idCardsDir = path.join(__dirname, '../uploads/id-cards');
+if (!require('fs').existsSync(idCardsDir)) {
+  require('fs').mkdirSync(idCardsDir, { recursive: true });
+}
+
 // Routes - uncomment these as you implement them
 const authRoutes = require('./routes/auth.routes');
 const passwordRoutes = require('./routes/password.routes');

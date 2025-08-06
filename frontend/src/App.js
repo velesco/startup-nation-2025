@@ -35,6 +35,7 @@ import AdminClientsPage from './pages/admin/AdminClientsPage';
 import MaterialsLibraryPage from './pages/admin/MaterialsLibraryPage';
 import AdminNotificationsPage from './pages/admin/AdminNotificationsPage';
 import NotificationsPage from './pages/NotificationsPage';
+import ProfilePage from './pages/ProfilePage';
 
 // Componenta pentru redirecționare de la /clients/:id la /admin/clients/:id
 const ClientIdRedirect = () => {
@@ -229,6 +230,15 @@ function App() {
           element={
             <ProtectedRoute>
               <NotificationsPage />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
             </ProtectedRoute>
           }
         />

@@ -155,9 +155,16 @@ const UserSchema = new mongoose.Schema(
       expiryDate: {
         type: Date
       },
+      imagePath: {
+        type: String,
+        trim: true
+      },
       verified: {
         type: Boolean,
         default: false
+      },
+      extractedAt: {
+        type: Date
       }
     },
     dataSentToSheet: {

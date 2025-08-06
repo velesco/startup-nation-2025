@@ -196,6 +196,20 @@ const apiService = {
     createBackup: () => api.post('/admin/backups'),
     restoreBackup: (filename) => api.post('/admin/backups/restore', { filename }),
     getLogs: (params) => api.get('/admin/logs', { params })
+  },
+
+  // User requests
+  users: {
+    getProfile: () => api.get('/users/profile'),
+    updateProfile: (data) => api.put('/users/profile', data),
+    uploadProfilePicture: (formData) => api.post('/users/profile-picture', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+    changePassword: (data) => api.put('/users/password', data),
+    uploadIDCard: (formData) => api.post('/users/id-card', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+    extractIDCardData: () => api.post('/users/id-card/extract')
   }
 };
 
