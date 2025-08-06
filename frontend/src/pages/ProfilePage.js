@@ -16,10 +16,10 @@ import {
   Badge as BadgeIcon,
   Settings as SettingsIcon
 } from '@mui/icons-material';
-import { useAuth } from '../../contexts/AuthContext';
-import DashboardLayout from '../../components/layouts/DashboardLayout';
-import IDCardUpload from '../../components/users/IDCardUpload';
-import apiService from '../../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import DashboardLayout from '../components/layouts/DashboardLayout';
+import IDCardUpload from '../components/users/IDCardUpload';
+import apiService from '../services/api';
 
 const ProfilePage = () => {
   const { currentUser, refreshUser } = useAuth();
