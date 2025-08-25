@@ -300,7 +300,7 @@ const generateAuthorityDocumentForUser = async (req, res, next) => {
 // @access  Private (Admin, super-admin)
 const downloadAuthorityDocument = async (req, res, next) => {
   try {
-    const userId = req.params.userId;
+    const userId = req.params.id; // Schimbat din userId în id pentru a se potrivi cu ruta
     logger.info(`Download authorization document requested for user: ${userId}`);
     
     // Verifică dacă ID-ul utilizatorului este valid

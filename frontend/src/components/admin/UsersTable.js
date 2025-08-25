@@ -14,7 +14,8 @@ import {
   UserPlus,
   UserCog,
   FileSignature,
-  PenTool
+  PenTool,
+  RefreshCw
 } from 'lucide-react';
 
 /**
@@ -112,6 +113,19 @@ const UsersTable = ({
     }
   };
 
+  // Handle authority document regeneration
+  const handleRegenerateAuthority = async (user, e) => {
+    e.stopPropagation();
+    
+    const confirmMessage = `Doriți să regenerați împuternicirea pentru utilizatorul ${user.name}? Documentul existent va fi suprascris.`;
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+    
+    // Reuse the same generation function
+    await handleGenerateAuthority(user, e);
+  };
+
   // Handle authority document download
   const handleDownloadAuthority = async (user, e) => {
     e.stopPropagation();
@@ -128,23 +142,34 @@ const UsersTable = ({
         }
       );
 
-      // Create a blob URL and trigger download
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      
-      const fileName = `imputernicire_${user.name?.replace(/\s+/g, '_') || user._id}.pdf`;
-      link.setAttribute('download', fileName);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      // Verificăm dacă răspunsul este un blob valid
+      if (response.data && response.data.size > 0) {
+        // Create a blob URL and trigger download
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        
+        const fileName = `imputernicire_${user.name?.replace(/\s+/g, '_') || user._id}.pdf`;
+        link.setAttribute('download', fileName);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      } else {
+        throw new Error('Înțelege-se că răspunsul este gol sau invalid');
+      }
     } catch (error) {
       console.error('Error downloading authority document:', error);
-      if (error.response?.data?.shouldGenerate) {
+      
+      // Verificăm tipul de eroare pentru a oferi mesaje mai clare
+      if (error.response?.status === 400) {
+        alert('Eroare de cerere: Verificați dacă utilizatorul există și are împuternicirea generată.');
+      } else if (error.response?.status === 404) {
         if (window.confirm('Împuternicirea nu există. Doriți să o generați acum?')) {
           handleGenerateAuthority(user, e);
         }
+      } else if (error.response?.status === 500) {
+        alert('Eroare de server: Încercați din nou într-un moment.');
       } else {
         alert(`Eroare la descărcarea împuternicirii: ${error.response?.data?.message || error.message}`);
       }
@@ -452,15 +477,32 @@ const UsersTable = ({
                         <Mail className="h-5 w-5" />
                       </button>
                       
-                      {/* Împuternicire Button */}
+                      {/* Împuternicire Buttons */}
                       {user.documents && user.documents.authorityDocumentGenerated ? (
-                        <button 
-                          className="p-2 text-purple-600 hover:bg-purple-50 rounded-md transition-colors"
-                          onClick={(e) => handleDownloadAuthority(user, e)}
-                          title={user.signature ? "Descarcă împuternicire (cu semnătură)" : "Descarcă împuternicire (fără semnătură)"}
-                        >
-                          <FileSignature className="h-5 w-5" />
-                        </button>
+                        <div className="flex space-x-1">
+                          <button 
+                            className="p-2 text-purple-600 hover:bg-purple-50 rounded-md transition-colors"
+                            onClick={(e) => handleDownloadAuthority(user, e)}
+                            title={user.signature ? "Descarcă împuternicire (cu semnătură)" : "Descarcă împuternicire (fără semnătură)"}
+                          >
+                            <FileSignature className="h-5 w-5" />
+                          </button>
+                          <button 
+                            className={`p-2 text-orange-600 hover:bg-orange-50 rounded-md transition-colors ${generatingAuthority === user._id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            onClick={(e) => handleRegenerateAuthority(user, e)}
+                            disabled={generatingAuthority === user._id}
+                            title="Regenerează împuternicire"
+                          >
+                            {generatingAuthority === user._id ? (
+                              <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                            ) : (
+                              <RefreshCw className="h-5 w-5" />
+                            )}
+                          </button>
+                        </div>
                       ) : (
                         <button 
                           className={`p-2 text-purple-600 hover:bg-purple-50 rounded-md transition-colors ${generatingAuthority === user._id ? 'opacity-50 cursor-not-allowed' : ''}`}
