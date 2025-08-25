@@ -1779,6 +1779,49 @@ exports.updateDocumentFlags = async (req, res, next) => {
         needsUpdate = true;
       }
       
+      // Funcție pentru verificarea existenței fișierelor de împuternicire
+      const checkAuthorityFile = async (userId) => {
+        const possiblePaths = [
+          path.join(__dirname, `../../../uploads/contracts/imputernicire_${userId}.pdf`),
+          path.join(__dirname, `../../../uploads/contracts/imputernicire_${userId}.docx`),
+          path.join(__dirname, `../../../uploads/authorization/imputernicire_${userId}.pdf`),
+          path.join(__dirname, `../../../uploads/authorization/imputernicire_${userId}.docx`)
+        ];
+
+        for (const filePath of possiblePaths) {
+          if (fs.existsSync(filePath)) {
+            console.log(`Împuternicire găsită pentru user ${userId} la calea: ${filePath}`);
+            return {
+              exists: true,
+              path: filePath,
+              format: filePath.endsWith('.docx') ? 'docx' : 'pdf'
+            };
+          }
+        }
+
+        return { exists: false };
+      };
+      
+      // Verificăm existența împuternicirii
+      const authorityResult = await checkAuthorityFile(user._id);
+      if (authorityResult.exists && (!user.documents || !user.documents.authorityDocumentGenerated)) {
+        console.log(`Utilizatorul ${user.name} (${user._id}) are împuternicire generată, dar flag-ul nu este setat`);
+        if (!user.documents) {
+          user.documents = {};
+        }
+        user.documents.authorityDocumentGenerated = true;
+        
+        // Determinăm calea relativă
+        if (authorityResult.path.includes('/contracts/')) {
+          user.documents.authorityDocumentPath = `/uploads/contracts/imputernicire_${user._id}.${authorityResult.format}`;
+        } else {
+          user.documents.authorityDocumentPath = `/uploads/authorization/imputernicire_${user._id}.${authorityResult.format}`;
+        }
+        
+        user.documents.authorityDocumentFormat = authorityResult.format;
+        needsUpdate = true;
+      }
+      
       if (needsUpdate) {
         await user.save();
         updatedUsersCount++;

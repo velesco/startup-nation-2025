@@ -132,6 +132,9 @@ const generateAuthorityDocumentForUser = async (req, res, next) => {
     if (user.signature) {
       const cleanSignature = user.signature.replace(/\\s+/g, '');
       formData.append('signature', cleanSignature);
+      logger.info(`Including user signature for authorization document: ${user.signature ? 'Present' : 'Not present'}`);
+    } else {
+      logger.warn(`No signature available for user ${userId}, proceeding without signature`);
     }
     
     logger.info('Sending data to external API for authorization document...');

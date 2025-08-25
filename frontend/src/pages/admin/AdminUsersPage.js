@@ -102,6 +102,8 @@ const AdminUsersPage = () => {
           'Contract Generat': user.documents?.contractGenerated ? 'Da' : 'Nu',
           'Contract Consultanță': user.documents?.consultingContractGenerated ? 'Da' : 'Nu',
           'Contract Consultanță Semnat': user.documents?.consultingContractSigned ? 'Da' : 'Nu',
+          'Împuternicire Generată': user.documents?.authorityDocumentGenerated ? 'Da' : 'Nu',
+          'Semnătură Salvată': user.signature ? 'Da' : 'Nu',
           'Depus': user.submitted?.status ? 'Da' : 'Nu',
           'Actualizat de': user.submitted?.updated_by?.name || '',
           'Data Actualizării': user.submitted?.updated_at ? new Date(user.submitted.updated_at).toLocaleString('ro-RO') : '',
@@ -140,6 +142,8 @@ const AdminUsersPage = () => {
           { wch: 10 },  // Contract Generat
           { wch: 10 },  // Contract Consultanță
           { wch: 10 },  // Contract Consultanță Semnat
+          { wch: 10 },  // Împuternicire Generată
+          { wch: 10 },  // Semnătură Salvată
           { wch: 10 },  // Depus
           { wch: 20 },  // Actualizat de
           { wch: 20 },  // Data actualizării

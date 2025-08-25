@@ -109,6 +109,19 @@ const UserSchema = new mongoose.Schema(
       consultingContractSigned: {
         type: Boolean,
         default: false
+      },
+      authorityDocumentGenerated: {
+        type: Boolean,
+        default: false
+      },
+      authorityDocumentPath: {
+        type: String,
+        default: null
+      },
+      authorityDocumentFormat: {
+        type: String,
+        enum: ['pdf', 'docx', null],
+        default: 'pdf'
       }
     },
     contractSigned: {

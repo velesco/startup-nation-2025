@@ -12,7 +12,9 @@ import {
   FileText,
   Trash2,
   UserPlus,
-  UserCog
+  UserCog,
+  FileSignature,
+  PenTool
 } from 'lucide-react';
 
 /**
@@ -35,6 +37,7 @@ const UsersTable = ({
   const { currentUser } = useAuth();
   const [isUpdatingSubmission, setIsUpdatingSubmission] = useState(null);
   const [isUpdatingIneligible, setIsUpdatingIneligible] = useState(null);
+  const [generatingAuthority, setGeneratingAuthority] = useState(null);
   const navigate = useNavigate();
 
   // Role colors
@@ -65,6 +68,87 @@ const UsersTable = ({
   const getCreatorName = (user) => {
     if (!user.added_by) return 'N/A';
     return typeof user.added_by === 'object' ? user.added_by.name : 'Necunoscut';
+  };
+
+  // Handle authority document generation
+  const handleGenerateAuthority = async (user, e) => {
+    e.stopPropagation();
+    
+    // Check if user has signature
+    if (!user.signature) {
+      const confirmMessage = `Utilizatorul ${user.name} nu are semnătură salvată. Împuternicirea va fi generată fără semnătură. Doriți să continuați?`;
+      if (!window.confirm(confirmMessage)) {
+        return;
+      }
+    }
+    
+    try {
+      setGeneratingAuthority(user._id);
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
+      
+      const response = await axios.post(
+        `${API_URL}/admin/contracts/admin/generate-authority/${user._id}`,
+        {},
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+
+      if (response.data && response.data.success) {
+        const successMessage = user.signature 
+          ? 'Împuternicirea a fost generată cu succes cu semnătura utilizatorului!' 
+          : 'Împuternicirea a fost generată cu succes (fără semnătură)!';
+        alert(successMessage);
+        fetchUsers(); // Refresh the user list
+      }
+    } catch (error) {
+      console.error('Error generating authority document:', error);
+      alert(`Eroare la generarea împutternicirii: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setGeneratingAuthority(null);
+    }
+  };
+
+  // Handle authority document download
+  const handleDownloadAuthority = async (user, e) => {
+    e.stopPropagation();
+    try {
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
+      
+      const response = await axios.get(
+        `${API_URL}/admin/users/${user._id}/download-authority-document`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          },
+          responseType: 'blob'
+        }
+      );
+
+      // Create a blob URL and trigger download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const fileName = `imputernicire_${user.name?.replace(/\s+/g, '_') || user._id}.pdf`;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading authority document:', error);
+      if (error.response?.data?.shouldGenerate) {
+        if (window.confirm('Împuternicirea nu există. Doriți să o generați acum?')) {
+          handleGenerateAuthority(user, e);
+        }
+      } else {
+        alert(`Eroare la descărcarea împuternicirii: ${error.response?.data?.message || error.message}`);
+      }
+    }
   };
 
   return (
@@ -205,6 +289,30 @@ const UsersTable = ({
                           Contract Consultanță
                         </span>
                       )}
+                      
+                      {user.documents && user.documents.authorityDocumentGenerated ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                          <Check className="h-3 w-3 mr-1" />
+                          Împuternicire
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                          <X className="h-3 w-3 mr-1" />
+                          Împuternicire
+                        </span>
+                      )}
+                      
+                      {user.signature ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                          <PenTool className="h-3 w-3 mr-1" />
+                          Semnătură
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                          <X className="h-3 w-3 mr-1" />
+                          Semnătură
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
@@ -343,6 +451,33 @@ const UsersTable = ({
                       >
                         <Mail className="h-5 w-5" />
                       </button>
+                      
+                      {/* Împuternicire Button */}
+                      {user.documents && user.documents.authorityDocumentGenerated ? (
+                        <button 
+                          className="p-2 text-purple-600 hover:bg-purple-50 rounded-md transition-colors"
+                          onClick={(e) => handleDownloadAuthority(user, e)}
+                          title={user.signature ? "Descarcă împuternicire (cu semnătură)" : "Descarcă împuternicire (fără semnătură)"}
+                        >
+                          <FileSignature className="h-5 w-5" />
+                        </button>
+                      ) : (
+                        <button 
+                          className={`p-2 text-purple-600 hover:bg-purple-50 rounded-md transition-colors ${generatingAuthority === user._id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          onClick={(e) => handleGenerateAuthority(user, e)}
+                          disabled={generatingAuthority === user._id}
+                          title={user.signature ? "Generează împuternicire cu semnătura utilizatorului" : "Generează împuternicire (utilizatorul nu are semnătură)"}
+                        >
+                          {generatingAuthority === user._id ? (
+                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          ) : (
+                            <FileSignature className="h-5 w-5" />
+                          )}
+                        </button>
+                      )}
                       
                       <button 
                         className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"

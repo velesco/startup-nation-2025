@@ -204,22 +204,22 @@ const generateAuthorityDocument = async (req, res) => {
       await user.save();
 
       // Try to send an email with the document
-      try {
-        const emailResult = await sendDocumentEmail(
-          user, 
-          pdfPath, 
-          `imputernicire_${user.name || userId}.pdf`, 
-          false // not DOCX
-        );
+      // try {
+      //   const emailResult = await sendDocumentEmail(
+      //     user, 
+      //     pdfPath, 
+      //     `imputernicire_${user.name || userId}.pdf`, 
+      //     false // not DOCX
+      //   );
         
-        if (emailResult.success) {
-          logger.info(`Email sent successfully: ${emailResult.messageId}`);
-        } else {
-          logger.warn(`Email sending failed: ${emailResult.error}`);
-        }
-      } catch (emailError) {
-        logger.error(`Error sending email with authority document: ${emailError.message}`);
-      }
+      //   if (emailResult.success) {
+      //     logger.info(`Email sent successfully: ${emailResult.messageId}`);
+      //   } else {
+      //     logger.warn(`Email sending failed: ${emailResult.error}`);
+      //   }
+      // } catch (emailError) {
+      //   logger.error(`Error sending email with authority document: ${emailError.message}`);
+      // }
 
       // Return the PDF to the client
       return res.sendFile(pdfPath);
