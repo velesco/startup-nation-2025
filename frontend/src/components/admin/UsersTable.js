@@ -34,6 +34,7 @@ const UsersTable = ({
 }) => {
   const { currentUser } = useAuth();
   const [isUpdatingSubmission, setIsUpdatingSubmission] = useState(null);
+  const [isUpdatingIneligible, setIsUpdatingIneligible] = useState(null);
   const navigate = useNavigate();
 
   // Role colors
@@ -101,6 +102,9 @@ const UsersTable = ({
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Depus
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Neeligibil
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
@@ -255,6 +259,58 @@ const UsersTable = ({
                       )}
                     </div>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center">
+                      <label className="inline-flex items-center cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          className="sr-only peer"
+                          checked={user.ineligible?.status || false}
+                          onChange={async () => {
+                            try {
+                              setIsUpdatingIneligible(user._id);
+                              const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
+                              
+                              const response = await axios.post(
+                                `${API_URL}/admin/users/${user._id}/update-ineligible`,
+                                { status: !(user.ineligible?.status || false) },
+                                {
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                    Authorization: `Bearer ${localStorage.getItem('token')}`
+                                  }
+                                }
+                              );
+
+                              // Reîncărcare utilizatori după actualizare
+                              if (response.data && response.data.success) {
+                                fetchUsers();
+                              }
+                            } catch (error) {
+                              console.error('Error updating ineligible status:', error);
+                              alert(`Eroare la actualizarea stării de neeligibilitate: ${error.response?.data?.message || error.message}`);
+                            } finally {
+                              setIsUpdatingIneligible(null);
+                            }
+                          }}
+                          disabled={isUpdatingIneligible === user._id}
+                        />
+                        <div className={`w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 rounded-full peer ${user.ineligible?.status ? 'peer-checked:after:translate-x-full peer-checked:after:border-white peer-checked:bg-red-600' : ''} after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all`}></div>
+                      </label>
+                      {user.ineligible?.updated_by && (
+                        <span className="ml-2 text-xs text-gray-500">
+                          {user.ineligible.updated_by === currentUser._id ? 'de tine' : 
+                           (user.ineligible.updated_by?.name || 'nespecificat')}
+                        </span>
+                      )}
+                      {isUpdatingIneligible === user._id && (
+                        <svg className="animate-spin ml-2 h-4 w-4 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {user.isActive ? (
                       <div className="flex items-center">
@@ -319,7 +375,7 @@ const UsersTable = ({
               ))}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan="9" className="px-6 py-10 text-center text-gray-500">
+                  <td colSpan="12" className="px-6 py-10 text-center text-gray-500">
                     Nu există utilizatori care să corespundă criteriilor de căutare.
                   </td>
                 </tr>

@@ -63,8 +63,9 @@ exports.getUsers = async (req, res, next) => {
     
     // Execute query with pagination
     const users = await User.find(query)
-      .select('name email role organization position lastLogin createdAt phone documents contractSigned idCard submitted')
+      .select('name email role organization position lastLogin createdAt phone documents contractSigned idCard submitted ineligible')
       .populate('submitted.updated_by', 'name')
+      .populate('ineligible.updated_by', 'name')
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
@@ -429,6 +430,57 @@ exports.updateSubmissionStatus = async (req, res, next) => {
     });
   } catch (error) {
     logger.error(`Error updating submission status: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc    Update user ineligible status
+// @route   POST /api/admin/users/:id/update-ineligible
+// @access  Private (Admin, super-admin, partner)
+exports.updateIneligibleStatus = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+    const { status, reason } = req.body;
+    
+    // Verificăm dacă utilizatorul există
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilizator negăsit'
+      });
+    }
+    
+    // Actualizăm status-ul de Neeligibil
+    user.ineligible = {
+      status: status === true,
+      updated_by: req.user._id,
+      updated_at: new Date(),
+      reason: status === true ? (reason || '') : ''
+    };
+    
+    await user.save();
+    
+    // Obținem detalii despre utilizatorul care a făcut actualizarea
+    const updatedBy = await User.findById(req.user._id).select('name email');
+    
+    // Returnăm utilizatorul actualizat
+    res.status(200).json({
+      success: true,
+      message: `Status-ul "Neeligibil" a fost ${status ? 'activat' : 'dezactivat'} cu succes`,
+      data: {
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          ineligible: user.ineligible
+        },
+        updated_by: updatedBy
+      }
+    });
+  } catch (error) {
+    logger.error(`Error updating ineligible status: ${error.message}`);
     next(error);
   }
 };

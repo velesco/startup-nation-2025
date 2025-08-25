@@ -106,6 +106,10 @@ const AdminUsersPage = () => {
           'Actualizat de': user.submitted?.updated_by?.name || '',
           'Data Actualizării': user.submitted?.updated_at ? new Date(user.submitted.updated_at).toLocaleString('ro-RO') : '',
           'Status': user.isActive ? 'Activ' : 'Inactiv',
+          'Neeligibil': user.ineligible?.status ? 'Da' : 'Nu',
+          'Motiv neeligibilitate': user.ineligible?.reason || '',
+          'Neeligibilitate actualizată de': user.ineligible?.updated_by?.name || '',
+          'Data actualizării neeligibilității': user.ineligible?.updated_at ? new Date(user.ineligible.updated_at).toLocaleString('ro-RO') : '',
           // Informații firmă
           'Organizație': user.organization || '',
           'Poziție': user.position || '',
@@ -140,6 +144,10 @@ const AdminUsersPage = () => {
           { wch: 20 },  // Actualizat de
           { wch: 20 },  // Data actualizării
           { wch: 10 },  // Status
+          { wch: 10 },  // Neeligibil
+          { wch: 30 },  // Motiv neeligibilitate
+          { wch: 20 },  // Neeligibilitate actualizată de
+          { wch: 20 },  // Data actualizării neeligibilității
           { wch: 25 },  // Organizație
           { wch: 20 },  // Poziție
           { wch: 20 },  // Ultima autentificare

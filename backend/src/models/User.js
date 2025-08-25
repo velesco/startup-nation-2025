@@ -186,6 +186,24 @@ const UserSchema = new mongoose.Schema(
       updated_at: {
         type: Date
       }
+    },
+    ineligible: {
+      status: {
+        type: Boolean,
+        default: false
+      },
+      updated_by: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      updated_at: {
+        type: Date
+      },
+      reason: {
+        type: String,
+        trim: true,
+        maxlength: [500, 'Reason cannot be more than 500 characters']
+      }
     }
   },
   {

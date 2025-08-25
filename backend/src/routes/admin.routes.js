@@ -5,7 +5,7 @@ const upload = require('../middlewares/upload');
 
 // Importăm controllere separate 
 const { getDashboardStats, getUsersStatistics, getClientStatistics } = require('../controllers/stats.controller');
-const { getUsers, getUserById, updateUser, addUser, generateUserToken, sendUserDataToExternalAPI, updateSubmissionStatus } = require('../controllers/users.controller');
+const { getUsers, getUserById, updateUser, addUser, generateUserToken, sendUserDataToExternalAPI, updateSubmissionStatus, updateIneligibleStatus } = require('../controllers/users.controller');
 const { 
   getClientDocuments, uploadClientDocument, 
   getUserDocuments, uploadUserDocument,
@@ -100,6 +100,9 @@ router.post('/contracts/admin/generate-authority/:userId', authorize('admin', 'p
 
 // Update user submission status
 router.post('/users/:id/update-submission', authorize('admin', 'partner', 'super-admin'), updateSubmissionStatus);
+
+// Update user ineligible status
+router.post('/users/:id/update-ineligible', authorize('admin', 'partner', 'super-admin'), updateIneligibleStatus);
 
 // Send user data to external API
 router.post('/users/:id/send-data', authorize('admin', 'super-admin'), sendUserDataToExternalAPI);
